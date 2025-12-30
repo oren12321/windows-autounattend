@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
-	<!--https://schneegans.de/windows/unattend-generator/?LanguageMode=Interactive&ProcessorArchitecture=amd64&BypassRequirementsCheck=true&BypassNetworkCheck=true&KeepSensitiveFiles=true&ComputerNameMode=Random&CompactOsMode=Never&TimeZoneMode=Implicit&PartitionMode=Interactive&DiskAssertionMode=Skip&WindowsEditionMode=Interactive&InstallFromMode=Automatic&PEMode=Default&UserAccountMode=InteractiveLocal&PasswordExpirationMode=Unlimited&LockoutMode=Default&HideFiles=None&ShowFileExtensions=true&ClassicContextMenu=true&LaunchToThisPC=true&ShowEndTask=true&TaskbarSearch=Hide&TaskbarIconsMode=Default&DisableWidgets=true&LeftTaskbar=true&HideTaskViewButton=true&DisableBingResults=true&StartTilesMode=Empty&StartPinsMode=Empty&DisableWindowsUpdate=true&DisableSac=true&DisableFastStartup=true&DisableSystemRestore=true&EnableLongPaths=true&HardenSystemDriveAcl=true&AllowPowerShellScripts=true&DisableLastAccess=true&PreventAutomaticReboot=true&DisableAppSuggestions=true&PreventDeviceEncryption=true&HideEdgeFre=true&DisableEdgeStartupBoost=true&DisableAutomaticRestartSignOn=true&EffectsMode=Custom&ThumbnailsOrIcon=true&DragFullWindows=true&FontSmoothing=true&DeleteEdgeDesktopIcon=true&DesktopIconsMode=Default&StartFoldersMode=Default&WifiMode=Skip&ExpressSettings=DisableAll&LockKeysMode=Skip&StickyKeysMode=Default&ColorMode=Default&WallpaperMode=Default&LockScreenMode=Default&Remove3DViewer=true&RemoveBingSearch=true&RemoveClipchamp=true&RemoveCopilot=true&RemoveCortana=true&RemoveDevHome=true&RemoveWindowsHello=true&RemoveFamily=true&RemoveFeedbackHub=true&RemoveGameAssist=true&RemoveGetHelp=true&RemoveHandwriting=true&RemoveInternetExplorer=true&RemoveMailCalendar=true&RemoveMaps=true&RemoveMathInputPanel=true&RemoveMixedReality=true&RemoveZuneVideo=true&RemoveNews=true&RemoveOffice365=true&RemoveOneDrive=true&RemoveOneNote=true&RemoveOneSync=true&RemoveOpenSSHClient=true&RemoveOutlook=true&RemovePaint3D=true&RemovePeople=true&RemovePowerAutomate=true&RemovePowerShell2=true&RemovePowerShellISE=true&RemoveQuickAssist=true&RemoveRecall=true&RemoveRdpClient=true&RemoveSkype=true&RemoveSolitaire=true&RemoveSpeech=true&RemoveStepsRecorder=true&RemoveStickyNotes=true&RemoveTeams=true&RemoveGetStarted=true&RemoveToDo=true&RemoveWallet=true&RemoveWeather=true&RemoveFaxAndScan=true&RemoveWindowsMediaPlayer=true&RemoveWordPad=true&RemoveXboxApps=true&RemoveYourPhone=true&SystemScript0=%3A%3A+CMD+script%3A+these+scripts+will+run+in+the+system+context%2C+before+user+accounts+are+created.&SystemScriptType0=Cmd&SystemScript1=%23+PS1+script%3A+these+scripts+will+run+in+the+system+context%2C+before+user+accounts+are+created.&SystemScriptType1=Ps1&SystemScript2=%3B+REG+script%3A+these+scripts+will+run+in+the+system+context%2C+before+user+accounts+are+created.&SystemScriptType2=Reg&DefaultUserScript0=%3A%3A+CMD+script%3A+scripts+to+modify+the+default+user.&DefaultUserScriptType0=Cmd&DefaultUserScript1=%23+PS1+script%3A+scripts+to+modify+the+default+user.&DefaultUserScriptType1=Ps1&DefaultUserScript2=%3B+REG+script%3A+scripts+to+modify+the+default+user.&DefaultUserScriptType2=Reg&UserOnceScript0=%3A%3A+CMD+script%3A+these+scripts+will+run+whenever+a+user+logs+on+for+the+first+time.&UserOnceScriptType0=Cmd&UserOnceScript1=%23+PS1+script%3A+these+scripts+will+run+whenever+a+user+logs+on+for+the+first+time.&UserOnceScriptType1=Ps1&UserOnceScript2=%3B+REG+script%3A+these+scripts+will+run+whenever+a+user+logs+on+for+the+first+time.&UserOnceScriptType2=Reg&WdacMode=Skip&AppLockerMode=Skip-->
+	<!--https://schneegans.de/windows/unattend-generator/?LanguageMode=Interactive&ProcessorArchitecture=amd64&BypassRequirementsCheck=true&BypassNetworkCheck=true&KeepSensitiveFiles=true&ComputerNameMode=Random&CompactOsMode=Never&TimeZoneMode=Implicit&PartitionMode=Interactive&DiskAssertionMode=Skip&WindowsEditionMode=Interactive&InstallFromMode=Automatic&PEMode=Default&UserAccountMode=InteractiveLocal&PasswordExpirationMode=Unlimited&LockoutMode=Default&HideFiles=None&ShowFileExtensions=true&ClassicContextMenu=true&LaunchToThisPC=true&ShowEndTask=true&TaskbarSearch=Hide&TaskbarIconsMode=Default&DisableWidgets=true&LeftTaskbar=true&HideTaskViewButton=true&DisableBingResults=true&StartTilesMode=Empty&StartPinsMode=Empty&DisableWindowsUpdate=true&DisableSac=true&DisableFastStartup=true&DisableSystemRestore=true&EnableLongPaths=true&AllowPowerShellScripts=true&DisableLastAccess=true&PreventAutomaticReboot=true&TurnOffSystemSounds=true&DisableAppSuggestions=true&PreventDeviceEncryption=true&HideEdgeFre=true&DisableEdgeStartupBoost=true&DisablePointerPrecision=true&DisableAutomaticRestartSignOn=true&EffectsMode=Custom&ThumbnailsOrIcon=true&DragFullWindows=true&FontSmoothing=true&DeleteEdgeDesktopIcon=true&DesktopIconsMode=Default&StartFoldersMode=Default&WifiMode=Skip&ExpressSettings=DisableAll&LockKeysMode=Skip&StickyKeysMode=Default&ColorMode=Default&WallpaperMode=Default&LockScreenMode=Default&Remove3DViewer=true&RemoveBingSearch=true&RemoveClipchamp=true&RemoveCopilot=true&RemoveCortana=true&RemoveDevHome=true&RemoveWindowsHello=true&RemoveFamily=true&RemoveFeedbackHub=true&RemoveGameAssist=true&RemoveGetHelp=true&RemoveHandwriting=true&RemoveMailCalendar=true&RemoveMaps=true&RemoveMathInputPanel=true&RemoveMixedReality=true&RemoveZuneVideo=true&RemoveNews=true&RemoveOffice365=true&RemoveOneDrive=true&RemoveOneNote=true&RemoveOneSync=true&RemoveOutlook=true&RemovePaint3D=true&RemovePeople=true&RemovePowerAutomate=true&RemovePowerShellISE=true&RemoveQuickAssist=true&RemoveRecall=true&RemoveRdpClient=true&RemoveSkype=true&RemoveSolitaire=true&RemoveSpeech=true&RemoveStepsRecorder=true&RemoveStickyNotes=true&RemoveTeams=true&RemoveGetStarted=true&RemoveToDo=true&RemoveWallet=true&RemoveWeather=true&RemoveFaxAndScan=true&RemoveWindowsMediaPlayer=true&RemoveWordPad=true&RemoveXboxApps=true&RemoveYourPhone=true&SystemScript0=%3C%21%5BCDATA%5B%3C%23%0D%0A%23+These+script+will+run+in+the+system+context%2C+before+user+accounts+are+created.%0D%0A%5D%5D%3E&SystemScriptType0=Ps1&DefaultUserScript0=%3C%21%5BCDATA%5B%3C%23%0D%0A%23+Use+this+script+to+modify+the+default+user%27s+registry+hive.+For+example%3A%0D%0A%23+Registry%3A%3AHKU%5CDefaultUser%5C...%0D%0A%5D%5D%3E&DefaultUserScriptType0=Ps1&FirstLogonScript0=%3C%21%5BCDATA%5B%3C%23%0D%0A%23+These+script+will+run+when+the+firt+user+logs+on+after+Windows+has+been+installed.%0D%0A%23+The+first+user+to+log+on+is+typically+an+administrator.%0D%0A%5D%5D%3E&FirstLogonScriptType0=Ps1&UserOnceScript0=%3C%21%5BCDATA%5B%3C%23%0D%0A%23+These+script+will+run+whenever+a+user+logs+on+for+the+first+time.%0D%0A%5D%5D%3E&UserOnceScriptType0=Ps1&WdacMode=Skip&AppLockerMode=Skip-->
 	<settings pass="offlineServicing"></settings>
 	<settings pass="windowsPE">
 		<component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
@@ -97,6 +97,7 @@ foreach( $file in $Document.unattend.Extensions.File ) {
 }
 		</ExtractScript>
 		<File path="C:\Windows\Setup\Scripts\RemovePackages.ps1">
+<![CDATA[
 $selectors = @(
 	'Microsoft.Microsoft3DViewer';
 	'Microsoft.BingSearch';
@@ -156,15 +157,15 @@ $removeCommand = {
 };
 $type = 'Package';
 $logfile = 'C:\Windows\Setup\Scripts\RemovePackages.log';
-&amp; {
-	$installed = &amp; $getCommand;
+& {
+	$installed = & $getCommand;
 	foreach( $selector in $selectors ) {
 		$result = [ordered] @{
 			Selector = $selector;
 		};
 		$found = $installed | Where-Object -FilterScript $filterCommand;
 		if( $found ) {
-			$result.Output = $found | &amp; $removeCommand;
+			$result.Output = $found | & $removeCommand;
 			if( $? ) {
 				$result.Message = "$type removed.";
 			} else {
@@ -176,16 +177,16 @@ $logfile = 'C:\Windows\Setup\Scripts\RemovePackages.log';
 		}
 		$result | ConvertTo-Json -Depth 3 -Compress;
 	}
-} *&gt;&amp;1 | Out-String -Width 1KB -Stream &gt;&gt; $logfile;
+} *>&1 | Out-String -Width 1KB -Stream >> $logfile;
+]]>
 		</File>
 		<File path="C:\Windows\Setup\Scripts\RemoveCapabilities.ps1">
+<![CDATA[
 $selectors = @(
 	'Print.Fax.Scan';
 	'Language.Handwriting';
-	'Browser.InternetExplorer';
 	'MathRecognizer';
 	'OneCoreUAP.OneSync';
-	'OpenSSH.Client';
 	'Microsoft.Windows.PowerShell.ISE';
 	'App.Support.QuickAssist';
 	'Language.Speech';
@@ -218,15 +219,15 @@ $removeCommand = {
 };
 $type = 'Capability';
 $logfile = 'C:\Windows\Setup\Scripts\RemoveCapabilities.log';
-&amp; {
-	$installed = &amp; $getCommand;
+& {
+	$installed = & $getCommand;
 	foreach( $selector in $selectors ) {
 		$result = [ordered] @{
 			Selector = $selector;
 		};
 		$found = $installed | Where-Object -FilterScript $filterCommand;
 		if( $found ) {
-			$result.Output = $found | &amp; $removeCommand;
+			$result.Output = $found | & $removeCommand;
 			if( $? ) {
 				$result.Message = "$type removed.";
 			} else {
@@ -238,11 +239,12 @@ $logfile = 'C:\Windows\Setup\Scripts\RemoveCapabilities.log';
 		}
 		$result | ConvertTo-Json -Depth 3 -Compress;
 	}
-} *&gt;&amp;1 | Out-String -Width 1KB -Stream &gt;&gt; $logfile;
+} *>&1 | Out-String -Width 1KB -Stream >> $logfile;
+]]>
 		</File>
 		<File path="C:\Windows\Setup\Scripts\RemoveFeatures.ps1">
+<![CDATA[
 $selectors = @(
-	'MicrosoftWindowsPowerShellV2Root';
 	'Microsoft-RemoteDesktopConnection';
 	'Recall';
 );
@@ -267,15 +269,15 @@ $removeCommand = {
 };
 $type = 'Feature';
 $logfile = 'C:\Windows\Setup\Scripts\RemoveFeatures.log';
-&amp; {
-	$installed = &amp; $getCommand;
+& {
+	$installed = & $getCommand;
 	foreach( $selector in $selectors ) {
 		$result = [ordered] @{
 			Selector = $selector;
 		};
 		$found = $installed | Where-Object -FilterScript $filterCommand;
 		if( $found ) {
-			$result.Output = $found | &amp; $removeCommand;
+			$result.Output = $found | & $removeCommand;
 			if( $? ) {
 				$result.Message = "$type removed.";
 			} else {
@@ -287,15 +289,17 @@ $logfile = 'C:\Windows\Setup\Scripts\RemoveFeatures.log';
 		}
 		$result | ConvertTo-Json -Depth 3 -Compress;
 	}
-} *&gt;&amp;1 | Out-String -Width 1KB -Stream &gt;&gt; $logfile;
+} *>&1 | Out-String -Width 1KB -Stream >> $logfile;
+]]>
 		</File>
 		<File path="C:\Windows\Setup\Scripts\PauseWindowsUpdate.ps1">
+<![CDATA[
 $formatter = {
 	$args[0].ToString( "yyyy'-'MM'-'dd'T'HH':'mm':'ssK" );
 };
 $now = [datetime]::UtcNow;
-$start = &amp; $formatter $now;
-$end = &amp; $formatter $now.AddDays( 7 );
+$start = & $formatter $now;
+$end = & $formatter $now.AddDays( 7 );
 
 $params = @{
 	LiteralPath = 'Registry::HKLM\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings';
@@ -309,112 +313,130 @@ Set-ItemProperty @params -Name 'PauseQualityUpdatesStartTime' -Value $start;
 Set-ItemProperty @params -Name 'PauseQualityUpdatesEndTime' -Value $end;
 Set-ItemProperty @params -Name 'PauseUpdatesStartTime' -Value $start;
 Set-ItemProperty @params -Name 'PauseUpdatesExpiryTime' -Value $end;
+]]>
 		</File>
 		<File path="C:\Windows\Setup\Scripts\PauseWindowsUpdate.xml">
-&lt;Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task"&gt;
-	&lt;Triggers&gt;
-		&lt;BootTrigger&gt;
-			&lt;Repetition&gt;
-				&lt;Interval&gt;P1D&lt;/Interval&gt;
-				&lt;StopAtDurationEnd&gt;false&lt;/StopAtDurationEnd&gt;
-			&lt;/Repetition&gt;
-			&lt;Enabled&gt;true&lt;/Enabled&gt;
-		&lt;/BootTrigger&gt;
-	&lt;/Triggers&gt;
-	&lt;Principals&gt;
-		&lt;Principal id="Author"&gt;
-			&lt;UserId&gt;S-1-5-19&lt;/UserId&gt;
-			&lt;RunLevel&gt;LeastPrivilege&lt;/RunLevel&gt;
-		&lt;/Principal&gt;
-	&lt;/Principals&gt;
-	&lt;Settings&gt;
-		&lt;MultipleInstancesPolicy&gt;IgnoreNew&lt;/MultipleInstancesPolicy&gt;
-		&lt;DisallowStartIfOnBatteries&gt;false&lt;/DisallowStartIfOnBatteries&gt;
-		&lt;StopIfGoingOnBatteries&gt;false&lt;/StopIfGoingOnBatteries&gt;
-		&lt;AllowHardTerminate&gt;true&lt;/AllowHardTerminate&gt;
-		&lt;StartWhenAvailable&gt;false&lt;/StartWhenAvailable&gt;
-		&lt;RunOnlyIfNetworkAvailable&gt;false&lt;/RunOnlyIfNetworkAvailable&gt;
-		&lt;IdleSettings&gt;
-			&lt;StopOnIdleEnd&gt;true&lt;/StopOnIdleEnd&gt;
-			&lt;RestartOnIdle&gt;false&lt;/RestartOnIdle&gt;
-		&lt;/IdleSettings&gt;
-		&lt;AllowStartOnDemand&gt;true&lt;/AllowStartOnDemand&gt;
-		&lt;Enabled&gt;true&lt;/Enabled&gt;
-		&lt;Hidden&gt;false&lt;/Hidden&gt;
-		&lt;RunOnlyIfIdle&gt;false&lt;/RunOnlyIfIdle&gt;
-		&lt;WakeToRun&gt;false&lt;/WakeToRun&gt;
-		&lt;ExecutionTimeLimit&gt;PT72H&lt;/ExecutionTimeLimit&gt;
-		&lt;Priority&gt;7&lt;/Priority&gt;
-	&lt;/Settings&gt;
-	&lt;Actions Context="Author"&gt;
-		&lt;Exec&gt;
-			&lt;Command&gt;C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe&lt;/Command&gt;
-			&lt;Arguments&gt;-ExecutionPolicy "Unrestricted" -NoProfile -File "C:\Windows\Setup\Scripts\PauseWindowsUpdate.ps1"&lt;/Arguments&gt;
-		&lt;/Exec&gt;
-	&lt;/Actions&gt;
-&lt;/Task&gt;
+<![CDATA[
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+	<Triggers>
+		<BootTrigger>
+			<Repetition>
+				<Interval>P1D</Interval>
+				<StopAtDurationEnd>false</StopAtDurationEnd>
+			</Repetition>
+			<Enabled>true</Enabled>
+		</BootTrigger>
+	</Triggers>
+	<Principals>
+		<Principal id="Author">
+			<UserId>S-1-5-19</UserId>
+			<RunLevel>LeastPrivilege</RunLevel>
+		</Principal>
+	</Principals>
+	<Settings>
+		<MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+		<DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+		<StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+		<AllowHardTerminate>true</AllowHardTerminate>
+		<StartWhenAvailable>false</StartWhenAvailable>
+		<RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+		<IdleSettings>
+			<StopOnIdleEnd>true</StopOnIdleEnd>
+			<RestartOnIdle>false</RestartOnIdle>
+		</IdleSettings>
+		<AllowStartOnDemand>true</AllowStartOnDemand>
+		<Enabled>true</Enabled>
+		<Hidden>false</Hidden>
+		<RunOnlyIfIdle>false</RunOnlyIfIdle>
+		<WakeToRun>false</WakeToRun>
+		<ExecutionTimeLimit>PT72H</ExecutionTimeLimit>
+		<Priority>7</Priority>
+	</Settings>
+	<Actions Context="Author">
+		<Exec>
+			<Command>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Command>
+			<Arguments>-ExecutionPolicy "Unrestricted" -NoProfile -File "C:\Windows\Setup\Scripts\PauseWindowsUpdate.ps1"</Arguments>
+		</Exec>
+	</Actions>
+</Task>
+]]>
 		</File>
 		<File path="C:\Windows\Setup\Scripts\MoveActiveHours.vbs">
-HKLM = &amp;H80000002
+<![CDATA[
+HKLM = &H80000002
 key = "SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"
 Set reg = GetObject("winmgmts://./root/default:StdRegProv")
 current = Hour(Now)
 reg.SetDWORDValue HKLM, key, "ActiveHoursStart", ( current + 23 ) Mod 24
 reg.SetDWORDValue HKLM, key, "ActiveHoursEnd", ( current + 11 ) Mod 24
 reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
+]]>
 		</File>
 		<File path="C:\Windows\Setup\Scripts\MoveActiveHours.xml">
-&lt;Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task"&gt;
-	&lt;Triggers&gt;
-		&lt;BootTrigger&gt;
-			&lt;Repetition&gt;
-				&lt;Interval&gt;PT4H&lt;/Interval&gt;
-				&lt;StopAtDurationEnd&gt;false&lt;/StopAtDurationEnd&gt;
-			&lt;/Repetition&gt;
-			&lt;Enabled&gt;true&lt;/Enabled&gt;
-		&lt;/BootTrigger&gt;
-		&lt;RegistrationTrigger&gt;
-			&lt;Repetition&gt;
-				&lt;Interval&gt;PT4H&lt;/Interval&gt;
-				&lt;StopAtDurationEnd&gt;false&lt;/StopAtDurationEnd&gt;
-			&lt;/Repetition&gt;
-			&lt;Enabled&gt;true&lt;/Enabled&gt;
-		&lt;/RegistrationTrigger&gt;
-	&lt;/Triggers&gt;
-	&lt;Principals&gt;
-		&lt;Principal id="Author"&gt;
-			&lt;UserId&gt;S-1-5-19&lt;/UserId&gt;
-			&lt;RunLevel&gt;LeastPrivilege&lt;/RunLevel&gt;
-		&lt;/Principal&gt;
-	&lt;/Principals&gt;
-	&lt;Settings&gt;
-		&lt;MultipleInstancesPolicy&gt;IgnoreNew&lt;/MultipleInstancesPolicy&gt;
-		&lt;DisallowStartIfOnBatteries&gt;false&lt;/DisallowStartIfOnBatteries&gt;
-		&lt;StopIfGoingOnBatteries&gt;false&lt;/StopIfGoingOnBatteries&gt;
-		&lt;AllowHardTerminate&gt;true&lt;/AllowHardTerminate&gt;
-		&lt;StartWhenAvailable&gt;false&lt;/StartWhenAvailable&gt;
-		&lt;RunOnlyIfNetworkAvailable&gt;false&lt;/RunOnlyIfNetworkAvailable&gt;
-		&lt;IdleSettings&gt;
-			&lt;StopOnIdleEnd&gt;true&lt;/StopOnIdleEnd&gt;
-			&lt;RestartOnIdle&gt;false&lt;/RestartOnIdle&gt;
-		&lt;/IdleSettings&gt;
-		&lt;AllowStartOnDemand&gt;true&lt;/AllowStartOnDemand&gt;
-		&lt;Enabled&gt;true&lt;/Enabled&gt;
-		&lt;Hidden&gt;false&lt;/Hidden&gt;
-		&lt;RunOnlyIfIdle&gt;false&lt;/RunOnlyIfIdle&gt;
-		&lt;WakeToRun&gt;false&lt;/WakeToRun&gt;
-		&lt;ExecutionTimeLimit&gt;PT72H&lt;/ExecutionTimeLimit&gt;
-		&lt;Priority&gt;7&lt;/Priority&gt;
-	&lt;/Settings&gt;
-	&lt;Actions Context="Author"&gt;
-		&lt;Exec&gt;
-			&lt;Command&gt;C:\Windows\System32\wscript.exe&lt;/Command&gt;
-			&lt;Arguments&gt;C:\Windows\Setup\Scripts\MoveActiveHours.vbs&lt;/Arguments&gt;
-		&lt;/Exec&gt;
-	&lt;/Actions&gt;
-&lt;/Task&gt;
+<![CDATA[
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+	<Triggers>
+		<BootTrigger>
+			<Repetition>
+				<Interval>PT4H</Interval>
+				<StopAtDurationEnd>false</StopAtDurationEnd>
+			</Repetition>
+			<Enabled>true</Enabled>
+		</BootTrigger>
+		<RegistrationTrigger>
+			<Repetition>
+				<Interval>PT4H</Interval>
+				<StopAtDurationEnd>false</StopAtDurationEnd>
+			</Repetition>
+			<Enabled>true</Enabled>
+		</RegistrationTrigger>
+	</Triggers>
+	<Principals>
+		<Principal id="Author">
+			<UserId>S-1-5-19</UserId>
+			<RunLevel>LeastPrivilege</RunLevel>
+		</Principal>
+	</Principals>
+	<Settings>
+		<MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+		<DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+		<StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+		<AllowHardTerminate>true</AllowHardTerminate>
+		<StartWhenAvailable>false</StartWhenAvailable>
+		<RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+		<IdleSettings>
+			<StopOnIdleEnd>true</StopOnIdleEnd>
+			<RestartOnIdle>false</RestartOnIdle>
+		</IdleSettings>
+		<AllowStartOnDemand>true</AllowStartOnDemand>
+		<Enabled>true</Enabled>
+		<Hidden>false</Hidden>
+		<RunOnlyIfIdle>false</RunOnlyIfIdle>
+		<WakeToRun>false</WakeToRun>
+		<ExecutionTimeLimit>PT72H</ExecutionTimeLimit>
+		<Priority>7</Priority>
+	</Settings>
+	<Actions Context="Author">
+		<Exec>
+			<Command>C:\Windows\System32\wscript.exe</Command>
+			<Arguments>C:\Windows\Setup\Scripts\MoveActiveHours.vbs</Arguments>
+		</Exec>
+	</Actions>
+</Task>
+]]>
+		</File>
+		<File path="C:\Windows\Setup\Scripts\TurnOffSystemSounds.ps1">
+<![CDATA[
+$excludes = Get-ChildItem -LiteralPath 'Registry::HKU\DefaultUser\AppEvents\EventLabels' |
+    Where-Object -FilterScript { ($_ | Get-ItemProperty).ExcludeFromCPL -eq 1; } |
+    Select-Object -ExpandProperty 'PSChildName';
+Get-ChildItem -Path 'Registry::HKU\DefaultUser\AppEvents\Schemes\Apps\*\*' |
+    Where-Object -Property 'PSChildName' -NotIn $excludes |
+    Get-ChildItem -Include '.Current' | Set-ItemProperty -Name '(Default)' -Value '';
+]]>
 		</File>
 		<File path="C:\Windows\Setup\Scripts\SetStartPins.ps1">
+<![CDATA[
 $json = '{"pinnedList":[]}';
 if( [System.Environment]::OSVersion.Version.Build -lt 20000 ) {
 	return;
@@ -422,51 +444,44 @@ if( [System.Environment]::OSVersion.Version.Build -lt 20000 ) {
 $key = 'Registry::HKLM\SOFTWARE\Microsoft\PolicyManager\current\device\Start';
 New-Item -Path $key -ItemType 'Directory' -ErrorAction 'SilentlyContinue';
 Set-ItemProperty -LiteralPath $key -Name 'ConfigureStartPins' -Value $json -Type 'String';
+]]>
 		</File>
 		<File path="C:\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml">
-&lt;LayoutModificationTemplate Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification"&gt;
-	&lt;LayoutOptions StartTileGroupCellWidth="6" /&gt;
-	&lt;DefaultLayoutOverride&gt;
-		&lt;StartLayoutCollection&gt;
-			&lt;StartLayout GroupCellWidth="6" xmlns="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" /&gt;
-		&lt;/StartLayoutCollection&gt;
-	&lt;/DefaultLayoutOverride&gt;
-&lt;/LayoutModificationTemplate&gt;
+<![CDATA[
+<LayoutModificationTemplate Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
+	<LayoutOptions StartTileGroupCellWidth="6" />
+	<DefaultLayoutOverride>
+		<StartLayoutCollection>
+			<StartLayout GroupCellWidth="6" xmlns="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" />
+		</StartLayoutCollection>
+	</DefaultLayoutOverride>
+</LayoutModificationTemplate>
+]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\unattend-01.cmd">
-:: CMD script: these scripts will run in the system context, before user accounts are created.
+		<File path="C:\Windows\Setup\Scripts\unattend-01.ps1">
+<![CDATA[
+# These script will run in the system context, before user accounts are created.
+]]>
 		</File>
 		<File path="C:\Windows\Setup\Scripts\unattend-02.ps1">
-# PS1 script: these scripts will run in the system context, before user accounts are created.
+<![CDATA[
+# These script will run when the firt user logs on after Windows has been installed.
+# The first user to log on is typically an administrator.
+]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\unattend-03.reg">
-Windows Registry Editor Version 5.00
-
-; REG script: these scripts will run in the system context, before user accounts are created.
+		<File path="C:\Windows\Setup\Scripts\unattend-03.ps1">
+<![CDATA[
+# These script will run whenever a user logs on for the first time.
+]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\unattend-04.cmd">
-:: CMD script: these scripts will run whenever a user logs on for the first time.
-		</File>
-		<File path="C:\Windows\Setup\Scripts\unattend-05.ps1">
-# PS1 script: these scripts will run whenever a user logs on for the first time.
-		</File>
-		<File path="C:\Windows\Setup\Scripts\unattend-06.reg">
-Windows Registry Editor Version 5.00
-
-; REG script: these scripts will run whenever a user logs on for the first time.
-		</File>
-		<File path="C:\Windows\Setup\Scripts\unattend-07.cmd">
-:: CMD script: scripts to modify the default user.
-		</File>
-		<File path="C:\Windows\Setup\Scripts\unattend-08.ps1">
-# PS1 script: scripts to modify the default user.
-		</File>
-		<File path="C:\Windows\Setup\Scripts\unattend-09.reg">
-Windows Registry Editor Version 5.00
-
-; REG script: scripts to modify the default user.
+		<File path="C:\Windows\Setup\Scripts\unattend-04.ps1">
+<![CDATA[
+# Use this script to modify the default user's registry hive. For example:
+# Registry::HKU\DefaultUser\...
+]]>
 		</File>
 		<File path="C:\Windows\Setup\Scripts\Specialize.ps1">
+<![CDATA[
 $scripts = @(
 	{
 		reg.exe add "HKLM\SYSTEM\Setup\MoSetup" /v AllowUpgradesWithUnsupportedTPMOrCPU /t REG_DWORD /d 1 /f;
@@ -487,13 +502,13 @@ $scripts = @(
 		reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Communications" /v ConfigureChatAutoInstall /t REG_DWORD /d 0 /f;
 	};
 	{
-		&amp; 'C:\Windows\Setup\Scripts\RemovePackages.ps1';
+		& 'C:\Windows\Setup\Scripts\RemovePackages.ps1';
 	};
 	{
-		&amp; 'C:\Windows\Setup\Scripts\RemoveCapabilities.ps1';
+		& 'C:\Windows\Setup\Scripts\RemoveCapabilities.ps1';
 	};
 	{
-		&amp; 'C:\Windows\Setup\Scripts\RemoveFeatures.ps1';
+		& 'C:\Windows\Setup\Scripts\RemoveFeatures.ps1';
 	};
 	{
 		net.exe accounts /maxpwage:UNLIMITED;
@@ -506,9 +521,6 @@ $scripts = @(
 	};
 	{
 		reg.exe add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f
-	};
-	{
-		icacls.exe C:\ /remove:g "*S-1-5-11"
 	};
 	{
 		Remove-Item -LiteralPath 'C:\Users\Public\Desktop\Microsoft Edge.lnk' -ErrorAction 'SilentlyContinue' -Verbose;
@@ -533,6 +545,10 @@ $scripts = @(
 		reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /t REG_DWORD /d 0 /f;
 	};
 	{
+		reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" /v DisableStartupSound /t REG_DWORD /d 1 /f;
+		reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\EditionOverrides" /v UserSetting_DisableStartupSound /t REG_DWORD /d 1 /f;
+	};
+	{
 		reg.exe add "HKLM\Software\Policies\Microsoft\Windows\CloudContent" /v "DisableWindowsConsumerFeatures" /t REG_DWORD /d 1 /f;
 	};
 	{
@@ -546,7 +562,7 @@ $scripts = @(
 		reg.exe add "HKLM\Software\Policies\Microsoft\Edge\Recommended" /v StartupBoostEnabled /t REG_DWORD /d 0 /f;
 	};
 	{
-		&amp; 'C:\Windows\Setup\Scripts\SetStartPins.ps1';
+		& 'C:\Windows\Setup\Scripts\SetStartPins.ps1';
 	};
 	{
 		Set-ItemProperty -LiteralPath "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects\ControlAnimations" -Name 'DefaultValue' -Value 0 -Type 'DWord' -Force;
@@ -568,48 +584,47 @@ $scripts = @(
 		Set-ItemProperty -LiteralPath "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects\DropShadow" -Name 'DefaultValue' -Value 0 -Type 'DWord' -Force;
 	};
 	{
-		  reg.exe add "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableAutomaticRestartSignOn" /t REG_DWORD /d 1 /f;
+		reg.exe add "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableAutomaticRestartSignOn" /t REG_DWORD /d 1 /f;
 	};
 	{
-		C:\Windows\Setup\Scripts\unattend-01.cmd;
-	};
-	{
-		&amp; 'C:\Windows\Setup\Scripts\unattend-02.ps1';
-	};
-	{
-		reg.exe import "C:\Windows\Setup\Scripts\unattend-03.reg";
+		& 'C:\Windows\Setup\Scripts\unattend-01.ps1';
 	};
 );
 
-&amp; {
+& {
   [float] $complete = 0;
   [float] $increment = 100 / $scripts.Count;
   foreach( $script in $scripts ) {
     Write-Progress -Activity 'Running scripts to customize your Windows installation. Do not close this window.' -PercentComplete $complete;
-    '*** Will now execute command &#xAB;{0}&#xBB;.' -f $(
+    "*** Will now execute command $([char]0xAB){0}$([char]0xBB)." -f $(
       $str = $script.ToString().Trim() -replace '\s+', ' ';
       $max = 100;
       if( $str.Length -le $max ) {
         $str;
       } else {
-        $str.Substring( 0, $max - 1 ) + '&#x2026;';
+        $str.Substring( 0, $max - 1 ) + "$([char]0x2026)";
       }
     );
     $start = [datetime]::Now;
-    &amp; $script;
+    & $script;
     '*** Finished executing command after {0:0} ms.' -f [datetime]::Now.Subtract( $start ).TotalMilliseconds;
     "`r`n" * 3;
     $complete += $increment;
   }
-} *&gt;&amp;1 | Out-String -Width 1KB -Stream &gt;&gt; "C:\Windows\Setup\Scripts\Specialize.log";
+} *>&1 | Out-String -Width 1KB -Stream >> "C:\Windows\Setup\Scripts\Specialize.log";
+]]>
 		</File>
 		<File path="C:\Windows\Setup\Scripts\UserOnce.ps1">
+<![CDATA[
 $scripts = @(
 	{
 		Get-AppxPackage -Name 'Microsoft.Windows.Ai.Copilot.Provider' | Remove-AppxPackage;
 	};
 	{
 		Remove-Item -LiteralPath "${env:USERPROFILE}\Desktop\Microsoft Edge.lnk" -ErrorAction 'SilentlyContinue' -Verbose;
+	};
+	{
+		Set-ItemProperty -LiteralPath 'Registry::HKCU\AppEvents\Schemes' -Name '(Default)' -Type 'String' -Value '.None';
 	};
 	{
 		reg.exe add "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" /ve /f;
@@ -624,13 +639,7 @@ $scripts = @(
 		Set-ItemProperty -LiteralPath 'Registry::HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' -Name 'VisualFXSetting' -Type 'DWord' -Value 3 -Force;
 	};
 	{
-		C:\Windows\Setup\Scripts\unattend-04.cmd;
-	};
-	{
-		&amp; 'C:\Windows\Setup\Scripts\unattend-05.ps1';
-	};
-	{
-		reg.exe import "C:\Windows\Setup\Scripts\unattend-06.reg";
+		& 'C:\Windows\Setup\Scripts\unattend-03.ps1';
 	};
 	{
 		Get-Process -Name 'explorer' -ErrorAction 'SilentlyContinue' | Where-Object -FilterScript {
@@ -639,35 +648,34 @@ $scripts = @(
 	};
 );
 
-&amp; {
+& {
   [float] $complete = 0;
   [float] $increment = 100 / $scripts.Count;
   foreach( $script in $scripts ) {
     Write-Progress -Activity 'Running scripts to configure this user account. Do not close this window.' -PercentComplete $complete;
-    '*** Will now execute command &#xAB;{0}&#xBB;.' -f $(
+    "*** Will now execute command $([char]0xAB){0}$([char]0xBB)." -f $(
       $str = $script.ToString().Trim() -replace '\s+', ' ';
       $max = 100;
       if( $str.Length -le $max ) {
         $str;
       } else {
-        $str.Substring( 0, $max - 1 ) + '&#x2026;';
+        $str.Substring( 0, $max - 1 ) + "$([char]0x2026)";
       }
     );
     $start = [datetime]::Now;
-    &amp; $script;
+    & $script;
     '*** Finished executing command after {0:0} ms.' -f [datetime]::Now.Subtract( $start ).TotalMilliseconds;
     "`r`n" * 3;
     $complete += $increment;
   }
-} *&gt;&amp;1 | Out-String -Width 1KB -Stream &gt;&gt; "$env:TEMP\UserOnce.log";
+} *>&1 | Out-String -Width 1KB -Stream >> "$env:TEMP\UserOnce.log";
+]]>
 		</File>
 		<File path="C:\Windows\Setup\Scripts\DefaultUser.ps1">
+<![CDATA[
 $scripts = @(
 	{
 		reg.exe add "HKU\DefaultUser\Software\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f;
-	};
-	{
-		reg.exe add "HKU\DefaultUser\Software\Microsoft\Internet Explorer\LowRegistry\Audio\PolicyConfig\PropertyStore" /f;
 	};
 	{
 		Remove-ItemProperty -LiteralPath 'Registry::HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'OneDriveSetup' -Force -ErrorAction 'Continue';
@@ -686,6 +694,9 @@ $scripts = @(
 	};
 	{
 		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowTaskViewButton /t REG_DWORD /d 0 /f;
+	};
+	{
+		& 'C:\Windows\Setup\Scripts\TurnOffSystemSounds.ps1';
 	};
 	{
 		$names = @(
@@ -716,75 +727,86 @@ $scripts = @(
 		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAl /t REG_DWORD /d 0 /f;
 	};
 	{
+		$params = @{
+		  LiteralPath = 'Registry::HKU\DefaultUser\Control Panel\Mouse';
+		  Type = 'String';
+		  Value = 0;
+		  Force = $true;
+		};
+		Set-ItemProperty @params -Name 'MouseSpeed';
+		Set-ItemProperty @params -Name 'MouseThreshold1';
+		Set-ItemProperty @params -Name 'MouseThreshold2';
+	};
+	{
 		reg.exe add "HKU\DefaultUser\Software\Policies\Microsoft\Windows\Explorer" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f;
 	};
 	{
 		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings" /v TaskbarEndTask /t REG_DWORD /d 1 /f;
 	};
 	{
-		C:\Windows\Setup\Scripts\unattend-07.cmd;
-	};
-	{
-		&amp; 'C:\Windows\Setup\Scripts\unattend-08.ps1';
-	};
-	{
-		reg.exe import "C:\Windows\Setup\Scripts\unattend-09.reg";
+		& 'C:\Windows\Setup\Scripts\unattend-04.ps1';
 	};
 	{
 		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v "UnattendedSetup" /t REG_SZ /d "powershell.exe -WindowStyle \""Normal\"" -ExecutionPolicy \""Unrestricted\"" -NoProfile -File \""C:\Windows\Setup\Scripts\UserOnce.ps1\""" /f;
 	};
 );
 
-&amp; {
+& {
   [float] $complete = 0;
   [float] $increment = 100 / $scripts.Count;
   foreach( $script in $scripts ) {
-    Write-Progress -Activity 'Running scripts to modify the default user&#x2019;&#x2019;s registry hive. Do not close this window.' -PercentComplete $complete;
-    '*** Will now execute command &#xAB;{0}&#xBB;.' -f $(
+    Write-Progress -Activity "Running scripts to modify the default user$([char]0x2019)$([char]0x2019)s registry hive. Do not close this window." -PercentComplete $complete;
+    "*** Will now execute command $([char]0xAB){0}$([char]0xBB)." -f $(
       $str = $script.ToString().Trim() -replace '\s+', ' ';
       $max = 100;
       if( $str.Length -le $max ) {
         $str;
       } else {
-        $str.Substring( 0, $max - 1 ) + '&#x2026;';
+        $str.Substring( 0, $max - 1 ) + "$([char]0x2026)";
       }
     );
     $start = [datetime]::Now;
-    &amp; $script;
+    & $script;
     '*** Finished executing command after {0:0} ms.' -f [datetime]::Now.Subtract( $start ).TotalMilliseconds;
     "`r`n" * 3;
     $complete += $increment;
   }
-} *&gt;&amp;1 | Out-String -Width 1KB -Stream &gt;&gt; "C:\Windows\Setup\Scripts\DefaultUser.log";
+} *>&1 | Out-String -Width 1KB -Stream >> "C:\Windows\Setup\Scripts\DefaultUser.log";
+]]>
 		</File>
 		<File path="C:\Windows\Setup\Scripts\FirstLogon.ps1">
+<![CDATA[
 $scripts = @(
 	{
 		Disable-ComputerRestore -Drive 'C:\';
 	};
+	{
+		& 'C:\Windows\Setup\Scripts\unattend-02.ps1';
+	};
 );
 
-&amp; {
+& {
   [float] $complete = 0;
   [float] $increment = 100 / $scripts.Count;
   foreach( $script in $scripts ) {
     Write-Progress -Activity 'Running scripts to finalize your Windows installation. Do not close this window.' -PercentComplete $complete;
-    '*** Will now execute command &#xAB;{0}&#xBB;.' -f $(
+    "*** Will now execute command $([char]0xAB){0}$([char]0xBB)." -f $(
       $str = $script.ToString().Trim() -replace '\s+', ' ';
       $max = 100;
       if( $str.Length -le $max ) {
         $str;
       } else {
-        $str.Substring( 0, $max - 1 ) + '&#x2026;';
+        $str.Substring( 0, $max - 1 ) + "$([char]0x2026)";
       }
     );
     $start = [datetime]::Now;
-    &amp; $script;
+    & $script;
     '*** Finished executing command after {0:0} ms.' -f [datetime]::Now.Subtract( $start ).TotalMilliseconds;
     "`r`n" * 3;
     $complete += $increment;
   }
-} *&gt;&amp;1 | Out-String -Width 1KB -Stream &gt;&gt; "C:\Windows\Setup\Scripts\FirstLogon.log";
+} *>&1 | Out-String -Width 1KB -Stream >> "C:\Windows\Setup\Scripts\FirstLogon.log";
+]]>
 		</File>
 	</Extensions>
 </unattend>
