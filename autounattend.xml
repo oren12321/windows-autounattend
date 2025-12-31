@@ -143,7 +143,7 @@ $getCommand = {
   Get-AppxProvisionedPackage -Online;
 };
 $filterCommand = {
-  $_.DisplayName -eq $selector;
+  $_.DisplayName -like "*$selector*";
 };
 $removeCommand = {
   [CmdletBinding()]
@@ -153,6 +153,16 @@ $removeCommand = {
   );
   process {
     $InputObject | Remove-AppxProvisionedPackage -AllUsers -Online -ErrorAction 'Continue';
+    
+    $PFN = (Get-AppxPackage -Name $InputObject.DisplayName -AllUsers).PackageFamilyName
+
+    if ($PFN) {
+        $RegPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\$PFN"
+        if (!(Test-Path $RegPath)) {
+            # Use | Out-Null to prevent this from being captured by $result.Output
+            New-Item -Path $RegPath -Force | Out-Null
+        }
+    }
   }
 };
 $type = 'Package';
@@ -458,9 +468,18 @@ Set-ItemProperty -LiteralPath $key -Name 'ConfigureStartPins' -Value $json -Type
 </LayoutModificationTemplate>
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\unattend-01.ps1">
+		<File path="C:\Windows\Setup\Scripts\OneDriveRemovalAdditions.ps1">
 <![CDATA[
-# These script will run in the system context, before user accounts are created.
+# 1. Create the Appx Deprovisioned Marker
+$OneDrivePFN = "Microsoft.OneDrive_8wekyb3d8bbwe"
+$DeprovisionPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\$OneDrivePFN"
+if (!(Test-Path $DeprovisionPath)) { New-Item -Path $DeprovisionPath -Force }
+
+# 2. Block the legacy system-wide installer via Policy
+# This is the "Gold Standard" for 2025 to stop the .exe from returning
+$PolicyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive"
+if (!(Test-Path $PolicyPath)) { New-Item -Path $PolicyPath -Force }
+New-ItemProperty -Path $PolicyPath -Name "DisableFileSyncNGSC" -Value 1 -PropertyType DWORD -Force
 ]]>
 		</File>
 		<File path="C:\Windows\Setup\Scripts\unattend-02.ps1">
@@ -587,7 +606,7 @@ $scripts = @(
 		reg.exe add "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableAutomaticRestartSignOn" /t REG_DWORD /d 1 /f;
 	};
 	{
-		& 'C:\Windows\Setup\Scripts\unattend-01.ps1';
+		& 'C:\Windows\Setup\Scripts\OneDriveRemovalAdditions.ps1';
 	};
 );
 
