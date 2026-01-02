@@ -632,6 +632,9 @@ $scripts = @(
     {
         & 'C:\Windows\Setup\Scripts\ExplorerSettings.ps1'
     };
+    {
+        & 'C:\Windows\Setup\Scripts\StartMenuAndTaskbarSettings.ps1'
+    };
 );
 
 & {
@@ -1995,6 +1998,45 @@ Windows Registry Editor Version 5.00
 Remove-RegistryKey -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{f874310e-b6b7-47dc-bc84-b9e6b38f5903}' -Description 'Display the Home folder in the navigation pane as a shortcut to your user profile folder'
 Remove-RegistryKey -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{e88865ea-0e1c-4e20-9aa6-edcd0212c87c}' -Description 'Display the Gallery folder in the navigation pane for quick access to all your photos and videos'
 Set-RegistryValue -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled' -Type 'DWord' -Value 1 -Description 'Enables support for file paths with up to 32,767 characters instead of the traditional 260-character limit'
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\StartMenuAndTaskbarSettings.ps1">
+<![CDATA[
+function Set-RegistryValue {
+    param(
+        [string]$Path,
+        [string]$Name,
+        [string]$Type,
+        $Value,
+        [string]$Description
+    )
+
+    try {
+        if (-not (Test-Path $Path)) {
+            New-Item -Path $Path -Force | Out-Null
+        }
+        Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $Type -Force
+        Write-Output "$Description | $Path\$Name = $Value"
+    }
+    catch {
+        Write-Output "Failed to set $Path\$Name : $($_.Exception.Message)"
+    }
+}
+
+# ============================================================================
+# START MENU SETTINGS
+# ============================================================================
+
+Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'HideRecommendedSection' -Type 'DWord' -Value 1 -Description 'Show or hide the lower section that displays recently opened files and suggested apps'
+Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Start' -Name 'HideRecommendedSection' -Type 'DWord' -Value 1 -Description 'Show or hide the lower section that displays recently opened files and suggested apps'
+Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Education' -Name 'IsEducationEnvironment' -Type 'DWord' -Value 1 -Description 'Show or hide the lower section that displays recently opened files and suggested apps'
+Set-RegistryValue -Path 'HKLM:\Software\Policies\Microsoft\Windows\Explorer' -Name 'DisableSearchBoxSuggestions' -Type 'DWord' -Value 1 -Description 'Prevent web results from Bing from appearing when searching in the Start Menu, showing only local files and apps'
+
+# ============================================================================
+# TASKBAR SETTINGS
+# ============================================================================
+
+Set-RegistryValue -Path 'HKLM:\Software\Policies\Microsoft\Dsh' -Name 'AllowNewsAndInterests' -Type 'DWord' -Value 0 -Description 'Show the Widgets button that displays personalized news, weather, calendar, and other information'
 ]]>
         </File>
 	</Extensions>
