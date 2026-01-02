@@ -611,6 +611,9 @@ $scripts = @(
     {
         & 'C:\Windows\Setup\Scripts\EdgeRemoval.ps1';
     };
+    {
+        & 'C:\Windows\Setup\Scripts\PowerPlanSettings.ps1';
+    };
 );
 
 & {
@@ -1397,7 +1400,7 @@ foreach ($PFN in $EdgePFNs) {
     $Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\$PFN"
     if (!(Test-Path $Path)) {
         New-Item -Path $Path -Force | Out-Null
-        Write-Host "Deprovisioned marker added for: $PFN"
+        Write-Output "Deprovisioned marker added for: $PFN"
     }
 }
 
@@ -1405,5 +1408,164 @@ Write-Output "Done."
 Write-Output "Done. See $logFile for details."
 ]]>
 		</File>
+        <File path="C:\Windows\Setup\Scripts\PowerPlanSettings.ps1">
+<![CDATA[
+Write-Output "Setting up power plan: High Performance Laptop Plan..."
+
+$customPlanGuid = "57696e68-616e-6365-506f-776572000000"
+
+$existingPlan = powercfg /query $customPlanGuid 2>&1
+$planExists = $LASTEXITCODE -eq 0
+
+if ($planExists) {
+    Write-Output "Power plan already exists, using existing plan"
+} else {
+    Write-Output "Creating new power plan..."
+    $planCreated = $false
+
+    $sourceSchemes = @(
+        @{ Name = "Ultimate Performance"; Guid = "e9a42b02-d5df-448d-aa00-03f14749eb61" },
+        @{ Name = "High Performance"; Guid = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c" },
+        @{ Name = "Balanced"; Guid = "381b4222-f694-41f0-9685-ff5bb260df2e" }
+    )
+
+    foreach ($scheme in $sourceSchemes) {
+        Write-Output "Attempting to duplicate from $($scheme.Name)..."
+        $result = powercfg /duplicatescheme $($scheme.Guid) $customPlanGuid 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Output "Successfully created from $($scheme.Name)"
+            powercfg /changename $customPlanGuid "High Performance Laptop Plan" | Out-Null
+            $planCreated = $true
+            break
+        }
+    }
+
+    if (-not $planCreated) {
+        Write-Output "Failed to create power plan"
+    }
+}
+
+Write-Output "Disabling hibernation..."
+powercfg /hibernate on 2>$null
+Write-Output "Hibernation enabled"
+
+Write-Output "Enabling hidden power settings..."
+$PowerSettingsBasePath = "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerSettings"
+$hiddenSettings = @(
+    @{ Subgroup = "2a737441-1930-4402-8d77-b2bebba308a3"; Setting = "0853a681-27c8-4100-a2fd-82013e970683" },
+    @{ Subgroup = "2a737441-1930-4402-8d77-b2bebba308a3"; Setting = "d4e98f31-5ffe-4ce1-be31-1b38b384c009" },
+    @{ Subgroup = "4f971e89-eebd-4455-a8de-9e59040e7347"; Setting = "7648efa3-dd9c-4e3e-b566-50f929386280" },
+    @{ Subgroup = "4f971e89-eebd-4455-a8de-9e59040e7347"; Setting = "96996bc0-ad50-47ec-923b-6f41874dd9eb" },
+    @{ Subgroup = "4f971e89-eebd-4455-a8de-9e59040e7347"; Setting = "5ca83367-6e45-459f-a27b-476b1d01c936" },
+    @{ Subgroup = "54533251-82be-4824-96c1-47b60b740d00"; Setting = "94d3a615-a899-4ac5-ae2b-e4d8f634367f" },
+    @{ Subgroup = "54533251-82be-4824-96c1-47b60b740d00"; Setting = "be337238-0d82-4146-a960-4f3749d470c7" },
+    @{ Subgroup = "54533251-82be-4824-96c1-47b60b740d00"; Setting = "465e1f50-b610-473a-ab58-00d1077dc418" },
+    @{ Subgroup = "54533251-82be-4824-96c1-47b60b740d00"; Setting = "40fbefc7-2e9d-4d25-a185-0cfd8574bac6" },
+    @{ Subgroup = "54533251-82be-4824-96c1-47b60b740d00"; Setting = "0cc5b647-c1df-4637-891a-dec35c318583" },
+    @{ Subgroup = "54533251-82be-4824-96c1-47b60b740d00"; Setting = "ea062031-0e34-4ff1-9b6d-eb1059334028" },
+    @{ Subgroup = "54533251-82be-4824-96c1-47b60b740d00"; Setting = "36687f9e-e3a5-4dbf-b1dc-15eb381c6863" },
+    @{ Subgroup = "54533251-82be-4824-96c1-47b60b740d00"; Setting = "06cadf0e-64ed-448a-8927-ce7bf90eb35d" },
+    @{ Subgroup = "54533251-82be-4824-96c1-47b60b740d00"; Setting = "12a0ab44-fe28-4fa9-b3bd-4b64f44960a6" }
+)
+
+$enabledCount = 0
+foreach ($item in $hiddenSettings) {
+    $regPath = Join-Path $PowerSettingsBasePath "$($item.Subgroup)\$($item.Setting)"
+    try {
+        if (Test-Path $regPath) {
+            Set-ItemProperty -Path $regPath -Name "Attributes" -Value 0 -Type DWord -ErrorAction Stop
+            $enabledCount++
+        }
+    } catch {
+    }
+}
+Write-Output "Enabled $enabledCount hidden power settings"
+
+Write-Output "Applying power settings..."
+
+$settings = @(
+    @{ S="7516b95f-f776-4464-8c53-06167f40cc99"; G="3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e"; AC=0; DC=300; N="Specifies the period of inactivity before Windows turns off the display" },
+    @{ S="0012ee47-9041-4b5d-9b77-535fba8b1442"; G="6738e2c4-e8a5-4a42-b16a-e040e769756e"; AC=0; DC=600; N="Specifies the period of inactivity before Windows turns off the hard disk" },
+    @{ S="02f815b5-a5cf-4c84-bf20-649d1f75d3d8"; G="4c793e7d-a264-42e1-87d3-7a0d2f523ccd"; AC=0; DC=1; N="Specifies the frequency of JavaScript timers" },
+    @{ S="0d7dbae2-4294-402a-ba8e-26777e8488cd"; G="309dce9b-bef4-4119-9921-a851fb12f0f4"; AC=1; DC=1; N="Allow or prevent Windows from rotating through multiple wallpaper images" },
+    @{ S="19cbb8fa-5279-450e-9fac-8a3d5fedd0c1"; G="12bbebe6-58d6-4636-95bb-3217ef867c1a"; AC=0; DC=2; N="Balance wireless network performance with battery life by adjusting adapter power usage" },
+    @{ S="238c9fa8-0aad-41ed-83f4-97be242c8f20"; G="29f6c1db-86da-48c5-9fdb-f2b67b1f44da"; AC=0; DC=900; N="Specifies the period of inactivity before Windows puts the computer to sleep" },
+    @{ S="238c9fa8-0aad-41ed-83f4-97be242c8f20"; G="bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d"; AC=0; DC=0; N="Allow scheduled tasks and applications to wake your computer from sleep" },
+    @{ S="238c9fa8-0aad-41ed-83f4-97be242c8f20"; G="9d7815a6-7ee4-497e-8888-515a05f02364"; AC=0; DC=10800; N="Specifies the period of inactivity before Windows hibernates the computer" },
+    @{ S="238c9fa8-0aad-41ed-83f4-97be242c8f20"; G="94ac6d29-73ce-41a6-809f-6363ba21b47e"; AC=0; DC=0; N="Combines sleep and hibernate by saving your session to disk while staying in low-power mode for faster wake" },
+    @{ S="2a737441-1930-4402-8d77-b2bebba308a3"; G="0853a681-27c8-4100-a2fd-82013e970683"; AC=50; DC=50; N="Set how long USB hubs wait idle before powering down to save energy" },
+    @{ S="2a737441-1930-4402-8d77-b2bebba308a3"; G="48e6b7a6-50f5-4782-a5d4-53bb8f07e226"; AC=1; DC=1; N="Allow Windows to power down individual USB ports when devices are idle to save energy" },
+    @{ S="2a737441-1930-4402-8d77-b2bebba308a3"; G="d4e98f31-5ffe-4ce1-be31-1b38b384c009"; AC=2; DC=2; N="Control how aggressively USB 3.0 ports enter low-power states when devices are idle" },
+    @{ S="44f3beca-a7c0-460e-9df2-bb8b99e0cba6"; G="3619c3f2-afb2-4afc-b0e9-e7fef372de36"; AC=1; DC=1; N="Balance Intel integrated graphics performance with power consumption and battery life" },
+    @{ S="4f971e89-eebd-4455-a8de-9e59040e7347"; G="7648efa3-dd9c-4e3e-b566-50f929386280"; AC=1; DC=1; N="Choose what happens when you press the physical power button on your computer" },
+    @{ S="4f971e89-eebd-4455-a8de-9e59040e7347"; G="96996bc0-ad50-47ec-923b-6f41874dd9eb"; AC=1; DC=1; N="Choose what happens when you press the dedicated sleep button on your keyboard or computer" },
+    @{ S="4f971e89-eebd-4455-a8de-9e59040e7347"; G="5ca83367-6e45-459f-a27b-476b1d01c936"; AC=1; DC=1; N="Choose what happens when you close your laptop lid" },
+    @{ S="501a4d13-42af-4429-9fd1-a8218c268e20"; G="ee12f906-d277-404b-b6da-e5fa1a576df5"; AC=0; DC=2; N="Control power savings for PCIe devices like graphics cards, SSDs, and expansion cards" },
+    @{ S="54533251-82be-4824-96c1-47b60b740d00"; G="893dee8e-2bef-41e0-89c6-b55d0929964c"; AC=5; DC=5; N="Set the lowest CPU speed allowed as a percentage of maximum frequency" },
+    @{ S="54533251-82be-4824-96c1-47b60b740d00"; G="bc5038f7-23e0-4960-96da-33abaf5935ec"; AC=100; DC=80; N="Set the highest CPU speed allowed as a percentage of maximum frequency" },
+    @{ S="54533251-82be-4824-96c1-47b60b740d00"; G="94d3a615-a899-4ac5-ae2b-e4d8f634367f"; AC=1; DC=1; N="Choose whether to slow down the processor first (passive) or speed up fans first (active) when hot" },
+    @{ S="54533251-82be-4824-96c1-47b60b740d00"; G="be337238-0d82-4146-a960-4f3749d470c7"; AC=2; DC=1; N="Control how aggressively your CPU boosts above base frequency for demanding tasks" },
+    @{ S="54533251-82be-4824-96c1-47b60b740d00"; G="465e1f50-b610-473a-ab58-00d1077dc418"; AC=2; DC=0; N="Control how quickly CPU ramps up speed when workload increases (for legacy non-HWP processors)" },
+    @{ S="54533251-82be-4824-96c1-47b60b740d00"; G="40fbefc7-2e9d-4d25-a185-0cfd8574bac6"; AC=1; DC=2; N="Control how quickly CPU reduces speed when workload decreases (for legacy non-HWP processors)" },
+    @{ S="54533251-82be-4824-96c1-47b60b740d00"; G="0cc5b647-c1df-4637-891a-dec35c318583"; AC=0; DC=0; N="Set the minimum percentage of CPU cores that must remain active and responsive" },
+    @{ S="54533251-82be-4824-96c1-47b60b740d00"; G="ea062031-0e34-4ff1-9b6d-eb1059334028"; AC=100; DC=100; N="Set the maximum percentage of CPU cores allowed to be active (100% for best performance)" },
+    @{ S="54533251-82be-4824-96c1-47b60b740d00"; G="36687f9e-e3a5-4dbf-b1dc-15eb381c6863"; AC=0; DC=50; N="Balance power efficiency and performance for modern CPUs with HWP (0 = max performance, 100 = max efficiency)" },
+    @{ S="54533251-82be-4824-96c1-47b60b740d00"; G="06cadf0e-64ed-448a-8927-ce7bf90eb35d"; AC=10; DC=30; N="Set CPU usage percentage that triggers speed increase (lower = more responsive, for legacy non-HWP CPUs)" },
+    @{ S="54533251-82be-4824-96c1-47b60b740d00"; G="12a0ab44-fe28-4fa9-b3bd-4b64f44960a6"; AC=8; DC=20; N="Set CPU usage percentage that triggers speed reduction (lower = maintains performance longer, for legacy non-HWP CPUs)" },
+    @{ S="9596fb26-9850-41fd-ac3e-f7c3c00afd4b"; G="03680956-93bc-4294-bba6-4e0f09bb717f"; AC=1; DC=1; N="Control whether your PC can sleep while streaming media to other devices on your network" },
+    @{ S="9596fb26-9850-41fd-ac3e-f7c3c00afd4b"; G="10778347-1370-4ee0-8bbd-33bdacaade49"; AC=1; DC=1; N="Prioritize smooth video playback over battery life when watching videos" },
+    @{ S="9596fb26-9850-41fd-ac3e-f7c3c00afd4b"; G="34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4"; AC=0; DC=0; N="Balance video quality and power consumption during video playback" },
+    @{ S="e73a048d-bf27-4f12-9731-8b2076e8891f"; G="5dbb7c9f-38e9-40d2-9749-4f8a0e9f640f"; AC=1; DC=1; N="Show notification when battery reaches critically low level" },
+    @{ S="e73a048d-bf27-4f12-9731-8b2076e8891f"; G="637ea02f-bbcb-4015-8e2c-a1c7b9c0b546"; AC=2; DC=2; N="Choose what happens when battery reaches critically low level" },
+    @{ S="e73a048d-bf27-4f12-9731-8b2076e8891f"; G="8183ba9a-e910-48da-8769-14ae6dc1170a"; AC=10; DC=10; N="Set the battery percentage that triggers low battery warnings and actions" },
+    @{ S="e73a048d-bf27-4f12-9731-8b2076e8891f"; G="9a66d8d7-4ff7-4ef9-b5a2-5a326ca2a469"; AC=5; DC=5; N="Set the battery percentage that triggers critical battery warnings and emergency actions" },
+    @{ S="e73a048d-bf27-4f12-9731-8b2076e8891f"; G="bcded951-187b-4d05-bccc-f7e51960c258"; AC=1; DC=1; N="Show notification when battery reaches low battery level" },
+    @{ S="e73a048d-bf27-4f12-9731-8b2076e8891f"; G="d8742dcb-3e6a-4b3c-b3fe-374623cdcf06"; AC=0; DC=0; N="Choose what happens when battery reaches low battery level" },
+    @{ S="e73a048d-bf27-4f12-9731-8b2076e8891f"; G="f3c5027d-cd16-4930-aa6b-90db844a8f00"; AC=7; DC=7; N="Set battery percentage reserved to protect battery health and prevent unexpected shutdowns" }
+)
+
+$appliedCount = 0
+$targetPlanGuid = "57696e68-616e-6365-506f-776572000000"
+foreach ($setting in $settings) {
+    try {
+        powercfg /setacvalueindex $targetPlanGuid $setting.S $setting.G $setting.AC 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            powercfg /setdcvalueindex $targetPlanGuid $setting.S $setting.G $setting.DC 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                $appliedCount++
+            }
+        }
+    } catch {
+    }
+}
+Write-Output "Applied $appliedCount power settings"
+
+Write-Output "Activating power plan..."
+powercfg /setactive 57696e68-616e-6365-506f-776572000000 2>$null
+if ($LASTEXITCODE -eq 0) {
+    Write-Output "Power plan activated successfully"
+} else {
+    Write-Output "Failed to activate power plan"
+}
+
+function Set-RegistryValue {
+    param(
+        [string]$Path,
+        [string]$Name,
+        [string]$Type,
+        $Value,
+        [string]$Description
+    )
+    if (-not (Test-Path $Path)) { New-Item -Path $Path -Force | Out-Null }
+    Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $Type -Force
+}
+
+Set-RegistryValue -Path 'HKLM:\SYSTEM\ControlSet001\Control\Session Manager\Power' -Name 'HiberbootEnabled' -Type 'DWord' -Value 0 -Description 'Hibernate system state during shutdown for faster boot times (does not affect restart)'
+Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings' -Name 'ShowHibernateOption' -Type 'DWord' -Value 1 -Description 'Display the Hibernate option in the Start Menu power button menu'
+Set-RegistryValue -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling' -Name 'PowerThrottlingOff' -Type 'DWord' -Value 1 -Description 'Automatically reduces CPU performance for background processes to improve battery life and reduce heat generation'
+Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings' -Name 'ShowLockOption' -Type 'DWord' -Value 1 -Description 'Display the Lock option in the Start Menu power button menu'
+Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings' -Name 'ShowSleepOption' -Type 'DWord' -Value 1 -Description 'Display the Sleep option in the Start Menu power button menu'
+]]>
+        </File>
 	</Extensions>
 </unattend>
