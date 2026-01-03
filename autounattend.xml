@@ -630,10 +630,13 @@ $scripts = @(
         & 'C:\Windows\Setup\Scripts\WindowsUpdateSettings.ps1';
     };
     {
-        & 'C:\Windows\Setup\Scripts\ExplorerSettings.ps1'
+        & 'C:\Windows\Setup\Scripts\ExplorerSettings.ps1';
     };
     {
-        & 'C:\Windows\Setup\Scripts\StartMenuAndTaskbarSettings.ps1'
+        & 'C:\Windows\Setup\Scripts\StartMenuAndTaskbarSettings.ps1';
+    };
+    {
+        & 'C:\Windows\Setup\Scripts\RestartNagTaskSetup.ps1';
     };
 );
 
@@ -691,9 +694,8 @@ $scripts = @(
 		& 'C:\Windows\Setup\Scripts\AdditionalUserSpecificSettings.ps1';
 	};
 	{
-		Get-Process -Name 'explorer' -ErrorAction 'SilentlyContinue' | Where-Object -FilterScript {
-			$_.SessionId -eq ( Get-Process -Id $PID ).SessionId;
-		} | Stop-Process -Force;
+		New-Item -Path "$env:LOCALAPPDATA\RestartNag_Done.tag" -ItemType "File" -Force;
+        Start-ScheduledTask -TaskName "RestartNag";
 	};
 );
 
@@ -2416,6 +2418,138 @@ if (-not (Test-Path $wallpaperPath)) {
         Write-Output "Failed to set wallpaper: $($_.Exception.Message)"
     }
 }
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\RestartNag.ps1">
+<![CDATA[
+$tagPath = "$env:LOCALAPPDATA\RestartNag_Done.tag"
+$timeout = New-TimeSpan -Minutes 15 # Maximum time to wait
+$timer = [System.Diagnostics.Stopwatch]::StartNew()
+
+while (!(Test-Path $tagPath)) {
+    if ($timer.Elapsed -gt $timeout) { break } # Stop waiting after 15 mins
+    Start-Sleep -Seconds 10
+}
+
+# STOP NAGGING IF REBOOT IS COMPLETE
+# Checks common registry keys that indicate a pending update reboot
+$rebootPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"
+$pendingFile = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name PendingFileRenameOperations -ErrorAction SilentlyContinue
+
+if (-not (Test-Path $rebootPath) -and ($null -eq $pendingFile)) {
+    exit # No reboot pending, exit silently
+}
+
+# PREVENT DUPLICATE WINDOWS
+# If the window is already open, don't open another one
+if (Get-Process -Name "powershell" | Where-Object { $_.MainWindowTitle -eq "Restart Required" }) { 
+    exit 
+}
+
+# FORCE STA MODE (Essential for Windows 10)
+if ($Host.Runspace.ApartmentState -ne 'STA') {
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Sta -File `"$PSCommandPath`""
+    return
+}
+
+# LOAD TYPES & ENABLE STYLES
+Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+[System.Windows.Forms.Application]::EnableVisualStyles()
+
+# THEME DETECTION (Windows 10 Taskbar match)
+$bgColor = [System.Drawing.Color]::FromArgb(45, 45, 48) # Dark Taskbar Gray
+$titleColor = [System.Drawing.Color]::White
+$descColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
+
+# Check for Light Mode
+$themePath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+$isLightTheme = Get-ItemPropertyValue -Path $themePath -Name "AppsUseLightTheme" -ErrorAction SilentlyContinue
+if ($isLightTheme -eq 1) {
+    $bgColor = [System.Drawing.Color]::FromArgb(240, 240, 240)
+    $titleColor = [System.Drawing.Color]::Black
+    $descColor = [System.Drawing.Color]::FromArgb(100, 100, 100)
+}
+
+# CREATE FORM
+$form = New-Object System.Windows.Forms.Form
+$form.Text = "Restart Required"
+$form.Size = New-Object System.Drawing.Size(360, 100)
+$form.FormBorderStyle = "None"
+$form.BackColor = $bgColor
+$form.TopMost = $true
+$form.Opacity = 0.95
+$form.ShowInTaskbar = $false
+
+# Position (Bottom-Right)
+$workingArea = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+$form.Location = New-Object System.Drawing.Point(($workingArea.Width - 370), ($workingArea.Height - 115))
+$form.StartPosition = "Manual"
+
+# UI Elements (Title)
+$title = New-Object System.Windows.Forms.Label
+$title.Text = "Restart Required"
+$title.ForeColor = $titleColor
+$title.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10.5)
+$title.AutoSize = $true
+$title.Location = New-Object System.Drawing.Point(15, 15)
+$form.Controls.Add($title)
+
+# UI Elements (Description)
+$desc = New-Object System.Windows.Forms.Label
+$desc.Text = "Please restart your computer to complete Windows installation customizations."
+$desc.ForeColor = $descColor
+$desc.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+$desc.Size = New-Object System.Drawing.Size(300, 40)
+$desc.Location = New-Object System.Drawing.Point(15, 40)
+$form.Controls.Add($desc)
+
+# Close Button
+$closeBtn = New-Object System.Windows.Forms.Button
+$closeBtn.Text = "X"
+$closeBtn.Size = New-Object System.Drawing.Size(25, 25)
+$closeBtn.Location = New-Object System.Drawing.Point(325, 12)
+$closeBtn.FlatStyle = "Flat"
+$closeBtn.FlatAppearance.BorderSize = 0
+$closeBtn.ForeColor = $titleColor
+$closeBtn.Add_Click({ $form.Close() })
+$form.Controls.Add($closeBtn)
+
+# SHOW DIALOG
+$form.ShowDialog() | Out-Null
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\RestartNagTaskSetup.ps1">
+<![CDATA[
+$ScriptPath = "C:\Windows\Setup\Scripts\RestartNag.ps1"
+
+# Point to conhost.exe as the primary executable
+$ConhostPath = "C:\Windows\System32\conhost.exe"
+
+# The command to run as an argument for conhost
+$PSArguments = "powershell.exe -NoProfile -ExecutionPolicy Bypass -NonInteractive -File `"$ScriptPath`""
+
+# Use --headless to ensure NO window is allocated
+$Action = New-ScheduledTaskAction -Execute $ConhostPath `
+    -Argument "--headless $PSArguments"
+
+# Triggers: At Logon + Hourly Repetition
+# Trigger A: Fires as soon as any user logs in
+$AtLogon = New-ScheduledTaskTrigger -AtLogOn
+
+# Trigger B: Fires every hour (starting now) to handle the 'nagging'
+$Repetition = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Hours 1)
+
+$Triggers = @($AtLogon, $Repetition)
+
+# Principal: Run as the 'Users' Group (S-1-5-32-545)
+# This is key for the dialog to appear in the user's interactive session.
+$Principal = New-ScheduledTaskPrincipal -GroupId "S-1-5-32-545"
+
+# Settings
+$Settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+
+# Register
+Register-ScheduledTask -TaskName "RestartNag" -Action $Action -Trigger $Triggers -Principal $Principal -Settings $Settings -Force
 ]]>
         </File>
 	</Extensions>
