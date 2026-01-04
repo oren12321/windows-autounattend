@@ -1513,7 +1513,7 @@ $settings = @(
     @{ S="7516b95f-f776-4464-8c53-06167f40cc99"; G="3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e"; AC=0; DC=300; N="Specifies the period of inactivity before Windows turns off the display" },
     @{ S="0012ee47-9041-4b5d-9b77-535fba8b1442"; G="6738e2c4-e8a5-4a42-b16a-e040e769756e"; AC=0; DC=600; N="Specifies the period of inactivity before Windows turns off the hard disk" },
     @{ S="02f815b5-a5cf-4c84-bf20-649d1f75d3d8"; G="4c793e7d-a264-42e1-87d3-7a0d2f523ccd"; AC=0; DC=1; N="Specifies the frequency of JavaScript timers" },
-    @{ S="0d7dbae2-4294-402a-ba8e-26777e8488cd"; G="309dce9b-bef4-4119-9921-a851fb12f0f4"; AC=1; DC=1; N="Allow or prevent Windows from rotating through multiple wallpaper images" },
+    @{ S="0d7dbae2-4294-402a-ba8e-26777e8488cd"; G="309dce9b-bef4-4119-9921-a851fb12f0f4"; AC=0; DC=0; N="Allow or prevent Windows from rotating through multiple wallpaper images" },
     @{ S="19cbb8fa-5279-450e-9fac-8a3d5fedd0c1"; G="12bbebe6-58d6-4636-95bb-3217ef867c1a"; AC=0; DC=2; N="Balance wireless network performance with battery life by adjusting adapter power usage" },
     @{ S="238c9fa8-0aad-41ed-83f4-97be242c8f20"; G="29f6c1db-86da-48c5-9fdb-f2b67b1f44da"; AC=0; DC=900; N="Specifies the period of inactivity before Windows puts the computer to sleep" },
     @{ S="238c9fa8-0aad-41ed-83f4-97be242c8f20"; G="bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d"; AC=0; DC=0; N="Allow scheduled tasks and applications to wake your computer from sleep" },
