@@ -1,6 +1,51 @@
 ################# OLED CARE #######################
 ###################################################
 
+function Join-Explorer {
+    # Capture the original explorer PID (if running)
+    $old = Get-Process explorer -ErrorAction SilentlyContinue
+    $oldPid = $old?.Id
+
+    # If explorer is running, stop it
+    if ($oldPid) {
+        Stop-Process -Id $oldPid -Force
+    }
+
+    # Wait for either:
+    # 1. Explorer fully gone
+    # 2. A *new* Explorer PID (auto-restart)
+    $deadline = [datetime]::Now.AddSeconds(5)
+    while ([datetime]::Now -lt $deadline) {
+        $current = Get-Process explorer -ErrorAction SilentlyContinue
+
+        if (-not $current) {
+            # Explorer is fully gone — break and allow manual restart
+            break
+        }
+
+        if ($oldPid -and ($current.Id -ne $oldPid)) {
+            # Auto-restart detected — wait for stabilization
+            Start-Sleep -Seconds 1
+            return
+        }
+
+        Start-Sleep -Milliseconds 150
+    }
+
+    # If Explorer is not running, start it manually
+    if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) {
+        Start-Process explorer.exe
+    }
+
+    # Wait until explorer is fully initialized
+    while (-not (Get-Process explorer -ErrorAction SilentlyContinue)) {
+        Start-Sleep -Milliseconds 150
+    }
+
+    # Give the shell a moment to bring up the desktop/taskbar
+    Start-Sleep -Seconds 1
+}
+
 ################# DARK MODE -----------------------
 
 # 1. PATH DEFINITION (Changed to HKCU for the active profile)
@@ -20,7 +65,7 @@ if ([Environment]::OSVersion.Version.Build -ge 22000) {
 Write-Host "Dark Mode applied to the CURRENT session. Restart Explorer or log out to see full effect."
 
 # Restart Explorer to apply immediately
-Stop-Process -Name explorer -Force
+Restart-Explorer
 
 ################# TRANSPARANCY OFF ----------------
 
@@ -44,7 +89,7 @@ reg add "$accessibilityPath" /v DynamicScrollbars /t REG_DWORD /d 0 /f
 Write-Host "Transparency disabled across Windows 10/11 UI. Refreshing shell..."
 
 # Restart Explorer to apply immediately
-Stop-Process -Name explorer -Force
+Restart-Explorer
 
 ################# AUTO ACCENT COLOR ---------------
 
@@ -67,7 +112,7 @@ reg add "$dwmxPath" /v ColorPrevalence /t REG_DWORD /d 0 /f
 Write-Host "Automatic accent color enabled. Surface coloring disabled."
 
 # Restart Explorer to apply immediately
-Stop-Process -Name explorer -Force
+Restart-Explorer
 
 ################# ICONS ---------------------------
 # 1. Define Paths
@@ -75,6 +120,12 @@ $installDir = "$env:LOCALAPPDATA\Programs\AutoHideDesktopIcons"
 $zipPath = "$installDir\AutoHideDesktopIcons.zip"
 $exePath = "$installDir\AutoHideDesktopIcons.exe"
 $iniPath = "$installDir\AutoHideDesktopIcons.ini"
+
+# remove old of exists
+Stop-Process -Name AutoHideDesktopIcons -Force
+if (Test-Path $installDir) {
+    Remove-Item -Path $installDir -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 # 2. Create directory
 if (!(Test-Path $installDir)) { New-Item -ItemType Directory -Path $installDir }
@@ -117,6 +168,12 @@ $installDir = "$env:LOCALAPPDATA\Programs\AutoHideMouseCursor"
 $zipPath = "$installDir\AutoHideMouseCursor.zip"
 $exePath = "$installDir\AutoHideMouseCursor.exe"
 $iniPath = "$installDir\AutoHideMouseCursor.ini"
+
+# remove old of exists
+Stop-Process -Name AutoHideMouseCursor -Force
+if (Test-Path $installDir) {
+    Remove-Item -Path $installDir -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 # 2. Create directory
 if (!(Test-Path $installDir)) { New-Item -ItemType Directory -Path $installDir }
@@ -215,7 +272,7 @@ $result = [UIntPtr]::Zero
 ) | Out-Null
 
 # Restart Explorer to apply immediately
-Stop-Process -Name explorer -Force
+Restart-Explorer
 
 ################# SLIDESHOW ---------------------------------------
 
@@ -302,18 +359,33 @@ Write-Host "New theme written to: $newThemePath"
 # ==========================================
 Start-Process $newThemePath
 
-# Wait briefly for Settings to launch
-Start-Sleep -Seconds 1
+# Wait for SystemSettings.exe to appear (up to 3 seconds)
+$deadline = (Get-Date).AddSeconds(3)
+do {
+    $settings = Get-Process -Name SystemSettings -ErrorAction SilentlyContinue
+    if ($settings) { break }
+    Start-Sleep -Milliseconds 150
+} while ((Get-Date) -lt $deadline)
 
-# Try to close the Settings window
-$settings = Get-Process -Name SystemSettings -ErrorAction SilentlyContinue
 if ($settings) {
-    $settings.CloseMainWindow() | Out-Null
+    # Try graceful close
+    foreach ($proc in $settings) {
+        $null = $proc.CloseMainWindow()
+    }
+
     Start-Sleep -Milliseconds 300
 
-    # If it didn't close, force it
-    if (!$settings.HasExited) {
-        $settings.Kill()
+    # Force close any remaining instances
+    $settings = Get-Process -Name SystemSettings -ErrorAction SilentlyContinue
+    if ($settings) {
+        foreach ($proc in $settings) {
+            $proc.Kill()
+        }
+    }
+
+    # Wait until all Settings processes are gone
+    while (Get-Process -Name SystemSettings -ErrorAction SilentlyContinue) {
+        Start-Sleep -Milliseconds 150
     }
 }
 
