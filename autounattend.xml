@@ -385,56 +385,109 @@ reg.SetDWORDValue HKLM, key, "ActiveHoursEnd", ( current + 11 ) Mod 24
 reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\MoveActiveHours.xml">
+		<File path="C:\Windows\Setup\Scripts\MoveActiveHoursPrimary.xml">
 <![CDATA[
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-	<Triggers>
-		<BootTrigger>
-			<Repetition>
-				<Interval>PT4H</Interval>
-				<StopAtDurationEnd>false</StopAtDurationEnd>
-			</Repetition>
-			<Enabled>true</Enabled>
-		</BootTrigger>
-		<RegistrationTrigger>
-			<Repetition>
-				<Interval>PT4H</Interval>
-				<StopAtDurationEnd>false</StopAtDurationEnd>
-			</Repetition>
-			<Enabled>true</Enabled>
-		</RegistrationTrigger>
-	</Triggers>
-	<Principals>
-		<Principal id="Author">
-			<UserId>S-1-5-19</UserId>
-			<RunLevel>LeastPrivilege</RunLevel>
-		</Principal>
-	</Principals>
-	<Settings>
-		<MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
-		<DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
-		<StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
-		<AllowHardTerminate>true</AllowHardTerminate>
-		<StartWhenAvailable>false</StartWhenAvailable>
-		<RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
-		<IdleSettings>
-			<StopOnIdleEnd>true</StopOnIdleEnd>
-			<RestartOnIdle>false</RestartOnIdle>
-		</IdleSettings>
-		<AllowStartOnDemand>true</AllowStartOnDemand>
-		<Enabled>true</Enabled>
-		<Hidden>false</Hidden>
-		<RunOnlyIfIdle>false</RunOnlyIfIdle>
-		<WakeToRun>false</WakeToRun>
-		<ExecutionTimeLimit>PT72H</ExecutionTimeLimit>
-		<Priority>7</Priority>
-	</Settings>
-	<Actions Context="Author">
-		<Exec>
-			<Command>C:\Windows\System32\wscript.exe</Command>
-			<Arguments>C:\Windows\Setup\Scripts\MoveActiveHours.vbs</Arguments>
-		</Exec>
-	</Actions>
+  <Triggers>
+    <BootTrigger>
+      <Enabled>true</Enabled>
+    </BootTrigger>
+    <CalendarTrigger>
+      <StartBoundary>2026-01-01T00:00:00</StartBoundary>
+      <Enabled>true</Enabled>
+      <ScheduleByDay>
+        <DaysInterval>1</DaysInterval>
+      </ScheduleByDay>
+      <Repetition>
+        <Interval>PT4H</Interval>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+    </CalendarTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT5M</ExecutionTimeLimit>
+    <Priority>7</Priority>
+    <RestartOnFailure>
+      <Interval>PT5M</Interval>
+      <Count>5</Count>
+    </RestartOnFailure>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>C:\Windows\System32\wscript.exe</Command>
+      <Arguments>C:\Windows\Setup\Scripts\MoveActiveHours.vbs</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+]]>
+		</File>
+        		<File path="C:\Windows\Setup\Scripts\MoveActiveHoursBackup.xml">
+<![CDATA[
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <Triggers>
+    <BootTrigger>
+      <Enabled>true</Enabled>
+    </BootTrigger>
+    <CalendarTrigger>
+      <StartBoundary>2026-01-01T00:05:00</StartBoundary>
+      <Enabled>true</Enabled>
+      <ScheduleByDay>
+        <DaysInterval>1</DaysInterval>
+      </ScheduleByDay>
+      <Repetition>
+        <Interval>PT8H</Interval>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+    </CalendarTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>true</WakeToRun>
+    <ExecutionTimeLimit>PT5M</ExecutionTimeLimit>
+    <Priority>7</Priority>
+    <RestartOnFailure>
+      <Interval>PT5M</Interval>
+      <Count>5</Count>
+    </RestartOnFailure>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>C:\Windows\System32\wscript.exe</Command>
+      <Arguments>C:\Windows\Setup\Scripts\MoveActiveHours.vbs</Arguments>
+    </Exec>
+  </Actions>
 </Task>
 ]]>
 		</File>
@@ -558,7 +611,8 @@ $scripts = @(
 		reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" /v NoAutoRebootWithLoggedOnUsers /t REG_DWORD /d 1 /f;
 	};
 	{
-		Register-ScheduledTask -TaskName 'MoveActiveHours' -Xml $( Get-Content -LiteralPath 'C:\Windows\Setup\Scripts\MoveActiveHours.xml' -Raw );
+		Register-ScheduledTask -TaskName 'MoveActiveHoursPrimary' -Xml $( Get-Content -LiteralPath 'C:\Windows\Setup\Scripts\MoveActiveHoursPrimary.xml' -Raw );
+        Register-ScheduledTask -TaskName 'MoveActiveHoursBackup' -Xml $( Get-Content -LiteralPath 'C:\Windows\Setup\Scripts\MoveActiveHoursBackup.xml' -Raw );
 	};
 	{
 		reg.exe add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v HiberbootEnabled /t REG_DWORD /d 0 /f;
