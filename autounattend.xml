@@ -41,20 +41,24 @@
 					<Order>1</Order>
 					<Path>powershell.exe -WindowStyle "Normal" -NoProfile -Command "$xml = [xml]::new(); $xml.Load('C:\Windows\Panther\unattend.xml'); $sb = [scriptblock]::Create( $xml.unattend.Extensions.ExtractScript ); Invoke-Command -ScriptBlock $sb -ArgumentList $xml;"</Path>
 				</RunSynchronousCommand>
-				<RunSynchronousCommand wcm:action="add">
+                <RunSynchronousCommand wcm:action="add">
 					<Order>2</Order>
-					<Path>powershell.exe -WindowStyle "Normal" -ExecutionPolicy "Unrestricted" -NoProfile -File "C:\Windows\Setup\Scripts\Specialize.ps1"</Path>
+					<Path>powershell.exe -WindowStyle "Normal" -ExecutionPolicy "Unrestricted" -NoProfile -File "C:\Windows\Setup\Scripts\ToMaintenance.ps1"</Path>
 				</RunSynchronousCommand>
 				<RunSynchronousCommand wcm:action="add">
 					<Order>3</Order>
-					<Path>reg.exe load "HKU\DefaultUser" "C:\Users\Default\NTUSER.DAT"</Path>
+					<Path>powershell.exe -WindowStyle "Normal" -ExecutionPolicy "Unrestricted" -NoProfile -File "C:\MyMaintenance\Scripts\Specialize.ps1"</Path>
 				</RunSynchronousCommand>
 				<RunSynchronousCommand wcm:action="add">
 					<Order>4</Order>
-					<Path>powershell.exe -WindowStyle "Normal" -ExecutionPolicy "Unrestricted" -NoProfile -File "C:\Windows\Setup\Scripts\DefaultUser.ps1"</Path>
+					<Path>reg.exe load "HKU\DefaultUser" "C:\Users\Default\NTUSER.DAT"</Path>
 				</RunSynchronousCommand>
 				<RunSynchronousCommand wcm:action="add">
 					<Order>5</Order>
+					<Path>powershell.exe -WindowStyle "Normal" -ExecutionPolicy "Unrestricted" -NoProfile -File "C:\MyMaintenance\Scripts\DefaultUser.ps1"</Path>
+				</RunSynchronousCommand>
+				<RunSynchronousCommand wcm:action="add">
+					<Order>6</Order>
 					<Path>reg.exe unload "HKU\DefaultUser"</Path>
 				</RunSynchronousCommand>
 			</RunSynchronous>
@@ -73,7 +77,7 @@
 			<FirstLogonCommands>
 				<SynchronousCommand wcm:action="add">
 					<Order>1</Order>
-					<CommandLine>powershell.exe -WindowStyle "Normal" -ExecutionPolicy "Unrestricted" -NoProfile -File "C:\Windows\Setup\Scripts\FirstLogon.ps1"</CommandLine>
+					<CommandLine>powershell.exe -WindowStyle "Normal" -ExecutionPolicy "Unrestricted" -NoProfile -File "C:\MyMaintenance\Scripts\FirstLogon.ps1"</CommandLine>
 				</SynchronousCommand>
 			</FirstLogonCommands>
 		</component>
@@ -96,7 +100,268 @@ foreach( $file in $Document.unattend.Extensions.File ) {
     [System.IO.File]::WriteAllBytes( $path, $bytes );
 }
 		</ExtractScript>
-		<File path="C:\Windows\Setup\Scripts\RemovePackages.ps1">
+        <File path="ToMaintenance.ps1">
+<![CDATA[
+# ============================================================
+# SetupMaintenance.ps1
+# Runs during SPECIALIZE pass
+# Creates persistent maintenance folder structure and
+# copies original Setup scripts for post-upgrade reuse.
+# ============================================================
+
+$MaintenanceRoot = "C:\MyMaintenance"
+$Scripts = Join-Path $MaintenanceRoot "Scripts"
+$LogDir          = Join-Path $MaintenanceRoot "Logs"
+$StateDir        = Join-Path $MaintenanceRoot "State"
+
+# --- Create folder structure ---
+$folders = @(
+    $Scripts,
+    $LogDir,
+    $StateDir
+)
+
+foreach ($folder in $folders) {
+    if (-not (Test-Path $folder)) {
+        New-Item -Path $folder -ItemType Directory -Force | Out-Null
+    }
+}
+
+# --- Copy original Setup scripts ---
+$Source = "C:\Windows\Setup\Scripts"
+
+if (Test-Path $Source) {
+    Copy-Item -Path "$Source\*" -Destination $Scripts -Recurse -Force -ErrorAction SilentlyContinue
+} else {
+    # Optional: log a warning if needed
+}
+
+# --- Store current OS build number ---
+$Build = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").CurrentBuildNumber
+$Build | Out-File -FilePath (Join-Path $StateDir "LastBuild.txt") -Encoding ASCII -Force
+]]>
+        </File>
+        <File path="PostFeatureUpdate.ps1">
+<![CDATA[
+$Scripts = "C:\MyMaintenance\Scripts"
+$LogDir  = "C:\MyMaintenance\Logs"
+$LogFile = Join-Path $LogDir "PostFeatureUpdate.log"
+
+# --- Ensure log directory exists ---
+if (-not (Test-Path $LogDir)) {
+    New-Item -Path $LogDir -ItemType Directory -Force | Out-Null
+}
+
+function Write-Log {
+    param([string]$Message)
+    $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    "$timestamp  $Message" | Out-File -FilePath $LogFile -Append -Encoding UTF8
+}
+
+Write-Log "=== Maintenance run started ==="
+
+# --- Ensure working directory is correct ---
+try {
+    Set-Location $Scripts
+    Write-Log "Working directory set to $Scripts"
+}
+catch {
+    Write-Log "ERROR: Failed to set working directory. $_"
+}
+
+# --- Helper to run scripts with logging ---
+function Run-Script {
+    param([string]$ScriptPath)
+
+    if (-not (Test-Path $ScriptPath)) {
+        Write-Log "ERROR: Script not found: $ScriptPath"
+        return
+    }
+
+    Write-Log "Running script: $ScriptPath"
+
+    try {
+        & $ScriptPath
+        Write-Log "Completed: $ScriptPath"
+    }
+    catch {
+        Write-Log "ERROR in $ScriptPath : $_"
+    }
+}
+
+# --- Run Specialize.ps1 ---
+Run-Script "$Scripts\Specialize.ps1"
+
+# --- Modify Default User profile ---
+Write-Log "Loading Default User registry hive..."
+
+$HiveLoaded = $false
+try {
+    $result = reg.exe load "HKU\DefaultUser" "C:\Users\Default\NTUSER.DAT"
+    if ($LASTEXITCODE -eq 0) {
+        $HiveLoaded = $true
+        Write-Log "Default User hive loaded successfully."
+    }
+    else {
+        Write-Log "ERROR: Failed to load Default User hive. Exit code: $LASTEXITCODE"
+    }
+}
+catch {
+    Write-Log "ERROR: Exception while loading Default User hive. $_"
+}
+
+if ($HiveLoaded) {
+    Run-Script "$Scripts\DefaultUser.ps1"
+
+    Write-Log "Unloading Default User hive..."
+    try {
+        reg.exe unload "HKU\DefaultUser" | Out-Null
+        Write-Log "Default User hive unloaded."
+    }
+    catch {
+        Write-Log "ERROR: Failed to unload Default User hive. $_"
+    }
+}
+
+# --- Run FirstLogon.ps1 ---
+Run-Script "$Scripts\FirstLogon.ps1"
+
+Write-Log "=== Maintenance run finished ==="
+]]>
+        </File>
+        <File path="RunMaintenance.ps1">
+<![CDATA[
+# ============================================================
+# RunMaintenance.ps1
+# Runs at every boot via Scheduled Task (SYSTEM)
+# Detects OS build changes and re-runs maintenance scripts.
+# ============================================================
+
+$MaintenanceRoot = "C:\MyMaintenance"
+$Scripts         = Join-Path $MaintenanceRoot "Scripts"
+$LogDir          = Join-Path $MaintenanceRoot "Logs"
+$StateDir        = Join-Path $MaintenanceRoot "State"
+$BuildFile       = Join-Path $StateDir "LastBuild.txt"
+$LogFile         = Join-Path $LogDir "RunMaintenance.log"
+
+# --- Ensure logging directory exists ---
+if (-not (Test-Path $LogDir)) {
+    New-Item -Path $LogDir -ItemType Directory -Force | Out-Null
+}
+
+function Write-Log {
+    param([string]$Message)
+    $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    "$timestamp  $Message" | Out-File -FilePath $LogFile -Append -Encoding UTF8
+}
+
+Write-Log "=== Maintenance task started ==="
+
+# --- Get current OS build ---
+try {
+    $CurrentBuild = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").CurrentBuildNumber
+    Write-Log "Current OS Build: $CurrentBuild"
+}
+catch {
+    Write-Log "ERROR: Unable to read current OS build. $_"
+    exit 1
+}
+
+# --- Read stored build ---
+if (Test-Path $BuildFile) {
+    $StoredBuild = Get-Content $BuildFile -ErrorAction SilentlyContinue
+    Write-Log "Stored OS Build: $StoredBuild"
+}
+else {
+    Write-Log "No stored build found. Creating baseline and exiting."
+    $CurrentBuild | Out-File -FilePath $BuildFile -Encoding ASCII -Force
+    exit 0
+}
+
+# --- Compare builds ---
+if ($StoredBuild -eq $CurrentBuild) {
+    Write-Log "Build unchanged. No maintenance required."
+    Write-Log "=== Maintenance task finished ==="
+    exit 0
+}
+
+Write-Log "Build changed! Running maintenance scripts..."
+
+# --- Run your main orchestrator script ---
+$MainScript = Join-Path $Scripts "PostFeatureUpdate.ps1"
+
+if (Test-Path $MainScript) {
+    try {
+        Write-Log "Executing $MainScript"
+        Set-Location $Scripts
+        powershell.exe -ExecutionPolicy Bypass -File $MainScript
+        Write-Log "Maintenance scripts completed successfully."
+    }
+    catch {
+        Write-Log "ERROR running maintenance scripts: $_"
+    }
+}
+else {
+    Write-Log "ERROR: Main script not found: $MainScript"
+}
+
+# --- Update stored build number ---
+try {
+    $CurrentBuild | Out-File -FilePath $BuildFile -Encoding ASCII -Force
+    Write-Log "Updated stored build number to $CurrentBuild"
+}
+catch {
+    Write-Log "ERROR updating stored build number: $_"
+}
+
+Write-Log "=== Maintenance task finished ==="
+exit 0
+]]>
+        </File>
+        <File path="RunMaintenance.xml">
+<![CDATA[
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <Triggers>
+    <BootTrigger>
+      <Enabled>true</Enabled>
+      <Delay>PT30S</Delay>
+    </BootTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <Priority>5</Priority>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>powershell.exe</Command>
+      <Arguments>-NoProfile -ExecutionPolicy Bypass -File "C:\MyMaintenance\Scripts\RunMaintenance.ps1"</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+]]>
+        </File>
+		<File path="RemovePackages.ps1">
 <![CDATA[
 $selectors = @(
 	'Microsoft.Microsoft3DViewer';
@@ -166,7 +431,7 @@ $removeCommand = {
   }
 };
 $type = 'Package';
-$logfile = 'C:\Windows\Setup\Scripts\RemovePackages.log';
+$logfile = 'C:\MyMaintenance\Logs\RemovePackages.log';
 & {
 	$installed = & $getCommand;
 	foreach( $selector in $selectors ) {
@@ -190,7 +455,7 @@ $logfile = 'C:\Windows\Setup\Scripts\RemovePackages.log';
 } *>&1 | Out-String -Width 1KB -Stream >> $logfile;
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\RemoveCapabilities.ps1">
+		<File path="RemoveCapabilities.ps1">
 <![CDATA[
 $selectors = @(
 	'Print.Fax.Scan';
@@ -228,7 +493,7 @@ $removeCommand = {
   }
 };
 $type = 'Capability';
-$logfile = 'C:\Windows\Setup\Scripts\RemoveCapabilities.log';
+$logfile = 'C:\MyMaintenance\Logs\RemoveCapabilities.log';
 & {
 	$installed = & $getCommand;
 	foreach( $selector in $selectors ) {
@@ -252,7 +517,7 @@ $logfile = 'C:\Windows\Setup\Scripts\RemoveCapabilities.log';
 } *>&1 | Out-String -Width 1KB -Stream >> $logfile;
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\RemoveFeatures.ps1">
+		<File path="RemoveFeatures.ps1">
 <![CDATA[
 $selectors = @(
 	'Microsoft-RemoteDesktopConnection';
@@ -278,7 +543,7 @@ $removeCommand = {
   }
 };
 $type = 'Feature';
-$logfile = 'C:\Windows\Setup\Scripts\RemoveFeatures.log';
+$logfile = 'C:\MyMaintenance\Logs\RemoveFeatures.log';
 & {
 	$installed = & $getCommand;
 	foreach( $selector in $selectors ) {
@@ -302,7 +567,7 @@ $logfile = 'C:\Windows\Setup\Scripts\RemoveFeatures.log';
 } *>&1 | Out-String -Width 1KB -Stream >> $logfile;
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\PauseWindowsUpdate.ps1">
+		<File path="PauseWindowsUpdate.ps1">
 <![CDATA[
 $formatter = {
 	$args[0].ToString( "yyyy'-'MM'-'dd'T'HH':'mm':'ssK" );
@@ -325,7 +590,7 @@ Set-ItemProperty @params -Name 'PauseUpdatesStartTime' -Value $start;
 Set-ItemProperty @params -Name 'PauseUpdatesExpiryTime' -Value $end;
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\PauseWindowsUpdate.xml">
+		<File path="PauseWindowsUpdate.xml">
 <![CDATA[
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <Triggers>
@@ -368,13 +633,13 @@ Set-ItemProperty @params -Name 'PauseUpdatesExpiryTime' -Value $end;
   <Actions Context="Author">
     <Exec>
       <Command>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Command>
-      <Arguments>-ExecutionPolicy "Unrestricted" -NoProfile -File "C:\Windows\Setup\Scripts\PauseWindowsUpdate.ps1"</Arguments>
+      <Arguments>-ExecutionPolicy "Unrestricted" -NoProfile -File "C:\MyMaintenance\Scripts\PauseWindowsUpdate.ps1"</Arguments>
     </Exec>
   </Actions>
 </Task>
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\MoveActiveHours.vbs">
+		<File path="MoveActiveHours.vbs">
 <![CDATA[
 HKLM = &H80000002
 key = "SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"
@@ -385,7 +650,7 @@ reg.SetDWORDValue HKLM, key, "ActiveHoursEnd", ( current + 11 ) Mod 24
 reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\MoveActiveHoursPrimary.xml">
+		<File path="MoveActiveHoursPrimary.xml">
 <![CDATA[
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <Triggers>
@@ -432,13 +697,13 @@ reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
   <Actions Context="Author">
     <Exec>
       <Command>C:\Windows\System32\wscript.exe</Command>
-      <Arguments>C:\Windows\Setup\Scripts\MoveActiveHours.vbs</Arguments>
+      <Arguments>C:\MyMaintenance\Scripts\MoveActiveHours.vbs</Arguments>
     </Exec>
   </Actions>
 </Task>
 ]]>
 		</File>
-        		<File path="C:\Windows\Setup\Scripts\MoveActiveHoursBackup.xml">
+        		<File path="MoveActiveHoursBackup.xml">
 <![CDATA[
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <Triggers>
@@ -485,13 +750,13 @@ reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
   <Actions Context="Author">
     <Exec>
       <Command>C:\Windows\System32\wscript.exe</Command>
-      <Arguments>C:\Windows\Setup\Scripts\MoveActiveHours.vbs</Arguments>
+      <Arguments>C:\MyMaintenance\Scripts\MoveActiveHours.vbs</Arguments>
     </Exec>
   </Actions>
 </Task>
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\TurnOffSystemSounds.ps1">
+		<File path="TurnOffSystemSounds.ps1">
 <![CDATA[
 $excludes = Get-ChildItem -LiteralPath 'Registry::HKU\DefaultUser\AppEvents\EventLabels' |
     Where-Object -FilterScript { ($_ | Get-ItemProperty).ExcludeFromCPL -eq 1; } |
@@ -501,7 +766,7 @@ Get-ChildItem -Path 'Registry::HKU\DefaultUser\AppEvents\Schemes\Apps\*\*' |
     Get-ChildItem -Include '.Current' | Set-ItemProperty -Name '(Default)' -Value '';
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\SetStartPins.ps1">
+		<File path="SetStartPins.ps1">
 <![CDATA[
 $json = '{"pinnedList":[]}';
 if( [System.Environment]::OSVersion.Version.Build -lt 20000 ) {
@@ -524,7 +789,7 @@ Set-ItemProperty -LiteralPath $key -Name 'ConfigureStartPins' -Value $json -Type
 </LayoutModificationTemplate>
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\OneDriveRemovalAdditions.ps1">
+		<File path="OneDriveRemovalAdditions.ps1">
 <![CDATA[
 # 1. Create the Appx Deprovisioned Marker
 $OneDrivePFN = "Microsoft.OneDrive_8wekyb3d8bbwe"
@@ -538,24 +803,7 @@ if (!(Test-Path $PolicyPath)) { New-Item -Path $PolicyPath -Force }
 New-ItemProperty -Path $PolicyPath -Name "DisableFileSyncNGSC" -Value 1 -PropertyType DWORD -Force
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\unattend-02.ps1">
-<![CDATA[
-# These script will run when the firt user logs on after Windows has been installed.
-# The first user to log on is typically an administrator.
-]]>
-		</File>
-		<File path="C:\Windows\Setup\Scripts\unattend-03.ps1">
-<![CDATA[
-# These script will run whenever a user logs on for the first time.
-]]>
-		</File>
-		<File path="C:\Windows\Setup\Scripts\unattend-04.ps1">
-<![CDATA[
-# Use this script to modify the default user's registry hive. For example:
-# Registry::HKU\DefaultUser\...
-]]>
-		</File>
-		<File path="C:\Windows\Setup\Scripts\Specialize.ps1">
+		<File path="Specialize.ps1">
 <![CDATA[
 $scripts = @(
 	{
@@ -577,19 +825,19 @@ $scripts = @(
 		reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Communications" /v ConfigureChatAutoInstall /t REG_DWORD /d 0 /f;
 	};
 	{
-		& 'C:\Windows\Setup\Scripts\RemovePackages.ps1';
+		& 'C:\MyMaintenance\Scripts\RemovePackages.ps1';
 	};
 	{
-		& 'C:\Windows\Setup\Scripts\RemoveCapabilities.ps1';
+		& 'C:\MyMaintenance\Scripts\RemoveCapabilities.ps1';
 	};
 	{
-		& 'C:\Windows\Setup\Scripts\RemoveFeatures.ps1';
+		& 'C:\MyMaintenance\Scripts\RemoveFeatures.ps1';
 	};
 	{
 		net.exe accounts /maxpwage:UNLIMITED;
 	};
 	{
-		Register-ScheduledTask -TaskName 'PauseWindowsUpdate' -Xml $( Get-Content -LiteralPath 'C:\Windows\Setup\Scripts\PauseWindowsUpdate.xml' -Raw );
+		Register-ScheduledTask -TaskName 'PauseWindowsUpdate' -Xml $( Get-Content -LiteralPath 'C:\MyMaintenance\Scripts\PauseWindowsUpdate.xml' -Raw );
 	};
 	{
 		reg.exe add "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v VerifiedAndReputablePolicyState /t REG_DWORD /d 0 /f;
@@ -611,8 +859,8 @@ $scripts = @(
 		reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" /v NoAutoRebootWithLoggedOnUsers /t REG_DWORD /d 1 /f;
 	};
 	{
-		Register-ScheduledTask -TaskName 'MoveActiveHoursPrimary' -Xml $( Get-Content -LiteralPath 'C:\Windows\Setup\Scripts\MoveActiveHoursPrimary.xml' -Raw );
-        Register-ScheduledTask -TaskName 'MoveActiveHoursBackup' -Xml $( Get-Content -LiteralPath 'C:\Windows\Setup\Scripts\MoveActiveHoursBackup.xml' -Raw );
+		Register-ScheduledTask -TaskName 'MoveActiveHoursPrimary' -Xml $( Get-Content -LiteralPath 'C:\MyMaintenance\Scripts\MoveActiveHoursPrimary.xml' -Raw );
+        Register-ScheduledTask -TaskName 'MoveActiveHoursBackup' -Xml $( Get-Content -LiteralPath 'C:\MyMaintenance\Scripts\MoveActiveHoursBackup.xml' -Raw );
 	};
 	{
 		reg.exe add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v HiberbootEnabled /t REG_DWORD /d 0 /f;
@@ -638,7 +886,7 @@ $scripts = @(
 		reg.exe add "HKLM\Software\Policies\Microsoft\Edge\Recommended" /v StartupBoostEnabled /t REG_DWORD /d 0 /f;
 	};
 	{
-		& 'C:\Windows\Setup\Scripts\SetStartPins.ps1';
+		& 'C:\MyMaintenance\Scripts\SetStartPins.ps1';
 	};
 	{
 		Set-ItemProperty -LiteralPath "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects\ControlAnimations" -Name 'DefaultValue' -Value 0 -Type 'DWord' -Force;
@@ -663,38 +911,41 @@ $scripts = @(
 		reg.exe add "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableAutomaticRestartSignOn" /t REG_DWORD /d 1 /f;
 	};
 	{
-		& 'C:\Windows\Setup\Scripts\OneDriveRemovalAdditions.ps1';
+		& 'C:\MyMaintenance\Scripts\OneDriveRemovalAdditions.ps1';
 	};
     {
-        & 'C:\Windows\Setup\Scripts\EdgeRemoval.ps1';
+        & 'C:\MyMaintenance\Scripts\EdgeRemoval.ps1';
     };
     {
-        & 'C:\Windows\Setup\Scripts\PowerPlanSettings.ps1';
+        & 'C:\MyMaintenance\Scripts\PowerPlanSettings.ps1';
     };
     {
-        & 'C:\Windows\Setup\Scripts\GamingAndPerformanceSettings.ps1';
+        & 'C:\MyMaintenance\Scripts\GamingAndPerformanceSettings.ps1';
     };
     {
-        & 'C:\Windows\Setup\Scripts\NotificationsSettings.ps1';
+        & 'C:\MyMaintenance\Scripts\NotificationsSettings.ps1';
     };
     {
-        & 'C:\Windows\Setup\Scripts\PrivacyAndSecuritySettings.ps1';
+        & 'C:\MyMaintenance\Scripts\PrivacyAndSecuritySettings.ps1';
     };
     {
-        & 'C:\Windows\Setup\Scripts\SoundSettings.ps1';
+        & 'C:\MyMaintenance\Scripts\SoundSettings.ps1';
     };
     {
-        & 'C:\Windows\Setup\Scripts\WindowsUpdateSettings.ps1';
+        & 'C:\MyMaintenance\Scripts\WindowsUpdateSettings.ps1';
     };
     {
-        & 'C:\Windows\Setup\Scripts\ExplorerSettings.ps1';
+        & 'C:\MyMaintenance\Scripts\ExplorerSettings.ps1';
     };
     {
-        & 'C:\Windows\Setup\Scripts\StartMenuAndTaskbarSettings.ps1';
+        & 'C:\MyMaintenance\Scripts\StartMenuAndTaskbarSettings.ps1';
     };
     {
-        & 'C:\Windows\Setup\Scripts\RestartNagTaskSetup.ps1';
+        & 'C:\MyMaintenance\Scripts\RestartNagTaskSetup.ps1';
     };
+    {
+		Register-ScheduledTask -TaskName 'RunMaintenance' -Xml $( Get-Content -LiteralPath 'C:\MyMaintenance\Scripts\RunMaintenance.xml' -Raw );
+	};
 );
 
 & {
@@ -717,10 +968,10 @@ $scripts = @(
     "`r`n" * 3;
     $complete += $increment;
   }
-} *>&1 | Out-String -Width 1KB -Stream >> "C:\Windows\Setup\Scripts\Specialize.log";
+} *>&1 | Out-String -Width 1KB -Stream >> "C:\MyMaintenance\Logs\Specialize.log";
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\UserOnce.ps1">
+		<File path="UserOnce.ps1">
 <![CDATA[
 $scripts = @(
 	{
@@ -744,14 +995,18 @@ $scripts = @(
 	{
 		Set-ItemProperty -LiteralPath 'Registry::HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' -Name 'VisualFXSetting' -Type 'DWord' -Value 3 -Force;
 	};
-	{
-		& 'C:\Windows\Setup\Scripts\unattend-03.ps1';
-	};
     {
-		& 'C:\Windows\Setup\Scripts\AdditionalUserSpecificSettings.ps1';
+		& 'C:\MyMaintenance\Scripts\AdditionalUserSpecificSettings.ps1';
 	};
 	{
-		New-Item -Path "$env:LOCALAPPDATA\RestartNag_Done.tag" -ItemType "File" -Force;
+        $tag = "$env:LOCALAPPDATA\RestartNag_Done.tag"
+        if (-not (Test-Path $tag)) {
+            New-Item -Path $tag -ItemType "File" -Force;
+        }
+        $rebootPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"
+        if (-not (Test-Path $rebootPath)) {
+            New-Item -Path $rebootPath -Force | Out-Null
+        }
         Start-ScheduledTask -TaskName "RestartNag";
 	};
 );
@@ -779,7 +1034,7 @@ $scripts = @(
 } *>&1 | Out-String -Width 1KB -Stream >> "$env:TEMP\UserOnce.log";
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\DefaultUser.ps1">
+		<File path="DefaultUser.ps1">
 <![CDATA[
 $scripts = @(
 	{
@@ -804,7 +1059,7 @@ $scripts = @(
 		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowTaskViewButton /t REG_DWORD /d 0 /f;
 	};
 	{
-		& 'C:\Windows\Setup\Scripts\TurnOffSystemSounds.ps1';
+		& 'C:\MyMaintenance\Scripts\TurnOffSystemSounds.ps1';
 	};
 	{
 		$names = @(
@@ -852,10 +1107,7 @@ $scripts = @(
 		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings" /v TaskbarEndTask /t REG_DWORD /d 1 /f;
 	};
 	{
-		& 'C:\Windows\Setup\Scripts\unattend-04.ps1';
-	};
-	{
-		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v "UnattendedSetup" /t REG_SZ /d "powershell.exe -WindowStyle \""Normal\"" -ExecutionPolicy \""Unrestricted\"" -NoProfile -File \""C:\Windows\Setup\Scripts\UserOnce.ps1\""" /f;
+		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v "UnattendedSetup" /t REG_SZ /d "powershell.exe -WindowStyle \""Normal\"" -ExecutionPolicy \""Unrestricted\"" -NoProfile -File \""C:\MyMaintenance\Scripts\UserOnce.ps1\""" /f;
 	};
 );
 
@@ -879,17 +1131,14 @@ $scripts = @(
     "`r`n" * 3;
     $complete += $increment;
   }
-} *>&1 | Out-String -Width 1KB -Stream >> "C:\Windows\Setup\Scripts\DefaultUser.log";
+} *>&1 | Out-String -Width 1KB -Stream >> "C:\MyMaintenance\Logs\DefaultUser.log";
 ]]>
 		</File>
-		<File path="C:\Windows\Setup\Scripts\FirstLogon.ps1">
+		<File path="FirstLogon.ps1">
 <![CDATA[
 $scripts = @(
 	{
 		Disable-ComputerRestore -Drive 'C:\';
-	};
-	{
-		& 'C:\Windows\Setup\Scripts\unattend-02.ps1';
 	};
 );
 
@@ -913,10 +1162,10 @@ $scripts = @(
     "`r`n" * 3;
     $complete += $increment;
   }
-} *>&1 | Out-String -Width 1KB -Stream >> "C:\Windows\Setup\Scripts\FirstLogon.log";
+} *>&1 | Out-String -Width 1KB -Stream >> "C:\MyMaintenance\Logs\FirstLogon.log";
 ]]>
 		</File>
-        <File path="C:\Windows\Setup\Scripts\EdgeRemoval.ps1">
+        <File path="EdgeRemoval.ps1">
 <![CDATA[
 
 <#
@@ -961,7 +1210,7 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 }
 
 # Setup logging
-$logFolder = "C:\Windows\Setup\Scripts"
+$logFolder = "C:\MyMaintenance\Logs"
 $logFile = "$logFolder\EdgeRemoval.log"
 
 # Create log directory if it doesn't exist
@@ -1120,7 +1369,7 @@ function Install-EdgeProtocolRedirect {
     }
 
     Write-Output "Installing Edge protocol redirect using OpenWebSearch"
-    $scriptsDir = "C:\Windows\Setup\Scripts\OpenWebSearch"
+    $scriptsDir = "C:\MyMaintenance\Scripts\OpenWebSearch"
     New-Item -ItemType Directory -Path $scriptsDir -Force -ErrorAction SilentlyContinue | Out-Null
 
     $stubTargetPath = "$scriptsDir\ie_to_edge_stub.exe"
@@ -1394,7 +1643,7 @@ if ($chromiumInstalled) {
     }
 
     if ($stubPath) {
-        $scriptsDir = "C:\Windows\Setup\Scripts\OpenWebSearch"
+        $scriptsDir = "C:\MyMaintenance\Scripts\OpenWebSearch"
         New-Item -ItemType Directory -Path $scriptsDir -Force -ErrorAction SilentlyContinue | Out-Null
         Copy-Item $stubPath "$scriptsDir\ie_to_edge_stub.exe" -Force -ErrorAction SilentlyContinue
         Write-Output "Copied ie_to_edge_stub.exe to $scriptsDir before Edge removal"
@@ -1491,7 +1740,7 @@ Write-Output "Done."
 Write-Output "Done. See $logFile for details."
 ]]>
 		</File>
-        <File path="C:\Windows\Setup\Scripts\PowerPlanSettings.ps1">
+        <File path="PowerPlanSettings.ps1">
 <![CDATA[
 Write-Output "Setting up power plan: High Performance Laptop Plan..."
 
@@ -1659,7 +1908,7 @@ Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explore
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings' -Name 'ShowSleepOption' -Type 'DWord' -Value 1 -Description 'Display the Sleep option in the Start Menu power button menu'
 ]]>
         </File>
-        <File path="C:\Windows\Setup\Scripts\GamingAndPerformanceSettings.ps1">
+        <File path="GamingAndPerformanceSettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -1771,7 +2020,7 @@ foreach ($task in $scheduledTasks) {
 Write-Output "Processed $processedCount scheduled task settings"
 ]]>
         </File>
-        <File path="C:\Windows\Setup\Scripts\NotificationsSettings.ps1">
+        <File path="NotificationsSettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -1803,7 +2052,7 @@ Set-RegistryValue -Path 'HKLM:\Software\Policies\Microsoft\Windows Defender Secu
 Set-RegistryValue -Path 'HKLM:\Software\Policies\Microsoft\Windows Defender Security Center\Notifications' -Name 'DisableEnhancedNotifications' -Type 'DWord' -Value 0 -Description 'Show all notifications from Windows Security about threats, scans, and protection status'
 ]]>
         </File>
-        <File path="C:\Windows\Setup\Scripts\PrivacyAndSecuritySettings.ps1">
+        <File path="PrivacyAndSecuritySettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -1857,7 +2106,7 @@ Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Capabil
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\OneDrive' -Name 'KFMBlockOptIn' -Type 'DWord' -Value 1 -Description 'Prevents OneDrive from automatically backing up important folders (Documents, Pictures, Desktop, etc.)'
 ]]>
         </File>
-        <File path="C:\Windows\Setup\Scripts\SoundSettings.ps1">
+        <File path="SoundSettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -1890,7 +2139,7 @@ Set-RegistryValue -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\SpeechO
 Set-RegistryValue -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\SpeechOneCore\Settings' -Name 'AgentActivationLastUsed' -Type 'DWord' -Value 0 -Description 'Remember and apply the most recently used voice activation configuration'
 ]]>
         </File>
-        <File path="C:\Windows\Setup\Scripts\WindowsUpdateSettings.ps1">
+        <File path="WindowsUpdateSettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -1929,7 +2178,7 @@ Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore' -Name 'AutoDownload' -Type 'DWord' -Value 2 -Description 'Automatically download and install updates for apps from the Microsoft Store'
 ]]>
         </File>
-        <File path="C:\Windows\Setup\Scripts\ExplorerSettings.ps1">
+        <File path="ExplorerSettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -2062,7 +2311,7 @@ Remove-RegistryKey -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Explor
 Set-RegistryValue -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled' -Type 'DWord' -Value 1 -Description 'Enables support for file paths with up to 32,767 characters instead of the traditional 260-character limit'
 ]]>
         </File>
-        <File path="C:\Windows\Setup\Scripts\StartMenuAndTaskbarSettings.ps1">
+        <File path="StartMenuAndTaskbarSettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -2104,7 +2353,7 @@ Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policie
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Chat' -Name 'ChatIcon' -Type 'DWord' -Value 3 -Description 'Disable Windows 11 Chat Icon'
 ]]>
         </File>
-        <File path="C:\Windows\Setup\Scripts\AdditionalUserSpecificSettings.ps1">
+        <File path="AdditionalUserSpecificSettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -2476,7 +2725,7 @@ if (-not (Test-Path $wallpaperPath)) {
 }
 ]]>
         </File>
-        <File path="C:\Windows\Setup\Scripts\RestartNag.ps1">
+        <File path="RestartNag.ps1">
 <![CDATA[
 $tagPath = "$env:LOCALAPPDATA\RestartNag_Done.tag"
 $timeout = New-TimeSpan -Minutes 15 # Maximum time to wait
@@ -2552,7 +2801,7 @@ $form.Controls.Add($title)
 
 # UI Elements (Description)
 $desc = New-Object System.Windows.Forms.Label
-$desc.Text = "Please restart your computer to complete Windows installation customizations."
+$desc.Text = "Please restart your computer to complete Windows installation customizations and maintenance."
 $desc.ForeColor = $descColor
 $desc.Font = New-Object System.Drawing.Font("Segoe UI", 9)
 $desc.Size = New-Object System.Drawing.Size(300, 40)
@@ -2574,9 +2823,9 @@ $form.Controls.Add($closeBtn)
 $form.ShowDialog() | Out-Null
 ]]>
         </File>
-        <File path="C:\Windows\Setup\Scripts\RestartNagTaskSetup.ps1">
+        <File path="RestartNagTaskSetup.ps1">
 <![CDATA[
-$ScriptPath = "C:\Windows\Setup\Scripts\RestartNag.ps1"
+$ScriptPath = "C:\MyMaintenance\Scripts\RestartNag.ps1"
 
 # Point to conhost.exe as the primary executable
 $ConhostPath = "C:\Windows\System32\conhost.exe"
