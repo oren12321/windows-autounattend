@@ -100,7 +100,7 @@ foreach( $file in $Document.unattend.Extensions.File ) {
     [System.IO.File]::WriteAllBytes( $path, $bytes );
 }
 		</ExtractScript>
-        <File path="ToMaintenance.ps1">
+        <File path="C:\Windows\Setup\Scripts\ToMaintenance.ps1">
 <![CDATA[
 # ============================================================
 # SetupMaintenance.ps1
@@ -141,7 +141,7 @@ $Build = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion")
 $Build | Out-File -FilePath (Join-Path $StateDir "LastBuild.txt") -Encoding ASCII -Force
 ]]>
         </File>
-        <File path="PostFeatureUpdate.ps1">
+        <File path="C:\Windows\Setup\Scripts\PostFeatureUpdate.ps1">
 <![CDATA[
 $Scripts = "C:\MyMaintenance\Scripts"
 $LogDir  = "C:\MyMaintenance\Logs"
@@ -229,7 +229,7 @@ Run-Script "$Scripts\FirstLogon.ps1"
 Write-Log "=== Maintenance run finished ==="
 ]]>
         </File>
-        <File path="RunMaintenance.ps1">
+        <File path="C:\Windows\Setup\Scripts\RunMaintenance.ps1">
 <![CDATA[
 # ============================================================
 # RunMaintenance.ps1
@@ -318,7 +318,7 @@ Write-Log "=== Maintenance task finished ==="
 exit 0
 ]]>
         </File>
-        <File path="RunMaintenance.xml">
+        <File path="C:\Windows\Setup\Scripts\RunMaintenance.xml">
 <![CDATA[
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <Triggers>
@@ -361,7 +361,7 @@ exit 0
 </Task>
 ]]>
         </File>
-		<File path="RemovePackages.ps1">
+		<File path="C:\Windows\Setup\Scripts\RemovePackages.ps1">
 <![CDATA[
 $selectors = @(
 	'Microsoft.Microsoft3DViewer';
@@ -455,7 +455,7 @@ $logfile = 'C:\MyMaintenance\Logs\RemovePackages.log';
 } *>&1 | Out-String -Width 1KB -Stream >> $logfile;
 ]]>
 		</File>
-		<File path="RemoveCapabilities.ps1">
+		<File path="C:\Windows\Setup\Scripts\RemoveCapabilities.ps1">
 <![CDATA[
 $selectors = @(
 	'Print.Fax.Scan';
@@ -517,7 +517,7 @@ $logfile = 'C:\MyMaintenance\Logs\RemoveCapabilities.log';
 } *>&1 | Out-String -Width 1KB -Stream >> $logfile;
 ]]>
 		</File>
-		<File path="RemoveFeatures.ps1">
+		<File path="C:\Windows\Setup\Scripts\RemoveFeatures.ps1">
 <![CDATA[
 $selectors = @(
 	'Microsoft-RemoteDesktopConnection';
@@ -567,7 +567,7 @@ $logfile = 'C:\MyMaintenance\Logs\RemoveFeatures.log';
 } *>&1 | Out-String -Width 1KB -Stream >> $logfile;
 ]]>
 		</File>
-		<File path="PauseWindowsUpdate.ps1">
+		<File path="C:\Windows\Setup\Scripts\PauseWindowsUpdate.ps1">
 <![CDATA[
 $formatter = {
 	$args[0].ToString( "yyyy'-'MM'-'dd'T'HH':'mm':'ssK" );
@@ -590,7 +590,7 @@ Set-ItemProperty @params -Name 'PauseUpdatesStartTime' -Value $start;
 Set-ItemProperty @params -Name 'PauseUpdatesExpiryTime' -Value $end;
 ]]>
 		</File>
-		<File path="PauseWindowsUpdate.xml">
+		<File path="C:\Windows\Setup\Scripts\PauseWindowsUpdate.xml">
 <![CDATA[
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <Triggers>
@@ -639,7 +639,7 @@ Set-ItemProperty @params -Name 'PauseUpdatesExpiryTime' -Value $end;
 </Task>
 ]]>
 		</File>
-		<File path="MoveActiveHours.vbs">
+		<File path="C:\Windows\Setup\Scripts\MoveActiveHours.vbs">
 <![CDATA[
 HKLM = &H80000002
 key = "SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"
@@ -650,7 +650,7 @@ reg.SetDWORDValue HKLM, key, "ActiveHoursEnd", ( current + 11 ) Mod 24
 reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
 ]]>
 		</File>
-		<File path="MoveActiveHoursPrimary.xml">
+		<File path="C:\Windows\Setup\Scripts\MoveActiveHoursPrimary.xml">
 <![CDATA[
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <Triggers>
@@ -703,7 +703,7 @@ reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
 </Task>
 ]]>
 		</File>
-        		<File path="MoveActiveHoursBackup.xml">
+        		<File path="C:\Windows\Setup\Scripts\MoveActiveHoursBackup.xml">
 <![CDATA[
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <Triggers>
@@ -756,7 +756,7 @@ reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
 </Task>
 ]]>
 		</File>
-		<File path="TurnOffSystemSounds.ps1">
+		<File path="C:\Windows\Setup\Scripts\TurnOffSystemSounds.ps1">
 <![CDATA[
 $excludes = Get-ChildItem -LiteralPath 'Registry::HKU\DefaultUser\AppEvents\EventLabels' |
     Where-Object -FilterScript { ($_ | Get-ItemProperty).ExcludeFromCPL -eq 1; } |
@@ -766,7 +766,7 @@ Get-ChildItem -Path 'Registry::HKU\DefaultUser\AppEvents\Schemes\Apps\*\*' |
     Get-ChildItem -Include '.Current' | Set-ItemProperty -Name '(Default)' -Value '';
 ]]>
 		</File>
-		<File path="SetStartPins.ps1">
+		<File path="C:\Windows\Setup\Scripts\SetStartPins.ps1">
 <![CDATA[
 $json = '{"pinnedList":[]}';
 if( [System.Environment]::OSVersion.Version.Build -lt 20000 ) {
@@ -789,7 +789,7 @@ Set-ItemProperty -LiteralPath $key -Name 'ConfigureStartPins' -Value $json -Type
 </LayoutModificationTemplate>
 ]]>
 		</File>
-		<File path="OneDriveRemovalAdditions.ps1">
+		<File path="C:\Windows\Setup\Scripts\OneDriveRemovalAdditions.ps1">
 <![CDATA[
 # 1. Create the Appx Deprovisioned Marker
 $OneDrivePFN = "Microsoft.OneDrive_8wekyb3d8bbwe"
@@ -803,7 +803,7 @@ if (!(Test-Path $PolicyPath)) { New-Item -Path $PolicyPath -Force }
 New-ItemProperty -Path $PolicyPath -Name "DisableFileSyncNGSC" -Value 1 -PropertyType DWORD -Force
 ]]>
 		</File>
-		<File path="Specialize.ps1">
+		<File path="C:\Windows\Setup\Scripts\Specialize.ps1">
 <![CDATA[
 $scripts = @(
 	{
@@ -971,7 +971,7 @@ $scripts = @(
 } *>&1 | Out-String -Width 1KB -Stream >> "C:\MyMaintenance\Logs\Specialize.log";
 ]]>
 		</File>
-		<File path="UserOnce.ps1">
+		<File path="C:\Windows\Setup\Scripts\UserOnce.ps1">
 <![CDATA[
 $scripts = @(
 	{
@@ -1034,7 +1034,7 @@ $scripts = @(
 } *>&1 | Out-String -Width 1KB -Stream >> "$env:TEMP\UserOnce.log";
 ]]>
 		</File>
-		<File path="DefaultUser.ps1">
+		<File path="C:\Windows\Setup\Scripts\DefaultUser.ps1">
 <![CDATA[
 $scripts = @(
 	{
@@ -1134,7 +1134,7 @@ $scripts = @(
 } *>&1 | Out-String -Width 1KB -Stream >> "C:\MyMaintenance\Logs\DefaultUser.log";
 ]]>
 		</File>
-		<File path="FirstLogon.ps1">
+		<File path="C:\Windows\Setup\Scripts\FirstLogon.ps1">
 <![CDATA[
 $scripts = @(
 	{
@@ -1165,7 +1165,7 @@ $scripts = @(
 } *>&1 | Out-String -Width 1KB -Stream >> "C:\MyMaintenance\Logs\FirstLogon.log";
 ]]>
 		</File>
-        <File path="EdgeRemoval.ps1">
+        <File path="C:\Windows\Setup\Scripts\EdgeRemoval.ps1">
 <![CDATA[
 
 <#
@@ -1740,7 +1740,7 @@ Write-Output "Done."
 Write-Output "Done. See $logFile for details."
 ]]>
 		</File>
-        <File path="PowerPlanSettings.ps1">
+        <File path="C:\Windows\Setup\Scripts\PowerPlanSettings.ps1">
 <![CDATA[
 Write-Output "Setting up power plan: High Performance Laptop Plan..."
 
@@ -1908,7 +1908,7 @@ Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explore
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings' -Name 'ShowSleepOption' -Type 'DWord' -Value 1 -Description 'Display the Sleep option in the Start Menu power button menu'
 ]]>
         </File>
-        <File path="GamingAndPerformanceSettings.ps1">
+        <File path="C:\Windows\Setup\Scripts\GamingAndPerformanceSettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -2020,7 +2020,7 @@ foreach ($task in $scheduledTasks) {
 Write-Output "Processed $processedCount scheduled task settings"
 ]]>
         </File>
-        <File path="NotificationsSettings.ps1">
+        <File path="C:\Windows\Setup\Scripts\NotificationsSettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -2052,7 +2052,7 @@ Set-RegistryValue -Path 'HKLM:\Software\Policies\Microsoft\Windows Defender Secu
 Set-RegistryValue -Path 'HKLM:\Software\Policies\Microsoft\Windows Defender Security Center\Notifications' -Name 'DisableEnhancedNotifications' -Type 'DWord' -Value 0 -Description 'Show all notifications from Windows Security about threats, scans, and protection status'
 ]]>
         </File>
-        <File path="PrivacyAndSecuritySettings.ps1">
+        <File path="C:\Windows\Setup\Scripts\PrivacyAndSecuritySettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -2106,7 +2106,7 @@ Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Capabil
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\OneDrive' -Name 'KFMBlockOptIn' -Type 'DWord' -Value 1 -Description 'Prevents OneDrive from automatically backing up important folders (Documents, Pictures, Desktop, etc.)'
 ]]>
         </File>
-        <File path="SoundSettings.ps1">
+        <File path="C:\Windows\Setup\Scripts\SoundSettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -2139,7 +2139,7 @@ Set-RegistryValue -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\SpeechO
 Set-RegistryValue -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\SpeechOneCore\Settings' -Name 'AgentActivationLastUsed' -Type 'DWord' -Value 0 -Description 'Remember and apply the most recently used voice activation configuration'
 ]]>
         </File>
-        <File path="WindowsUpdateSettings.ps1">
+        <File path="C:\Windows\Setup\Scripts\WindowsUpdateSettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -2178,7 +2178,7 @@ Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore' -Name 'AutoDownload' -Type 'DWord' -Value 2 -Description 'Automatically download and install updates for apps from the Microsoft Store'
 ]]>
         </File>
-        <File path="ExplorerSettings.ps1">
+        <File path="C:\Windows\Setup\Scripts\ExplorerSettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -2311,7 +2311,7 @@ Remove-RegistryKey -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Explor
 Set-RegistryValue -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled' -Type 'DWord' -Value 1 -Description 'Enables support for file paths with up to 32,767 characters instead of the traditional 260-character limit'
 ]]>
         </File>
-        <File path="StartMenuAndTaskbarSettings.ps1">
+        <File path="C:\Windows\Setup\Scripts\StartMenuAndTaskbarSettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -2353,7 +2353,7 @@ Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policie
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Chat' -Name 'ChatIcon' -Type 'DWord' -Value 3 -Description 'Disable Windows 11 Chat Icon'
 ]]>
         </File>
-        <File path="AdditionalUserSpecificSettings.ps1">
+        <File path="C:\Windows\Setup\Scripts\AdditionalUserSpecificSettings.ps1">
 <![CDATA[
 function Set-RegistryValue {
     param(
@@ -2725,7 +2725,7 @@ if (-not (Test-Path $wallpaperPath)) {
 }
 ]]>
         </File>
-        <File path="RestartNag.ps1">
+        <File path="C:\Windows\Setup\Scripts\RestartNag.ps1">
 <![CDATA[
 $tagPath = "$env:LOCALAPPDATA\RestartNag_Done.tag"
 $timeout = New-TimeSpan -Minutes 15 # Maximum time to wait
@@ -2823,7 +2823,7 @@ $form.Controls.Add($closeBtn)
 $form.ShowDialog() | Out-Null
 ]]>
         </File>
-        <File path="RestartNagTaskSetup.ps1">
+        <File path="C:\Windows\Setup\Scripts\RestartNagTaskSetup.ps1">
 <![CDATA[
 $ScriptPath = "C:\MyMaintenance\Scripts\RestartNag.ps1"
 
