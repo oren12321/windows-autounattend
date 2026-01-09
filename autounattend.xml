@@ -278,15 +278,15 @@ function Apply-RegistryBatch {
 
 $scripts = @(
 	{
+        reg.exe load "HKU\DefaultUser" "C:\Users\Default\NTUSER.DAT"
 		& "C:\MySetup\Scripts\DefaultUser.ps1"
+        reg.exe unload "HKU\DefaultUser"
 	};
     {
-        reg.exe load "HKU\DefaultUser" "C:\Users\Default\NTUSER.DAT"
         Apply-Registry -Path "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\RunOnce" `
             -Name "CurrentUser" `
             -Type "String" `
             -Value "powershell.exe -WindowStyle \""Normal\"" -ExecutionPolicy \""Unrestricted\"" -NoProfile -File \""C:\MyMaintenance\Scripts\UserOnce.ps1\"""
-        reg.exe unload "HKU\DefaultUser"
     };
 );
 
