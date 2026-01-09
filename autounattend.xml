@@ -380,5 +380,79 @@ $scripts = @(
 } *>&1 | Out-String -Width 1KB -Stream >> "$logsDir\CurrentUser.log";
 ]]>
         </File>
+        <File path="C:\Windows\Setup\Scripts\PauseWindowsUpdate.ps1">
+<![CDATA[
+& {
+    $formatter = {
+        $args[0].ToString( "yyyy'-'MM'-'dd'T'HH':'mm':'ssK" );
+    };
+    $now = [datetime]::UtcNow;
+    $start = & $formatter $now;
+    $end = & $formatter $now.AddDays( 7.1 );
+
+    $params = @{
+        LiteralPath = 'Registry::HKLM\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings';
+        Type = 'String';
+        Force = $true;
+    };
+
+    Set-ItemProperty @params -Name 'PauseFeatureUpdatesStartTime' -Value $start;
+    Set-ItemProperty @params -Name 'PauseFeatureUpdatesEndTime' -Value $end;
+    Set-ItemProperty @params -Name 'PauseQualityUpdatesStartTime' -Value $start;
+    Set-ItemProperty @params -Name 'PauseQualityUpdatesEndTime' -Value $end;
+    Set-ItemProperty @params -Name 'PauseUpdatesStartTime' -Value $start;
+    Set-ItemProperty @params -Name 'PauseUpdatesExpiryTime' -Value $end;
+} *>&1 | Out-String -Width 1KB -Stream >> "C:\MySetup\Logs\PauseWindowsUpdate.log";
+]]>
+		</File>
+		<File path="C:\Windows\Setup\Scripts\PauseWindowsUpdate.xml">
+<![CDATA[
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <Triggers>
+    <CalendarTrigger>
+      <StartBoundary>2026-01-01T12:00:00-08:00</StartBoundary>
+      <Enabled>true</Enabled>
+      <ScheduleByDay>
+        <DaysInterval>1</DaysInterval>
+      </ScheduleByDay>
+    </CalendarTrigger>
+    <BootTrigger>
+      <Enabled>true</Enabled>
+    </BootTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>true</WakeToRun>
+    <ExecutionTimeLimit>PT5M</ExecutionTimeLimit>
+    <Priority>7</Priority>
+    <RestartOnFailure>
+      <Interval>PT5M</Interval>
+      <Count>5</Count>
+    </RestartOnFailure>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Command>
+      <Arguments>-ExecutionPolicy "Unrestricted" -NoProfile -File "C:\MySetup\Scripts\PauseWindowsUpdate.ps1"</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+]]>
+		</File>
     </Extensions>
 </unattend>
