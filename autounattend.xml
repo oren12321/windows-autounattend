@@ -47,7 +47,7 @@
 				</RunSynchronousCommand>
 				<RunSynchronousCommand wcm:action="add">
 					<Order>3</Order>
-					<Path>powershell.exe -WindowStyle "Normal" -ExecutionPolicy "Unrestricted" -NoProfile -File "C:\MyMaintenance\Scripts\Specialize.ps1"</Path>
+					<Path>powershell.exe -WindowStyle "Normal" -ExecutionPolicy "Unrestricted" -NoProfile -File "C:\MySetup\Scripts\Specialize.ps1"</Path>
 				</RunSynchronousCommand>
 			</RunSynchronous>
 		</component>
@@ -91,10 +91,10 @@ foreach( $file in $Document.unattend.Extensions.File ) {
 # copies original Setup scripts for post-upgrade reuse.
 # ============================================================
 
-$MaintenanceRoot = "C:\MySetup"
-$ScriptsDir = Join-Path $MaintenanceRoot "Scripts"
-$LogDir          = Join-Path $MaintenanceRoot "Logs"
-$StateDir        = Join-Path $MaintenanceRoot "State"
+$SetupDir = "C:\MySetup"
+$ScriptsDir = Join-Path $SetupDir "Scripts"
+$LogDir          = Join-Path $SetupDir "Logs"
+$StateDir        = Join-Path $SetupDir "State"
 
 # --- Create folder structure ---
 $folders = @(
@@ -304,7 +304,7 @@ $scripts = @(
         Apply-Registry -Path "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\RunOnce" `
             -Name "CurrentUser" `
             -Type "String" `
-            -Value "powershell.exe -WindowStyle \""Normal\"" -ExecutionPolicy \""Unrestricted\"" -NoProfile -File \""C:\MyMaintenance\Scripts\UserOnce.ps1\"""
+            -Value "powershell.exe -WindowStyle \""Normal\"" -ExecutionPolicy \""Unrestricted\"" -NoProfile -File \""C:\MySetup\Scripts\CurrentUser.ps1\"""
     };
 );
 
@@ -477,7 +477,7 @@ $removeCommand = {
   }
 };
 $type = 'Package';
-$logfile = 'C:\MyMaintenance\Logs\RemovePackages.log';
+$logfile = 'C:\MySetup\Logs\RemovePackages.log';
 & {
 	$installed = & $getCommand;
 	foreach( $selector in $selectors ) {
@@ -539,7 +539,7 @@ $removeCommand = {
   }
 };
 $type = 'Capability';
-$logfile = 'C:\MyMaintenance\Logs\RemoveCapabilities.log';
+$logfile = 'C:\MySetup\Logs\RemoveCapabilities.log';
 & {
 	$installed = & $getCommand;
 	foreach( $selector in $selectors ) {
@@ -589,7 +589,7 @@ $removeCommand = {
   }
 };
 $type = 'Feature';
-$logfile = 'C:\MyMaintenance\Logs\RemoveFeatures.log';
+$logfile = 'C:\MySetup\Logs\RemoveFeatures.log';
 & {
 	$installed = & $getCommand;
 	foreach( $selector in $selectors ) {
@@ -1112,7 +1112,7 @@ function Install-EdgeProtocolRedirect {
     }
 
     Write-Output "Installing Edge protocol redirect using OpenWebSearch"
-    $scriptsDir = "C:\MyMaintenance\Scripts\OpenWebSearch"
+    $scriptsDir = "C:\MySetup\Scripts\OpenWebSearch"
     New-Item -ItemType Directory -Path $scriptsDir -Force -ErrorAction SilentlyContinue | Out-Null
 
     $stubTargetPath = "$scriptsDir\ie_to_edge_stub.exe"
@@ -1386,7 +1386,7 @@ if ($chromiumInstalled) {
     }
 
     if ($stubPath) {
-        $scriptsDir = "C:\MyMaintenance\Scripts\OpenWebSearch"
+        $scriptsDir = "C:\MySetup\Scripts\OpenWebSearch"
         New-Item -ItemType Directory -Path $scriptsDir -Force -ErrorAction SilentlyContinue | Out-Null
         Copy-Item $stubPath "$scriptsDir\ie_to_edge_stub.exe" -Force -ErrorAction SilentlyContinue
         Write-Output "Copied ie_to_edge_stub.exe to $scriptsDir before Edge removal"
