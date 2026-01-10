@@ -272,6 +272,18 @@ function Apply-RegistryBatch {
 }
 ]]>
         </File>
+        <File path="C:\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml">
+<![CDATA[
+<LayoutModificationTemplate Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
+	<LayoutOptions StartTileGroupCellWidth="6" />
+	<DefaultLayoutOverride>
+		<StartLayoutCollection>
+			<StartLayout GroupCellWidth="6" xmlns="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" />
+		</StartLayoutCollection>
+	</DefaultLayoutOverride>
+</LayoutModificationTemplate>
+]]>
+		</File>
         <File path="C:\Windows\Setup\Scripts\Specialize.ps1">
 <![CDATA[
 . "C:\MySetup\Scripts\Apply-Registry.ps1"
