@@ -304,10 +304,12 @@ $scripts = @(
         reg.exe unload "HKU\DefaultUser"
 	};
     {
-        Apply-RegistryEntry -Path "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\RunOnce" `
+        reg.exe load "HKU\DefaultUser" "C:\Users\Default\NTUSER.DAT"
+        Apply-RegistryEntry -Path "Registry::HKEY_USERS\DefaultUser\Software\Microsoft\Windows\CurrentVersion\RunOnce" `
             -Name "CurrentUser" `
             -Type "String" `
             -Value "powershell.exe -WindowStyle \""Normal\"" -ExecutionPolicy \""Unrestricted\"" -NoProfile -File \""C:\MySetup\Scripts\CurrentUser.ps1\"""
+        reg.exe unload "HKU\DefaultUser"
     };
 );
 
@@ -2525,7 +2527,7 @@ Apply-RegistryBatch $regPaths
         </File>
         <File path="C:\Windows\Setup\Scripts\ConfigureWindowsUpdate.System.ps1">
 <![CDATA[
-. "C:\MySetup\Script\Apply-Registry.ps1"
+. "C:\MySetup\Scripts\Apply-Registry.ps1"
 
 $entries = @(
     @{
@@ -2781,7 +2783,7 @@ reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
   <Actions Context="Author">
     <Exec>
       <Command>C:\Windows\System32\wscript.exe</Command>
-      <Arguments>"C:\MySetup\Scripts\MoveActiveHours.vbs" >> "C:\MySetup\Logs\MoveActiveHours.log" 2>&1</Arguments>
+      <Arguments>"C:\MySetup\Scripts\MoveActiveHours.vbs" &gt;&gt; "C:\MySetup\Logs\MoveActiveHours.log" 2&gt;&amp;1</Arguments>
     </Exec>
   </Actions>
 </Task>
@@ -2834,7 +2836,7 @@ reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
   <Actions Context="Author">
     <Exec>
       <Command>C:\Windows\System32\wscript.exe</Command>
-      <Arguments>"C:\MySetup\Scripts\MoveActiveHours.vbs" >> "C:\MySetup\Logs\MoveActiveHours.log" 2>&1</Arguments>
+      <Arguments>"C:\MySetup\Scripts\MoveActiveHours.vbs" &gt;&gt; "C:\MySetup\Logs\MoveActiveHours.log" 2&gt;&amp;1</Arguments>
     </Exec>
   </Actions>
 </Task>
