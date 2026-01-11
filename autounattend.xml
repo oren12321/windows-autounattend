@@ -49,6 +49,18 @@
 					<Order>3</Order>
 					<Path>powershell.exe -WindowStyle "Normal" -ExecutionPolicy "Unrestricted" -NoProfile -File "C:\MySetup\Scripts\Specialize.ps1"</Path>
 				</RunSynchronousCommand>
+                <RunSynchronousCommand wcm:action="add">
+					<Order>4</Order>
+					<Path>reg.exe load "HKU\DefaultUser" "C:\Users\Default\NTUSER.DAT"</Path>
+				</RunSynchronousCommand>
+                <RunSynchronousCommand wcm:action="add">
+					<Order>5</Order>
+					<Path>powershell.exe -WindowStyle "Normal" -ExecutionPolicy "Unrestricted" -NoProfile -File "C:\MySetup\Scripts\DefaultUser.ps1"</Path>
+				</RunSynchronousCommand>
+                <RunSynchronousCommand wcm:action="add">
+					<Order>6</Order>
+					<Path>reg.exe unload "HKU\DefaultUser"</Path>
+				</RunSynchronousCommand>
 			</RunSynchronous>
 		</component>
 	</settings>
@@ -286,8 +298,6 @@ function Apply-RegistryBatch {
 		</File>
         <File path="C:\Windows\Setup\Scripts\Specialize.ps1">
 <![CDATA[
-. "C:\MySetup\Scripts\Apply-Registry.ps1"
-
 $scripts = @(
     {
         & "C:\MySetup\Scripts\Debloat.ps1"
@@ -297,19 +307,6 @@ $scripts = @(
     };
     {
         & "C:\MySetup\Scripts\ConfigureWindowsUpdate.System.ps1" >> "C:\MySetup\Logs\ConfigureWindowsUpdate.System.log" 2>&1
-    };
-	{
-        reg.exe load "HKU\DefaultUser" "C:\Users\Default\NTUSER.DAT"
-		& "C:\MySetup\Scripts\DefaultUser.ps1"
-        reg.exe unload "HKU\DefaultUser"
-	};
-    {
-        reg.exe load "HKU\DefaultUser" "C:\Users\Default\NTUSER.DAT"
-        Apply-RegistryEntry -Path "Registry::HKEY_USERS\DefaultUser\Software\Microsoft\Windows\CurrentVersion\RunOnce" `
-            -Name "CurrentUser" `
-            -Type "String" `
-            -Value "powershell.exe -WindowStyle \""Normal\"" -ExecutionPolicy \""Unrestricted\"" -NoProfile -File \""C:\MySetup\Scripts\CurrentUser.ps1\"""
-        reg.exe unload "HKU\DefaultUser"
     };
 );
 
@@ -338,10 +335,15 @@ $scripts = @(
         </File>
         <File path="C:\Windows\Setup\Scripts\DefaultUser.ps1">
 <![CDATA[
+. "C:\MySetup\Scripts\Apply-Registry.ps1"
+
 $scripts = @(
-	{
-    
-	};
+    {
+        Apply-RegistryEntry -Path "Registry::HKEY_USERS\DefaultUser\Software\Microsoft\Windows\CurrentVersion\RunOnce" `
+            -Name "CurrentUser" `
+            -Type "String" `
+            -Value "powershell.exe -WindowStyle \""Normal\"" -ExecutionPolicy \""Unrestricted\"" -NoProfile -File \""C:\MySetup\Scripts\CurrentUser.ps1\"""
+    };
 );
 
 & {
