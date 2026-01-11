@@ -1,0 +1,203 @@
+<#
+# ================================================================================
+# REGISTRY DEPLOYMENT DECISION TREE
+# Determines where a registry modification should be applied:
+#     - SYSTEM (HKLM or SYSTEM-loaded HKCU)
+#     - DEFAULT USER (HKU\Default)
+#     - CURRENT USER (HKCU after logon)
+#     - BOTH DEFAULT USER + CURRENT USER
+# ================================================================================
+#
+# STEP 1 — HKLM?
+# ---------------
+# IF the registry path starts with:
+#       HKLM\
+#
+# THEN:
+#       → Apply under SYSTEM during SPECIALIZE.
+#       Reason:
+#           - HKLM is system-wide.
+#           - SPECIALIZE is the correct pass for system configuration.
+#
+# STOP.
+#
+#
+# STEP 2 — HKCU\Software\Policies?
+# --------------------------------
+# IF the registry path starts with:
+#       HKCU\Software\Policies\
+#
+# THEN:
+#       → Apply under SYSTEM during SPECIALIZE.
+#       Reason:
+#           - SYSTEM can load the user hive.
+#           - Policies must be applied before first logon.
+#
+# STOP.
+#
+#
+# STEP 3 — Explorer-dependent HKCU keys?
+# --------------------------------------
+# IF the registry path matches ANY of the following patterns:
+#
+#       HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband
+#       HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\StartPage
+#       HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+#       HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders
+#       HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders
+#
+# THEN:
+#       → Apply in BOTH Default User AND Current User.
+#       Reason:
+#           - DefaultUser ensures new profiles inherit the settings.
+#           - CurrentUser is required because Explorer resets these during upgrades.
+#
+# STOP.
+#
+#
+# STEP 4 — AppX / UWP / CloudStore-dependent HKCU keys?
+# ------------------------------------------------------
+# These registry keys control Start menu layout, Taskbar pins, UWP app state,
+# tile positions, recommendations, and other modern shell features.
+#
+# IMPORTANT:
+#   - These keys are created AFTER the user logs in.
+#   - They depend on AppX packages being provisioned for the user.
+#   - They are wiped and rebuilt during Windows Feature Updates.
+#   - They CANNOT be placed in DefaultUser (Windows ignores them).
+#
+# Therefore:
+#       → Apply these keys ONLY in CURRENT USER (after logon).
+#
+# The following registry areas fall under this rule:
+#
+# 1. CloudStore (Start menu, Taskbar, Recommendations, Pinned apps)
+#    HKCU\Software\Microsoft\Windows\CurrentVersion\CloudStore\*
+#
+#    Controls:
+#       - Start menu layout (Windows 10/11)
+#       - Taskbar pinned apps
+#       - Start menu recommendations
+#       - Start menu app groups
+#       - Start menu tile grid (Win10)
+#       - Widgets feed preferences (Win11)
+#
+#
+# 2. UWP AppModel (AppX package state, tile data, app registration)
+#    HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\*
+#
+#    Controls:
+#       - AppX package activation history
+#       - Tile metadata for UWP apps
+#       - App tile positions
+#       - App notifications state
+#
+#
+# 3. Shell (Tile data, icon cache, jump lists, immersive shell state)
+#    HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\*
+#
+#    Controls:
+#       - TileDataLayer (Win10)
+#       - Icon cache
+#       - Jump list data
+#       - Immersive shell settings
+#       - Taskbar pinned UWP apps
+#
+#
+# 4. Start menu tile database (Windows 10 only)
+#    %LOCALAPPDATA%\TileDataLayer\Database\*.edb
+#
+#    Controls:
+#       - Start menu tile layout (Win10)
+#
+#    NOTE:
+#       - Not a registry key, but behaves like CloudStore.
+#       - Must be modified only after logon.
+#
+#
+# 5. Taskbar pinning (Explorer Taskband + CloudStore hybrid)
+#    HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband\*
+#
+#    Controls:
+#       - Taskbar pinned apps (Win10)
+#       - Taskbar layout cache
+#
+#    NOTE:
+#       - Taskband is Explorer-dependent AND AppX-dependent.
+#       - MUST be applied in CurrentUser.ps1.
+#
+#
+# 6. StartPage (Start menu behavior)
+#    HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\StartPage\*
+#
+#    Controls:
+#       - Start menu mode (full screen, compact)
+#       - Start menu search settings
+#
+#    NOTE:
+#       - Partially Explorer-dependent.
+#       - Also rebuilt during upgrades → CurrentUser only.
+#
+#
+# 7. Any key that references:
+#       - TileGrid
+#       - PinnedList
+#       - LayoutModification
+#       - StartLayout
+#       - TaskbarLayout
+#
+#    These ALWAYS require CurrentUser context.
+#
+#
+# SUMMARY FOR STEP 4:
+#   If the key affects Start menu, Taskbar, UWP apps, tiles, CloudStore,
+#   or anything under Local Settings → it MUST be applied in CurrentUser.ps1.
+#
+# STOP.
+#
+#
+# STEP 5 — General HKCU\Software keys?
+# ------------------------------------
+# IF the registry path starts with:
+#       HKCU\Software\
+#
+# AND it is NOT:
+#       - Explorer-dependent (Step 3)
+#       - AppX/UWP-dependent (Step 4)
+#       - Policies (Step 2)
+#
+# THEN:
+#       → Apply in DEFAULT USER.
+#       Reason:
+#           - These are static HKCU defaults.
+#           - They apply to new users.
+#           - They usually survive upgrades.
+#
+# STOP.
+#
+#
+# STEP 6 — Fallback for all other HKCU keys
+# -----------------------------------------
+# IF none of the above conditions matched:
+#
+# THEN:
+#       → Apply in DEFAULT USER.
+#       Reason:
+#           - Safe fallback for HKCU keys that are not Explorer/AppX/Policies.
+#
+# STOP.
+#
+#
+# ================================================================================
+# SUMMARY TABLE
+# ================================================================================
+#
+# HKLM\*                                   → SYSTEM
+# HKCU\Software\Policies\*                 → SYSTEM
+# Explorer-dependent HKCU keys             → BOTH DefaultUser + CurrentUser
+# AppX/UWP/CloudStore HKCU keys            → CurrentUser only
+# General HKCU\Software\*                  → DefaultUser
+# Other HKCU keys                          → DefaultUser
+#
+# ================================================================================
+#>
