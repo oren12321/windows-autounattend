@@ -1,13 +1,25 @@
 <#
 # ================================================================================
-# REGISTRY DEPLOYMENT DECISION TREE
-# Determines where a registry modification should be applied:
-#     - SYSTEM (HKLM or SYSTEM-loaded HKCU)
-#     - DEFAULT USER (HKU\Default)
-#     - CURRENT USER (HKCU after logon)
-#     - BOTH DEFAULT USER + CURRENT USER
-# ================================================================================
+# REGISTRY DEPLOYMENT DECISION TREE (EXTENDED)
 #
+# Determines how and where a registry modification should be applied:
+#
+#   1) SYSTEM (HKLM or SYSTEM-loaded HKCU; applied during SPECIALIZE)
+#   2) DEFAULT USER (HKU\Default; affects NEW profiles only)
+#   3) CURRENT USER — FIRST USER ONLY (one-time after first logon)
+#   4) CURRENT USER — EVERY USER (per-user first logon, including future users)
+#   5) BOTH DEFAULT USER + CURRENT USER (with separation between first user only
+#      and every user)
+#
+# This tree assumes:
+#   - SYSTEM context during SPECIALIZE is used for HKLM + policy hives.
+#   - DEFAULT USER is modified by loading C:\Users\Default\NTUSER.DAT.
+#   - CURRENT USER customizations that must run after logon are implemented via:
+#       * First user only: Scheduled Task or similar one-shot mechanism
+#       * Every user: Active Setup (per-user first logon)
+# ================================================================================
+
+
 # STEP 1 — HKLM?
 # ---------------
 # IF the registry path starts with:
@@ -19,9 +31,12 @@
 #           - HKLM is system-wide.
 #           - SPECIALIZE is the correct pass for system configuration.
 #
+# Target:
+#       - SCRIPT / CONTEXT: Specialize.ps1 under SYSTEM.
+#
 # STOP.
-#
-#
+
+
 # STEP 2 — HKCU\Software\Policies?
 # --------------------------------
 # IF the registry path starts with:
@@ -33,9 +48,12 @@
 #           - SYSTEM can load the user hive.
 #           - Policies must be applied before first logon.
 #
+# Target:
+#       - SCRIPT / CONTEXT: Specialize.ps1 under SYSTEM, loading user hive if needed.
+#
 # STOP.
-#
-#
+
+
 # STEP 3 — Explorer-dependent HKCU keys?
 # --------------------------------------
 # IF the registry path matches ANY of the following patterns:
@@ -47,14 +65,30 @@
 #       HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders
 #
 # THEN:
-#       → Apply in BOTH Default User AND Current User.
+#       These are Explorer-dependent HKCU settings.
+#
+#       → Apply in BOTH:
+#           1) DEFAULT USER (for new profiles)
+#           2) CURRENT USER — EVERY USER (per-user first logon)
+#
 #       Reason:
-#           - DefaultUser ensures new profiles inherit the settings.
-#           - CurrentUser is required because Explorer resets these during upgrades.
+#           - DefaultUser ensures new profiles inherit baseline Explorer defaults.
+#           - Explorer and the shell can reset these over time and across upgrades.
+#           - To guarantee consistency for ALL users, they must also run per-user
+#             at first logon.
+#
+# Targets:
+#       - DEFAULT USER:
+#           * SCRIPT: DefaultUser.ps1
+#           * CONTEXT: SYSTEM loads HKU\Default and writes these keys.
+#
+#       - CURRENT USER (EVERY USER):
+#           * SCRIPT: CurrentUser.ps1
+#           * INVOCATION: via Active Setup (per-user first logon), or equivalent.
 #
 # STOP.
-#
-#
+
+
 # STEP 4 — AppX / UWP / CloudStore-dependent HKCU keys?
 # ------------------------------------------------------
 # These registry keys control Start menu layout, Taskbar pins, UWP app state,
@@ -64,10 +98,12 @@
 #   - These keys are created AFTER the user logs in.
 #   - They depend on AppX packages being provisioned for the user.
 #   - They are wiped and rebuilt during Windows Feature Updates.
-#   - They CANNOT be placed in DefaultUser (Windows ignores them).
+#   - They CANNOT be meaningfully placed in DefaultUser.
 #
 # Therefore:
-#       → Apply these keys ONLY in CURRENT USER (after logon).
+#       → Apply these keys in CURRENT USER ONLY, and decide:
+#           - FIRST USER ONLY  OR
+#           - EVERY USER (per-user)
 #
 # The following registry areas fall under this rule:
 #
@@ -124,7 +160,7 @@
 #
 #    NOTE:
 #       - Taskband is Explorer-dependent AND AppX-dependent.
-#       - MUST be applied in CurrentUser.ps1.
+#       - MUST be applied in CURRENT USER after logon.
 #
 #
 # 6. StartPage (Start menu behavior)
@@ -134,10 +170,6 @@
 #       - Start menu mode (full screen, compact)
 #       - Start menu search settings
 #
-#    NOTE:
-#       - Partially Explorer-dependent.
-#       - Also rebuilt during upgrades → CurrentUser only.
-#
 #
 # 7. Any key that references:
 #       - TileGrid
@@ -146,18 +178,40 @@
 #       - StartLayout
 #       - TaskbarLayout
 #
-#    These ALWAYS require CurrentUser context.
+#    These ALWAYS require CURRENT USER context and a fully built profile.
 #
+# DECISION FOR STEP 4:
+#   You must decide between:
 #
-# SUMMARY FOR STEP 4:
-#   If the key affects Start menu, Taskbar, UWP apps, tiles, CloudStore,
-#   or anything under Local Settings → it MUST be applied in CurrentUser.ps1.
+#   (A) CURRENT USER — FIRST USER ONLY:
+#       - Use this if the customization is meant ONLY for the primary / first
+#         user created during OOBE and not for future users.
+#       - IMPLEMENTATION:
+#           * Run CurrentUser.ps1 via a one-shot Scheduled Task or similar,
+#             created during SPECIALIZE and deleted after first run.
+#
+#   (B) CURRENT USER — EVERY USER (per-user first logon):
+#       - Use this if the customization is required for ALL users, including any
+#         future local/domain users.
+#       - IMPLEMENTATION:
+#           * Use Active Setup:
+#               - Register an entry under:
+#                   HKLM\Software\Microsoft\Active Setup\Installed Components\<YourID>
+#               - StubPath calls CurrentUser.ps1.
+#               - Version can be bumped to re-run after Feature Updates.
+#
+# Targets for STEP 4 keys:
+#   - NEVER in DefaultUser.
+#   - ALWAYS in CurrentUser.ps1.
+#   - HOW they run:
+#       * FIRST USER ONLY → Scheduled Task / one-shot mechanism.
+#       * EVERY USER      → Active Setup (per-user).
 #
 # STOP.
-#
-#
-# STEP 5 — General HKCU\Software keys?
-# ------------------------------------
+
+
+# STEP 5 — General HKCU\Software keys (static defaults)?
+# ------------------------------------------------------
 # IF the registry path starts with:
 #       HKCU\Software\
 #
@@ -167,37 +221,92 @@
 #       - Policies (Step 2)
 #
 # THEN:
-#       → Apply in DEFAULT USER.
+#       These are considered general/static HKCU defaults.
+#
+#       → Apply in DEFAULT USER ONLY.
+#
 #       Reason:
 #           - These are static HKCU defaults.
-#           - They apply to new users.
+#           - They apply to new users when the profile is created.
 #           - They usually survive upgrades.
+#           - They do not require a fully initialized profile.
+#
+# Target:
+#       - SCRIPT / CONTEXT: DefaultUser.ps1 (SYSTEM loads HKU\Default).
+#
+# NOTE:
+#       - If you later decide that a given key must also be enforced for every
+#         existing user (not just new ones), you can additionally add it to
+#         CurrentUser.ps1 and invoke via Active Setup for per-user execution.
 #
 # STOP.
-#
-#
+
+
 # STEP 6 — Fallback for all other HKCU keys
 # -----------------------------------------
 # IF none of the above conditions matched:
 #
 # THEN:
 #       → Apply in DEFAULT USER.
+#
 #       Reason:
 #           - Safe fallback for HKCU keys that are not Explorer/AppX/Policies.
+#           - They behave as general user defaults.
+#
+# Target:
+#       - SCRIPT / CONTEXT: DefaultUser.ps1.
 #
 # STOP.
-#
-#
+
+
 # ================================================================================
 # SUMMARY TABLE
 # ================================================================================
 #
-# HKLM\*                                   → SYSTEM
-# HKCU\Software\Policies\*                 → SYSTEM
-# Explorer-dependent HKCU keys             → BOTH DefaultUser + CurrentUser
-# AppX/UWP/CloudStore HKCU keys            → CurrentUser only
-# General HKCU\Software\*                  → DefaultUser
-# Other HKCU keys                          → DefaultUser
+# HKLM\*                                   → SYSTEM (Specialize.ps1)
+#
+# HKCU\Software\Policies\*                 → SYSTEM (Specialize.ps1, load user hive)
+#
+# Explorer-dependent HKCU keys             → BOTH:
+#                                             - DEFAULT USER (DefaultUser.ps1)
+#                                             - CURRENT USER — EVERY USER
+#                                               (CurrentUser.ps1 via Active Setup)
+#
+# AppX/UWP/CloudStore HKCU keys            → CURRENT USER ONLY:
+#                                             - FIRST USER ONLY:
+#                                                 * CurrentUser.ps1 via one-shot
+#                                                   Scheduled Task
+#                                             - EVERY USER:
+#                                                 * CurrentUser.ps1 via Active Setup
+#
+# General HKCU\Software\*                  → DEFAULT USER ONLY:
+#                                             - DefaultUser.ps1
+#
+# Other HKCU keys                          → DEFAULT USER ONLY (fallback)
+#
+# ================================================================================
+# DESIGN MAPPING TO SCRIPTS
+# ================================================================================
+#
+#   Specialize.ps1 (SYSTEM):
+#       - Applies HKLM settings.
+#       - Applies HKCU\Software\Policies (via loaded user hives if needed).
+#       - Registers Active Setup for CurrentUser.ps1 (if per-user logic is used).
+#       - Optionally creates a one-shot Scheduled Task for FIRST USER ONLY
+#         post-logon actions, if required.
+#
+#   DefaultUser.ps1 (SYSTEM, HKU\Default):
+#       - Applies general HKCU\Software defaults.
+#       - Applies Explorer-dependent defaults that should be pre-seeded for all
+#         NEW profiles.
+#
+#   CurrentUser.ps1 (HKCU, after logon):
+#       - Applies Explorer-dependent settings that must be enforced per-user.
+#       - Applies AppX/UWP/CloudStore/Start/Taskbar customizations.
+#       - Runs:
+#           * Either for FIRST USER ONLY (via Scheduled Task)
+#           * Or for EVERY USER (via Active Setup)
+#           * Or both, depending on design.
 #
 # ================================================================================
 #>
