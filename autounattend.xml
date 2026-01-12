@@ -304,6 +304,10 @@ $scripts = @(
         # First user logon schedule task registration
         Register-ScheduledTask -TaskName 'UserSetup.FirstUser' -Xml $( Get-Content -LiteralPath 'C:\MySetup\Scripts\UserSetup.FirstUser.xml' -Raw );
     };
+    {
+        # Per user Active Setup
+        & "C:\MySetup\Scripts\ConfigureActiveSetup.ps1" >> "C:\MySetup\Logs\ConfigureActiveSetup.log" 2>&1
+    };
 );
 
 & {
@@ -511,6 +515,43 @@ $scripts = @(
     $complete += $increment;
   }
 } *>&1 | Out-String -Width 1KB -Stream >> "$logsDir\UserSetup.PerUser.log";
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\ConfigureActiveSetup.ps1">
+<![CDATA[
+. "C:\MySetup\Scripts\Apply-Registry.ps1"
+
+Write-Output "Starting Active Setup registration"
+
+$entries = @(
+    @{
+        Path = "HKLM:\Software\Microsoft\Active Setup\Installed Components\UserSetup.PerUser"
+        Name = "Version"
+        Type = "String"
+        Value = "1,0,0,0"
+    },
+    @{
+        Path = "HKLM:\Software\Microsoft\Active Setup\Installed Components\UserSetup.PerUser"
+        Name = "StubPath"
+        Type = "String"
+        Value = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"C:\MySetup\Scripts\UserSetup.ps1\" PerUser"
+    },
+    @{
+        Path = "HKLM:\Software\Microsoft\Active Setup\Installed Components\UserSetup.PerUser"
+        Name = "Locale"
+        Type = "String"
+        Value = "*"
+    },
+    @{
+        Path = "HKLM:\Software\Microsoft\Active Setup\Installed Components\UserSetup.PerUser"
+        Name = "IsInstalled"
+        Type = "DWord"
+        Value = 1
+    }
+)
+Apply-RegistryBatch $entries
+
+Write-Output "Active Setup registration done"
 ]]>
         </File>
         <File path="C:\Windows\Setup\Scripts\Debloat.ps1">
