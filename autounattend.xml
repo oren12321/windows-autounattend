@@ -342,10 +342,7 @@ $scripts = @(
         reg.exe load "HKU\DefaultUser" "C:\Users\Default\NTUSER.DAT"
     };
     {
-        Apply-RegistryEntry -Path "Registry::HKEY_USERS\DefaultUser\Software\Microsoft\Windows\CurrentVersion\RunOnce" `
-            -Name "UserSetup" `
-            -Type "String" `
-            -Value "powershell.exe -WindowStyle \""Normal\"" -ExecutionPolicy \""Unrestricted\"" -NoProfile -File \""C:\MySetup\Scripts\UserSetup.ps1\"""
+        # SOME DEFAULT USER MODIFICATIONS
     };
     {
         reg.exe unload "HKU\DefaultUser"
