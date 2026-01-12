@@ -3001,7 +3001,7 @@ reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
   </Triggers>
   <Principals>
     <Principal id="Author">
-      <UserId>S-1-5-18</UserId>
+      <LogonType>InteractiveToken</LogonType>
       <RunLevel>HighestAvailable</RunLevel>
     </Principal>
   </Principals>
