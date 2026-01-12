@@ -335,9 +335,9 @@ $scripts = @(
     };
     {
         Apply-RegistryEntry -Path "Registry::HKEY_USERS\DefaultUser\Software\Microsoft\Windows\CurrentVersion\RunOnce" `
-            -Name "CurrentUser" `
+            -Name "UserSetup" `
             -Type "String" `
-            -Value "powershell.exe -WindowStyle \""Normal\"" -ExecutionPolicy \""Unrestricted\"" -NoProfile -File \""C:\MySetup\Scripts\CurrentUser.ps1\"""
+            -Value "powershell.exe -WindowStyle \""Normal\"" -ExecutionPolicy \""Unrestricted\"" -NoProfile -File \""C:\MySetup\Scripts\UserSetup.ps1\"""
     };
     {
         reg.exe unload "HKU\DefaultUser"
@@ -367,7 +367,30 @@ $scripts = @(
 } *>&1 | Out-String -Width 1KB -Stream >> "C:\MySetup\Logs\DefaultUser.log";
 ]]>
         </File>
-        <File path="C:\Windows\Setup\Scripts\CurrentUser.ps1">
+        <File path="C:\Windows\Setup\Scripts\UserSetup.ps1">
+<![CDATA[
+param(
+    [string]$Mode  # "FirstUser" or "PerUser"
+)
+
+switch ($Mode) {
+
+    "FirstUser" {
+        # Things ONLY the first user should get
+        # Example: OEM branding, one-time app installs, etc.
+        & "C:\MySetup\Scripts\UserSetup.FirstUser.ps1"
+    }
+
+    "PerUser" {
+        # Things EVERY user should get
+        # Example: Explorer defaults, Taskbar tweaks, Start menu tweaks
+        & "C:\MySetup\Scripts\UserSetup.PerUser.ps1"
+    }
+}
+
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\UserSetup.FirstUser.ps1">
 <![CDATA[
 $logsDir = "$env:LOCALAPPDATA\MySetup"
 if (-not (Test-Path $logsDir)) {
@@ -400,7 +423,43 @@ $scripts = @(
     "`r`n" * 3;
     $complete += $increment;
   }
-} *>&1 | Out-String -Width 1KB -Stream >> "$logsDir\CurrentUser.log";
+} *>&1 | Out-String -Width 1KB -Stream >> "$logsDir\UserSetup.FirstUser.log";
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\UserSetup.PerUser.ps1">
+<![CDATA[
+$logsDir = "$env:LOCALAPPDATA\MySetup"
+if (-not (Test-Path $logsDir)) {
+    New-Item -Path $logsDir -ItemType Directory -Force | Out-Null
+}
+
+$scripts = @(
+	{
+    
+	};
+);
+
+& {
+  [float] $complete = 0;
+  [float] $increment = 100 / $scripts.Count;
+  foreach( $script in $scripts ) {
+    Write-Progress -Activity 'Running scripts to configure this user account. Do not close this window.' -PercentComplete $complete;
+    "*** Will now execute command $([char]0xAB){0}$([char]0xBB)." -f $(
+      $str = $script.ToString().Trim() -replace '\s+', ' ';
+      $max = 100;
+      if( $str.Length -le $max ) {
+        $str;
+      } else {
+        $str.Substring( 0, $max - 1 ) + "$([char]0x2026)";
+      }
+    );
+    $start = [datetime]::Now;
+    & $script;
+    '*** Finished executing command after {0:0} ms.' -f [datetime]::Now.Subtract( $start ).TotalMilliseconds;
+    "`r`n" * 3;
+    $complete += $increment;
+  }
+} *>&1 | Out-String -Width 1KB -Stream >> "$logsDir\UserSetup.PerUser.log";
 ]]>
         </File>
         <File path="C:\Windows\Setup\Scripts\Debloat.ps1">
