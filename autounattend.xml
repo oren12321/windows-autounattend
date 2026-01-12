@@ -300,6 +300,10 @@ $scripts = @(
     {
         & "C:\MySetup\Scripts\ConfigureWindowsUpdate.System.ps1" >> "C:\MySetup\Logs\ConfigureWindowsUpdate.System.log" 2>&1
     };
+    {
+        # First user logon schedule task registration
+        Register-ScheduledTask -TaskName 'UserSetup.FirstUser' -Xml $( Get-Content -LiteralPath 'C:\MySetup\Scripts\UserSetup.FirstUser.xml' -Raw );
+    };
 );
 
 & {
@@ -373,21 +377,68 @@ param(
     [string]$Mode  # "FirstUser" or "PerUser"
 )
 
+$logFile = "C:\MySetup\Logs\UserSetup.log"
+
+# Logging helper
+function Write-Log {
+    param([string]$Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$timestamp | $Message" | Out-File $logFile -Append
+}
+
+Write-Log "Starting UserSetup.ps1 with Mode='$Mode'"
+
 switch ($Mode) {
 
     "FirstUser" {
-        # Things ONLY the first user should get
-        # Example: OEM branding, one-time app installs, etc.
-        & "C:\MySetup\Scripts\UserSetup.FirstUser.ps1"
+        Write-Log "Executing FirstUser mode"
+    
+        try {
+            # Things ONLY the first user should get
+            # Example: OEM branding, one-time app installs, etc.
+            & "C:\MySetup\Scripts\UserSetup.FirstUser.ps1"
+        }
+        catch {
+            Write-Log "ERROR in FirstUser script: $_"
+        }
+        
+        # Remove the scheduled task so it never runs again
+        $taskName = "UserSetup.FirstUser"
+        
+        try {
+            if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
+                Write-Log "Removing scheduled task '$taskName'"
+                Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
+            }
+            else {
+                Write-Log "No scheduled task '$taskName' to remove"
+            }
+        }
+        catch {
+            Write-Log "ERROR in '$taskName' schedule task removal: $_"
+        }
     }
 
     "PerUser" {
-        # Things EVERY user should get
-        # Example: Explorer defaults, Taskbar tweaks, Start menu tweaks
-        & "C:\MySetup\Scripts\UserSetup.PerUser.ps1"
+        Write-Log "Executing PerUser mode"
+    
+        try {
+            # Things EVERY user should get
+            # Example: Explorer defaults, Taskbar tweaks, Start menu tweaks
+            & "C:\MySetup\Scripts\UserSetup.PerUser.ps1"
+        }
+        catch {
+            Write-Log "ERROR in PerUser script: $_"
+        }
+    }
+    
+    default {
+        Write-Log "WARNING: Invalid mode '$Mode'. Expected 'FirstUser' or 'PerUser'."
+        return
     }
 }
 
+Write-Log "UserSetup.ps1 finished"
 ]]>
         </File>
         <File path="C:\Windows\Setup\Scripts\UserSetup.FirstUser.ps1">
@@ -2901,5 +2952,48 @@ reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
 </Task>
 ]]>
 		</File>
+        <File path="C:\Windows\Setup\Scripts\UserSetup.FirstUser.xml">
+<![CDATA[
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <Triggers>
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+      <Delay>PT30S</Delay>
+    </LogonTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <Priority>5</Priority>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Command>
+      <Arguments>-NoProfile -ExecutionPolicy Bypass -File "C:\MySetup\Scripts\UserSetup.ps1" FirstUser</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+]]>
+        </File>
     </Extensions>
 </unattend>
