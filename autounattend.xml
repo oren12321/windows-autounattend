@@ -531,7 +531,7 @@ $entries = @(
         Path = "HKLM:\Software\Microsoft\Active Setup\Installed Components\UserSetup.PerUser"
         Name = "StubPath"
         Type = "String"
-        Value = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"C:\MySetup\Scripts\UserSetup.ps1\" PerUser"
+        Value = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ""C:\MySetup\Scripts\UserSetup.ps1"" PerUser"
     },
     @{
         Path = "HKLM:\Software\Microsoft\Active Setup\Installed Components\UserSetup.PerUser"
