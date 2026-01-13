@@ -574,9 +574,6 @@ $scripts = @(
 <![CDATA[
 $scripts = @(
 	{
-		reg.exe add "HKU\DefaultUser\Software\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f;
-	};
-	{
 		Remove-ItemProperty -LiteralPath 'Registry::HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'OneDriveSetup' -Force -ErrorAction 'Continue';
 	};
 	{
@@ -880,11 +877,9 @@ Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Error
 Set-RegistryValue -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance' -Name 'fAllowToGetHelp' -Type 'DWord' -Value 0 -Description 'Choose if other people can connect to your computer remotely to provide technical support'
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' -Name 'DisableLockWorkstation' -Type 'DWord' -Value 0 -Description 'Allows users to lock their computer using Windows+L, Start menu, or Ctrl+Alt+Del screen'
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo' -Name 'DisabledByGroupPolicy' -Type 'DWord' -Value 1 -Description 'Windows generates a unique advertising ID that apps use to track your activity and deliver personalized ads based on your behavior across different apps'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\InputPersonalization' -Name 'AllowInputPersonalization' -Type 'DWord' -Value 0 -Description 'Use your voice for apps using Microsoft''s online speech recognition technology'
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection' -Name 'AllowTelemetry' -Type 'DWord' -Value 1 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection' -Name 'MaxTelemetryAllowed' -Type 'DWord' -Value 1 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Name 'AllowTelemetry' -Type 'DWord' -Value 1 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'
-Set-RegistryValue -Path 'HKLM:\Software\Policies\Microsoft\Windows\CloudContent' -Name 'DisableTailoredExperiencesWithDiagnosticData' -Type 'DWord' -Value 1 -Description 'Let Microsoft use your diagnostic data to show personalized tips, ads and recommendations'
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Name 'DoNotShowFeedbackNotifications' -Type 'DWord' -Value 1 -Description 'Let Windows ask you to provide feedback on experiences in Windows'
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search' -Name 'AllowCortana' -Type 'DWord' -Value 0 -Description 'Enables Microsoft''s Cortana virtual assistant for voice commands and searches'
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location' -Name 'Value' -Type 'String' -Value 'Deny' -Description 'Allows Windows and apps to access your device location for location-based features'
@@ -1089,17 +1084,13 @@ function Set-RegistryValue {
 # START MENU SETTINGS
 # ============================================================================
 
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'HideRecommendedSection' -Type 'DWord' -Value 1 -Description 'Show or hide the lower section that displays recently opened files and suggested apps'
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Start' -Name 'HideRecommendedSection' -Type 'DWord' -Value 1 -Description 'Show or hide the lower section that displays recently opened files and suggested apps'
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Education' -Name 'IsEducationEnvironment' -Type 'DWord' -Value 1 -Description 'Show or hide the lower section that displays recently opened files and suggested apps'
-Set-RegistryValue -Path 'HKLM:\Software\Policies\Microsoft\Windows\Explorer' -Name 'DisableSearchBoxSuggestions' -Type 'DWord' -Value 1 -Description 'Prevent web results from Bing from appearing when searching in the Start Menu, showing only local files and apps'
 
 # ============================================================================
 # TASKBAR SETTINGS
 # ============================================================================
 
-Set-RegistryValue -Path 'HKLM:\Software\Policies\Microsoft\Dsh' -Name 'AllowNewsAndInterests' -Type 'DWord' -Value 0 -Description 'Show the Widgets button that displays personalized news, weather, calendar, and other information'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds' -Name 'EnableFeeds' -Type 'DWord' -Value 0 -Description 'Show the Widgets button that displays personalized news, weather, calendar, and other information'
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer' -Name 'HideSCAMeetNow' -Type 'DWord' -Value 1 -Description 'Disable Meet Now Icon'
 Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Chat' -Name 'ChatIcon' -Type 'DWord' -Value 3 -Description 'Disable Windows 11 Chat Icon'
 ]]>
@@ -1309,7 +1300,6 @@ Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Narrator\NoRoam' -Name 'Online
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Narrator\NoRoam' -Name 'ScriptingEnabled' -Type 'DWord' -Value 0 -Description 'Allow Narrator to execute scripts for automation and custom functionality'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\CPSS\Store\InkingAndTypingPersonalization' -Name 'Value' -Type 'DWord' -Value 0 -Description 'Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Personalization\Settings' -Name 'AcceptedPrivacyPolicy' -Type 'DWord' -Value 0 -Description 'Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)'
-Set-RegistryValue -Path 'HKCU:\Software\Microsoft\InputPersonalization' -Name 'RestrictImplicitTextCollection' -Type 'DWord' -Value 1 -Description 'Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\InputPersonalization\TrainedDataStore' -Name 'HarvestContacts' -Type 'DWord' -Value 0 -Description 'Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Diagnostics\DiagTrack' -Name 'ShowedToastAtLevel' -Type 'DWord' -Value 1 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'
 Set-RegistryValue -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection' -Name 'AllowTelemetry' -Type 'DWord' -Value 1 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'

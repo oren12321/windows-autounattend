@@ -2878,13 +2878,6 @@ $entries = @(
     },
     @{
         Path = "HKLM\SOFTWARE\Policies\Microsoft\WindowsStore"
-        Name = "AutoDownload"
-        Type = "DWord"
-        Value = 2
-        Description = "Disables automatic app updates from the Microsoft Store."
-    },
-    @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\WindowsStore"
         Name = "DisableStoreApps"
         Type = "DWord"
         Value = 1
