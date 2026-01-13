@@ -2635,44 +2635,44 @@ if ($LASTEXITCODE -eq 0) {
     Write-Output "Failed to activate power plan"
 }
 
-$regPaths = @(
+$entries = @(
     @{
         Path = "HKLM:\SYSTEM\ControlSet001\Control\Session Manager\Power"
         Name = "HiberbootEnabled"
         Type = "DWord"
         Value = 0
-        Description = "Hibernate system state during shutdown for faster boot times (does not affect restart)"
+        Description = "Disables Fast Startup by preventing Windows from using a hibernated system state during shutdown."
     },
     @{
         Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings"
         Name = "ShowHibernateOption"
         Type = "DWord"
         Value = 1
-        Description = "Display the Hibernate option in the Start Menu power button menu"
+        Description = "Enables the Hibernate option in the Start Menu power flyout."
     },
     @{
         Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling"
         Name = "PowerThrottlingOff"
         Type = "DWord"
         Value = 1
-        Description = "Automatically reduces CPU performance for background processes to improve battery life and reduce heat generation"
+        Description = "Disables power throttling to prevent Windows from reducing CPU performance for background processes."
     },
     @{
         Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings"
         Name = "ShowLockOption"
         Type = "DWord"
         Value = 1
-        Description = "Display the Lock option in the Start Menu power button menu"
+        Description = "Enables the Lock option in the Start Menu power flyout."
     },
     @{
         Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings"
         Name = "ShowSleepOption"
         Type = "DWord"
         Value = 1
-        Description = "Display the Sleep option in the Start Menu power button menu"
+        Description = "Enables the Sleep option in the Start Menu power flyout."
     }
 )
-Apply-RegistryBatch $regPaths
+Apply-RegistryBatch $entries
 ]]>
         </File>
         <File path="C:\Windows\Setup\Scripts\ConfigureWindowsUpdate.System.ps1">
