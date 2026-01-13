@@ -2754,41 +2754,6 @@ $entries = @(
         Type = "DWord"
         Value = 2
         Description="Automatically download and install updates for apps from the Microsoft Store"
-    },
-    @{
-        Path = "HKCU:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization"
-        Name = "DODownloadMode"
-        Type = "DWord"
-        Value = 99
-        Description="Share downloaded updates with other PCs on your network or the internet to reduce bandwidth usage"
-    },
-    @{
-        Path = "HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU"
-        Name = "NoAutoRebootWithLoggedOnUsers"
-        Type = "DWord"
-        Value = 1
-        Description="Prevents automatic restarts after installing updates when users are logged on"
-    },
-    @{
-        Path = "HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
-        Name = "SetUpdateNotificationLevel"
-        Type = "DWord"
-        Value = 1
-        Description="Show or hide notifications about available updates and update progress"
-    },
-    @{
-        Path = "HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
-        Name = "ExcludeWUDriversInQualityUpdate"
-        Type = "DWord"
-        Value = 1
-        Description="Prevent Windows from automatically downloading and installing hardware driver updates"
-    },
-    @{
-        Path = "HKCU:\SOFTWARE\Policies\Microsoft\WindowsStore"
-        Name = "AutoDownload"
-        Type = "DWord"
-        Value = 2
-        Description="Automatically download and install updates for apps from the Microsoft Store"
     }
 )
 Apply-RegistryBatch $entries
