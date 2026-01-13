@@ -637,9 +637,6 @@ $scripts = @(
 		Set-ItemProperty @params -Name 'MouseThreshold2';
 	};
 	{
-		reg.exe add "HKU\DefaultUser\Software\Policies\Microsoft\Windows\Explorer" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f;
-	};
-	{
 		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings" /v TaskbarEndTask /t REG_DWORD /d 1 /f;
 	};
 	{
@@ -1230,8 +1227,6 @@ function Set-BinaryByte {
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\GameBar' -Name 'AutoGameModeEnabled' -Type 'DWord' -Value 1 -Description 'Optimize your PC for play by turning things off in the background'
 Set-RegistryValue -Path 'HKCU:\Control Panel\Mouse' -Name 'MouseSpeed' -Type 'String' -Value '0' -Description 'Adjust cursor speed based on movement velocity (mouse acceleration). Most competitive gamers disable this for consistent aiming in FPS games'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize' -Name 'StartupDelayInMSec' -Type 'DWord' -Value 10000 -Description 'Delay startup applications by 10 seconds after boot to improve initial system responsiveness. Windows becomes usable faster, but your startup apps take longer to load'
-Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy' -Name 'LetAppsRunInBackground' -Type 'DWord' -Value 0 -Description 'Allow apps to receive notifications, update data, and perform tasks even when not actively in use'
-Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\StorageSense' -Name 'AllowStorageSenseGlobal' -Type 'DWord' -Value 0 -Description 'Automatically free up disk space by removing temporary files, emptying the recycle bin, and managing downloads'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Search\Preferences' -Name 'WholeFileSystem' -Type 'DWord' -Value 0 -Description 'Search your entire file system instead of only indexed locations. This provides more complete results but is significantly slower than indexed search and increases disk activity'
 Set-RegistryValue -Path 'HKCU:\Control Panel\Desktop' -Name 'JPEGImportQuality' -Type 'DWord' -Value 100 -Description 'Allow Windows to compress wallpapers to save disk space and improve performance. Only affects images in JPEG format.'
 Set-RegistryValue -Path 'HKCU:\Control Panel\Desktop' -Name 'MenuShowDelay' -Type 'String' -Value '0' -Description 'Add a brief delay before displaying menus, or show them instantly for faster navigation'
@@ -1285,16 +1280,12 @@ Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Notific
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.StartupApp' -Name 'Enabled' -Type 'DWord' -Value 0 -Description 'Show notifications when apps are added to your Windows startup list'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location' -Name 'ShowGlobalPrompts' -Type 'DWord' -Value 1 -Description 'Show notifications when apps attempt to access your location information'
 Set-RegistryValue -Path 'HKCU:\Control Panel\Desktop' -Name 'DstNotification' -Type 'DWord' -Value 0 -Description 'Show notifications when daylight saving time changes occur'
-Set-RegistryValue -Path 'HKCU:\Software\Policies\Microsoft\Windows Defender Security Center\Notifications' -Name 'DisableNotifications' -Type 'DWord' -Value 0 -Description 'Show all notifications from Windows Security about threats, scans, and protection status'
-Set-RegistryValue -Path 'HKCU:\Software\Policies\Microsoft\Windows Defender Security Center\Notifications' -Name 'DisableEnhancedNotifications' -Type 'DWord' -Value 0 -Description 'Show all notifications from Windows Security about threats, scans, and protection status'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.SecurityAndMaintenance' -Name 'Enabled' -Type 'DWord' -Value 1 -Description 'Show notifications from the Security and Maintenance Action Center'
 
 # ============================================================================
 # PRIVACY & SECURITY SETTINGS
 # ============================================================================
 
-Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin' -Name 'BlockAADWorkplaceJoin' -Type 'DWord' -Value 1 -Description 'Blocks the ''Allow my organization to manage my device'' and ''No, sign in to this app only'' pop-up messages'
-Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting' -Name 'Disabled' -Type 'DWord' -Value 1 -Description 'Choose if Windows should collect and send crash reports and error information to Microsoft'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'ContentDeliveryAllowed' -Type 'DWord' -Value 0 -Description 'Allows Windows to deliver promotional content and automatically install suggested apps'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'SubscribedContentEnabled' -Type 'DWord' -Value 0 -Description 'Enables promotional content subscriptions from Microsoft and partners throughout Windows'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'FeatureManagementEnabled' -Type 'DWord' -Value 0 -Description 'Enables Windows feature management functionality for promotional features and automatic app installations'
@@ -1307,7 +1298,6 @@ Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Content
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'RotatingLockScreenOverlayEnabled' -Type 'DWord' -Value 0 -Description 'Displays fun facts, tips, and tricks as an overlay on your lock screen'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'SlideshowEnabled' -Type 'DWord' -Value 0 -Description 'Enables slideshow option for lock screen background'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo' -Name 'Enabled' -Type 'DWord' -Value 0 -Description 'Windows generates a unique advertising ID that apps use to track your activity and deliver personalized ads based on your behavior across different apps'
-Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo' -Name 'DisabledByGroupPolicy' -Type 'DWord' -Value 1 -Description 'Windows generates a unique advertising ID that apps use to track your activity and deliver personalized ads based on your behavior across different apps'
 Set-RegistryValue -Path 'HKCU:\Control Panel\International\User Profile' -Name 'HttpAcceptLanguageOptOut' -Type 'DWord' -Value 1 -Description 'Allows websites to access your language preferences so they can automatically display content in your preferred language without requiring manual configuration on each site'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'Start_TrackProgs' -Type 'DWord' -Value 0 -Description 'Windows records which apps you use most frequently to personalize your Start menu and improve search results, making your most-used apps more accessible'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'SubscribedContent-338393Enabled' -Type 'DWord' -Value 0 -Description 'Microsoft displays promotional content, tips, and feature suggestions within the Windows Settings app to help you discover new features and functionality'
@@ -1315,7 +1305,6 @@ Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Content
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'SubscribedContent-353696Enabled' -Type 'DWord' -Value 0 -Description 'Microsoft displays promotional content, tips, and feature suggestions within the Windows Settings app to help you discover new features and functionality'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\SystemSettings\AccountNotifications' -Name 'EnableAccountNotifications' -Type 'DWord' -Value 0 -Description 'Shows account notifications in the Settings app, including prompts to reauthenticate, backup your device, and manage subscriptions'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy' -Name 'HasAccepted' -Type 'DWord' -Value 0 -Description 'Use your voice for apps using Microsoft''s online speech recognition technology'
-Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\InputPersonalization' -Name 'AllowInputPersonalization' -Type 'DWord' -Value 0 -Description 'Use your voice for apps using Microsoft''s online speech recognition technology'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Narrator\NoRoam' -Name 'OnlineServicesEnabled' -Type 'DWord' -Value 0 -Description 'Allow Narrator to use Microsoft cloud services for features like intelligent image descriptions and enhanced voice models'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Narrator\NoRoam' -Name 'ScriptingEnabled' -Type 'DWord' -Value 0 -Description 'Allow Narrator to execute scripts for automation and custom functionality'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\CPSS\Store\InkingAndTypingPersonalization' -Name 'Value' -Type 'DWord' -Value 0 -Description 'Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)'
@@ -1323,21 +1312,15 @@ Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Personalization\Settings' -Nam
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\InputPersonalization' -Name 'RestrictImplicitTextCollection' -Type 'DWord' -Value 1 -Description 'Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\InputPersonalization\TrainedDataStore' -Name 'HarvestContacts' -Type 'DWord' -Value 0 -Description 'Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Diagnostics\DiagTrack' -Name 'ShowedToastAtLevel' -Type 'DWord' -Value 1 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'
-Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Name 'AllowTelemetry' -Type 'DWord' -Value 1 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'
 Set-RegistryValue -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection' -Name 'AllowTelemetry' -Type 'DWord' -Value 1 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'
 Set-RegistryValue -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection' -Name 'MaxTelemetryAllowed' -Type 'DWord' -Value 1 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Input\TIPC' -Name 'Enabled' -Type 'DWord' -Value 0 -Description 'Send optional inking and typing diagnostic data to Microsoft'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\CPSS\Store\ImproveInkingAndTyping' -Name 'Value' -Type 'DWord' -Value 0 -Description 'Send optional inking and typing diagnostic data to Microsoft'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Privacy' -Name 'TailoredExperiencesWithDiagnosticDataEnabled' -Type 'DWord' -Value 0 -Description 'Let Microsoft use your diagnostic data to show personalized tips, ads and recommendations'
-Set-RegistryValue -Path 'HKCU:\Software\Policies\Microsoft\Windows\CloudContent' -Name 'DisableTailoredExperiencesWithDiagnosticData' -Type 'DWord' -Value 1 -Description 'Let Microsoft use your diagnostic data to show personalized tips, ads and recommendations'
-Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Name 'DoNotShowFeedbackNotifications' -Type 'DWord' -Value 1 -Description 'Let Windows ask you to provide feedback on experiences in Windows'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings' -Name 'IsDeviceSearchHistoryEnabled' -Type 'DWord' -Value 0 -Description 'Improves search results by allowing Windows Search to store your search history locally on this device (Does not clear existing history)'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings' -Name 'IsDynamicSearchBoxEnabled' -Type 'DWord' -Value 0 -Description 'See content suggestions in search'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings' -Name 'IsMSACloudSearchEnabled' -Type 'DWord' -Value 0 -Description 'Allow Windows Search to show results from apps and services that you are signed in to with your Microsoft account'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings' -Name 'IsAADCloudSearchEnabled' -Type 'DWord' -Value 0 -Description 'Allow Windows Search to show results from apps and services that you are signed in to with your work or school account'
-Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\Windows Search' -Name 'AllowCortana' -Type 'DWord' -Value 0 -Description 'Enables Microsoft''s Cortana virtual assistant for voice commands and searches'
-Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors' -Name 'DisableLocation' -Type 'DWord' -Value 1 -Description 'Allows Windows and apps to access your device location for location-based features'
-Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\OneDrive' -Name 'KFMBlockOptIn' -Type 'DWord' -Value 1 -Description 'Prevents OneDrive from automatically backing up important folders (Documents, Pictures, Desktop, etc.)'
 
 # ============================================================================
 # SOUND SETTINGS
@@ -1395,14 +1378,12 @@ Set-RegistryValue -Path 'HKCU:\Software\Classes\CLSID\{031E4825-7B94-4dc3-B131-E
 # START MENU SETTINGS
 # ============================================================================
 
-Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'HideRecommendedSection' -Type 'DWord' -Value 1 -Description 'Show or hide the lower section that displays recently opened files and suggested apps'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Start' -Name 'ShowAllPinsList' -Type 'DWord' -Value 1 -Description 'Automatically expand to show all pinned apps instead of requiring you to click ''All apps'''
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Start' -Name 'ShowRecentList' -Type 'DWord' -Value 0 -Description 'Display a list of recently installed applications at the top of the All Apps list'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Start' -Name 'ShowFrequentList' -Type 'DWord' -Value 0 -Description 'Display your frequently launched applications at the top of the All Apps list for quick access'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'Start_TrackDocs' -Type 'DWord' -Value 0 -Description 'Display your recently opened documents and files in the Start Menu''s Recommended section for quick access'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'Start_IrisRecommendations' -Type 'DWord' -Value 0 -Description 'Display personalized suggestions from Windows for tips, app shortcuts, and Microsoft Store apps in the Recommended section'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'Start_AccountNotifications' -Type 'DWord' -Value 0 -Description 'Display notifications about Microsoft account sign-in, sync status, and account-related suggestions'
-Set-RegistryValue -Path 'HKCU:\Software\Policies\Microsoft\Windows\Explorer' -Name 'DisableSearchBoxSuggestions' -Type 'DWord' -Value 1 -Description 'Prevent web results from Bing from appearing when searching in the Start Menu, showing only local files and apps'
 
 # ============================================================================
 # TASKBAR SETTINGS
@@ -1411,10 +1392,7 @@ Set-RegistryValue -Path 'HKCU:\Software\Policies\Microsoft\Windows\Explorer' -Na
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Search' -Name 'SearchboxTaskbarMode' -Type 'DWord' -Value 0 -Description 'Choose how the Windows search appears on your taskbar: hidden, icon only, icon with label, or full search box'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'TaskbarAl' -Type 'DWord' -Value 0 -Description 'Align taskbar icons to the left (classic Windows style) or center (Windows 11 default)'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'ShowTaskViewButton' -Type 'DWord' -Value 0 -Description 'Show the Task View button for managing virtual desktops and viewing all open windows at once'
-Set-RegistryValue -Path 'HKCU:\Software\Policies\Microsoft\Dsh' -Name 'AllowNewsAndInterests' -Type 'DWord' -Value 0 -Description 'Show the Widgets button that displays personalized news, weather, calendar, and other information'
-Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds' -Name 'EnableFeeds' -Type 'DWord' -Value 0 -Description 'Show the Widgets button that displays personalized news, weather, calendar, and other information'
 Set-RegistryValue -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer' -Name 'HideSCAMeetNow' -Type 'DWord' -Value 1 -Description 'Disable Meet Now Icon'
-Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\Chat' -Name 'ChatIcon' -Type 'DWord' -Value 3 -Description 'Disable Windows 11 Chat Icon'
 Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings' -Name 'TaskbarEndTask' -Type 'DWord' -Value 1 -Description 'Adds an ''End Task'' option when right-clicking applications on the taskbar for quick termination'
 
 # ============================================================================
