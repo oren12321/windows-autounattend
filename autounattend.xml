@@ -303,6 +303,9 @@ $scripts = @(
         & "C:\MySetup\Scripts\ConfigureWindowsAI.System.ps1" >> "C:\MySetup\Logs\ConfigureWindowsAI.System.log" 2>&1
     };
     {
+        & "C:\MySetup\Scripts\ConfigureSecurityAndPrivacy.System.ps1" >> "C:\MySetup\Logs\ConfigureSecurityAndPrivacy.System.log" 2>&1
+    };
+    {
         # First user logon schedule task registration
         Register-ScheduledTask -TaskName 'UserSetup.FirstUser' -Xml $( Get-Content -LiteralPath 'C:\MySetup\Scripts\UserSetup.FirstUser.xml' -Raw );
     };
@@ -2910,6 +2913,176 @@ $entries = @(
         Type = "DWord"
         Value = 1
         Description = "Disables Windows Spotlight and its AI-driven content recommendations."
+    }
+)
+Apply-RegistryBatch $entries
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\ConfigureSecurityAndPrivacy.System.ps1">
+<![CDATA[
+. "C:\MySetup\Scripts\Apply-Registry.ps1"
+
+$entries = @(
+    @{
+        Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
+        Name = "ConsentPromptBehaviorAdmin"
+        Type = "DWord"
+        Value = 0
+        Description = "Defines how Windows prompts administrators for approval when elevated permissions are required."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
+        Name = "PromptOnSecureDesktop"
+        Type = "DWord"
+        Value = 0
+        Description = "Determines whether UAC prompts appear on the secure desktop for added protection."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin"
+        Name = "BlockAADWorkplaceJoin"
+        Type = "DWord"
+        Value = 1
+        Description = "Prevents users from joining Azure AD or seeing prompts to let the organization manage the device."
+    },
+    @{
+        Path = "HKLM:\SYSTEM\CurrentControlSet\Control\BitLocker"
+        Name = "PreventDeviceEncryption"
+        Type = "DWord"
+        Value = 1
+        Description = "Stops Windows from automatically enabling BitLocker device encryption."
+    },
+    @{
+        Path = "HKLM:\Software\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting"
+        Name = "Value"
+        Type = "DWord"
+        Value = 0
+        Description = "Disables Wi‑Fi Sense features that share Wi‑Fi credentials and connect to suggested hotspots."
+    },
+    @{
+        Path = "HKLM:\Software\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots"
+        Name = "Value"
+        Type = "DWord"
+        Value = 0
+        Description = "Prevents automatic connection to open or suggested Wi‑Fi Sense hotspots."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance"
+        Name = "MaintenanceDisabled"
+        Type = "DWord"
+        Value = 1
+        Description = "Disables automatic system maintenance tasks that normally run during idle time."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting"
+        Name = "Disabled"
+        Type = "DWord"
+        Value = 1
+        Description = "Turns off Windows Error Reporting so crash and diagnostic data is not sent to Microsoft."
+    },
+    @{
+        Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance"
+        Name = "fAllowToGetHelp"
+        Type = "DWord"
+        Value = 0
+        Description = "Blocks Remote Assistance so others cannot connect to provide remote help."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+        Name = "DisableLockWorkstation"
+        Type = "DWord"
+        Value = 0
+        Description = "Controls whether users are allowed to lock the workstation using Windows security shortcuts."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo"
+        Name = "DisabledByGroupPolicy"
+        Type = "DWord"
+        Value = 1
+        Description = "Disables the advertising ID used by apps to deliver personalized ads."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection"
+        Name = "AllowTelemetry"
+        Type = "DWord"
+        Value = 1
+        Description = "Sets the level of diagnostic data Windows is allowed to send to Microsoft."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection"
+        Name = "MaxTelemetryAllowed"
+        Type = "DWord"
+        Value = 1
+        Description = "Defines the maximum diagnostic data level permitted on the device."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+        Name = "AllowTelemetry"
+        Type = "DWord"
+        Value = 1
+        Description = "Specifies whether diagnostic data collection is permitted by policy."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+        Name = "DoNotShowFeedbackNotifications"
+        Type = "DWord"
+        Value = 1
+        Description = "Suppresses Windows feedback notifications that request user input."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
+        Name = "AllowCortana"
+        Type = "DWord"
+        Value = 0
+        Description = "Enables or disables the Cortana assistant for search and voice interaction."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location"
+        Name = "Value"
+        Type = "String"
+        Value = "Deny"
+        Description = "Controls whether Windows and apps are allowed to access the device’s location."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors"
+        Name = "DisableLocation"
+        Type = "DWord"
+        Value = 1
+        Description = "Disables all location services and prevents apps from accessing location data."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam"
+        Name = "Value"
+        Type = "String"
+        Value = "Allow"
+        Description = "Specifies whether apps are permitted to access the device camera."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone"
+        Name = "Value"
+        Type = "String"
+        Value = "Allow"
+        Description = "Specifies whether apps are permitted to access the device microphone."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\userAccountInformation"
+        Name = "Value"
+        Type = "String"
+        Value = "Deny"
+        Description = "Controls whether apps can access user account information."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\appDiagnostics"
+        Name = "Value"
+        Type = "String"
+        Value = "Deny"
+        Description = "Controls whether apps can access diagnostic information about other apps."
+    },
+    @{
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\OneDrive"
+        Name = "KFMBlockOptIn"
+        Type = "DWord"
+        Value = 1
+        Description = "Prevents OneDrive from offering or enabling automatic backup of user folders."
     }
 )
 Apply-RegistryBatch $entries

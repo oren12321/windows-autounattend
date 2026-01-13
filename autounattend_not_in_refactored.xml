@@ -465,9 +465,6 @@ $scripts = @(
         & 'C:\MyMaintenance\Scripts\NotificationsSettings.ps1';
     };
     {
-        & 'C:\MyMaintenance\Scripts\PrivacyAndSecuritySettings.ps1';
-    };
-    {
         & 'C:\MyMaintenance\Scripts\SoundSettings.ps1';
     };
     {
@@ -837,58 +834,6 @@ function Set-RegistryValue {
 Set-RegistryValue -Path 'HKLM:\Software\Microsoft\Windows Defender Security Center\Notifications' -Name 'DisableNotifications' -Type 'DWord' -Value 0 -Description 'Show all notifications from Windows Security about threats, scans, and protection status'
 Set-RegistryValue -Path 'HKLM:\Software\Policies\Microsoft\Windows Defender Security Center\Notifications' -Name 'DisableNotifications' -Type 'DWord' -Value 0 -Description 'Show all notifications from Windows Security about threats, scans, and protection status'
 Set-RegistryValue -Path 'HKLM:\Software\Policies\Microsoft\Windows Defender Security Center\Notifications' -Name 'DisableEnhancedNotifications' -Type 'DWord' -Value 0 -Description 'Show all notifications from Windows Security about threats, scans, and protection status'
-]]>
-        </File>
-        <File path="C:\Windows\Setup\Scripts\PrivacyAndSecuritySettings.ps1">
-<![CDATA[
-function Set-RegistryValue {
-    param(
-        [string]$Path,
-        [string]$Name,
-        [string]$Type,
-        $Value,
-        [string]$Description
-    )
-
-    try {
-        if (-not (Test-Path $Path)) {
-            New-Item -Path $Path -Force | Out-Null
-        }
-        Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $Type -Force
-        Write-Output "$Description | $Path\$Name = $Value"
-    }
-    catch {
-        Write-Output "Failed to set $Path\$Name : $($_.Exception.Message)"
-    }
-}
-
-# ============================================================================
-# PRIVACY & SECURITY SETTINGS
-# ============================================================================
-
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name 'ConsentPromptBehaviorAdmin' -Type 'DWord' -Value 0 -Description 'Controls UAC notification level and secure desktop behavior'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name 'PromptOnSecureDesktop' -Type 'DWord' -Value 0 -Description 'Controls UAC notification level and secure desktop behavior'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin' -Name 'BlockAADWorkplaceJoin' -Type 'DWord' -Value 1 -Description 'Blocks the ''Allow my organization to manage my device'' and ''No, sign in to this app only'' pop-up messages'
-Set-RegistryValue -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\BitLocker' -Name 'PreventDeviceEncryption' -Type 'DWord' -Value 1 -Description 'Prevents Windows from automatically encrypting your device with BitLocker without user consent'
-Set-RegistryValue -Path 'HKLM:\Software\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting' -Name 'Value' -Type 'DWord' -Value 0 -Description 'Allow sharing WiFi passwords with contacts and automatically connecting to suggested open hotspots'
-Set-RegistryValue -Path 'HKLM:\Software\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots' -Name 'Value' -Type 'DWord' -Value 0 -Description 'Allow sharing WiFi passwords with contacts and automatically connecting to suggested open hotspots'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance' -Name 'MaintenanceDisabled' -Type 'DWord' -Value 1 -Description 'Choose if Windows should run automatic system maintenance tasks during idle time'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting' -Name 'Disabled' -Type 'DWord' -Value 1 -Description 'Choose if Windows should collect and send crash reports and error information to Microsoft'
-Set-RegistryValue -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance' -Name 'fAllowToGetHelp' -Type 'DWord' -Value 0 -Description 'Choose if other people can connect to your computer remotely to provide technical support'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' -Name 'DisableLockWorkstation' -Type 'DWord' -Value 0 -Description 'Allows users to lock their computer using Windows+L, Start menu, or Ctrl+Alt+Del screen'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo' -Name 'DisabledByGroupPolicy' -Type 'DWord' -Value 1 -Description 'Windows generates a unique advertising ID that apps use to track your activity and deliver personalized ads based on your behavior across different apps'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection' -Name 'AllowTelemetry' -Type 'DWord' -Value 1 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection' -Name 'MaxTelemetryAllowed' -Type 'DWord' -Value 1 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Name 'AllowTelemetry' -Type 'DWord' -Value 1 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Name 'DoNotShowFeedbackNotifications' -Type 'DWord' -Value 1 -Description 'Let Windows ask you to provide feedback on experiences in Windows'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search' -Name 'AllowCortana' -Type 'DWord' -Value 0 -Description 'Enables Microsoft''s Cortana virtual assistant for voice commands and searches'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location' -Name 'Value' -Type 'String' -Value 'Deny' -Description 'Allows Windows and apps to access your device location for location-based features'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors' -Name 'DisableLocation' -Type 'DWord' -Value 1 -Description 'Allows Windows and apps to access your device location for location-based features'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam' -Name 'Value' -Type 'String' -Value 'Allow' -Description 'Allow apps to have camera access'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone' -Name 'Value' -Type 'String' -Value 'Allow' -Description 'Allow apps to have microphone access'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\userAccountInformation' -Name 'Value' -Type 'String' -Value 'Deny' -Description 'Allow apps to have account info access'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\appDiagnostics' -Name 'Value' -Type 'String' -Value 'Deny' -Description 'Allow apps to have app diagnostic access'
-Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\OneDrive' -Name 'KFMBlockOptIn' -Type 'DWord' -Value 1 -Description 'Prevents OneDrive from automatically backing up important folders (Documents, Pictures, Desktop, etc.)'
 ]]>
         </File>
         <File path="C:\Windows\Setup\Scripts\SoundSettings.ps1">
