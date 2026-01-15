@@ -473,70 +473,7 @@ $scripts = @(
 <![CDATA[
 $scripts = @(
 	{
-		Remove-ItemProperty -LiteralPath 'Registry::HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'OneDriveSetup' -Force -ErrorAction 'Continue';
-	};
-	{
-		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\GameDVR" /v AppCaptureEnabled /t REG_DWORD /d 0 /f;
-	};
-	{
-		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "HideFileExt" /t REG_DWORD /d 0 /f;
-	};
-	{
-		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "Hidden" /t REG_DWORD /d 1 /f;
-	};
-	{
-		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "ShowSuperHidden" /t REG_DWORD /d 1 /f;
-	};
-	{
-		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowTaskViewButton /t REG_DWORD /d 0 /f;
-	};
-	{
 		& 'C:\MyMaintenance\Scripts\TurnOffSystemSounds.ps1';
-	};
-	{
-		$names = @(
-		  'ContentDeliveryAllowed';
-		  'FeatureManagementEnabled';
-		  'OEMPreInstalledAppsEnabled';
-		  'PreInstalledAppsEnabled';
-		  'PreInstalledAppsEverEnabled';
-		  'SilentInstalledAppsEnabled';
-		  'SoftLandingEnabled';
-		  'SubscribedContentEnabled';
-		  'SubscribedContent-310093Enabled';
-		  'SubscribedContent-338387Enabled';
-		  'SubscribedContent-338388Enabled';
-		  'SubscribedContent-338389Enabled';
-		  'SubscribedContent-338393Enabled';
-		  'SubscribedContent-353694Enabled';
-		  'SubscribedContent-353696Enabled';
-		  'SubscribedContent-353698Enabled';
-		  'SystemPaneSuggestionsEnabled';
-		);
-		
-		foreach( $name in $names ) {
-		  reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v $name /t REG_DWORD /d 0 /f;
-		}
-	};
-	{
-		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAl /t REG_DWORD /d 0 /f;
-	};
-	{
-		$params = @{
-		  LiteralPath = 'Registry::HKU\DefaultUser\Control Panel\Mouse';
-		  Type = 'String';
-		  Value = 0;
-		  Force = $true;
-		};
-		Set-ItemProperty @params -Name 'MouseSpeed';
-		Set-ItemProperty @params -Name 'MouseThreshold1';
-		Set-ItemProperty @params -Name 'MouseThreshold2';
-	};
-	{
-		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings" /v TaskbarEndTask /t REG_DWORD /d 1 /f;
-	};
-	{
-		reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v "UnattendedSetup" /t REG_SZ /d "powershell.exe -WindowStyle \""Normal\"" -ExecutionPolicy \""Unrestricted\"" -NoProfile -File \""C:\MyMaintenance\Scripts\UserOnce.ps1\""" /f;
 	};
 );
 

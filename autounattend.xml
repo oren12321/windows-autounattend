@@ -471,14 +471,28 @@ $scripts = @(
         <File path="C:\Windows\Setup\Scripts\DefaultUser.ps1">
 <![CDATA[
 . "C:\MySetup\Scripts\Apply-Registry.ps1"
+. "C:\MySetup\Scripts\RegistryPlacement.ps1"
 
 $scripts = @(
     {
         reg.exe load "HKU\DefaultUser" "C:\Users\Default\NTUSER.DAT"
     };
     {
-        # SOME DEFAULT USER MODIFICATIONS
-    };
+        . "C:\MySetup\Scripts\ExplorerRegistry.User.ps1"
+        Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $ExplorerEntries -Scope DefaultUser))
+	};
+    {
+        . "C:\MySetup\Scripts\PerformanceRegistry.User.ps1"
+        Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $Entries $PerformanceEntries -Scope DefaultUser))
+	};
+    {
+        . "C:\MySetup\Scripts\ShellUIRegistry.User.ps1"
+        Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $ShellUIEntries -Scope DefaultUser))
+	};
+    {
+        . "C:\MySetup\Scripts\SecurityAndPrivacyRegistry.User.ps1"
+        Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $SecurityAndPrivacyEntries -Scope DefaultUser))
+	};
     {
         reg.exe unload "HKU\DefaultUser"
     };
@@ -579,6 +593,9 @@ Write-Log "UserSetup.ps1 finished"
         </File>
         <File path="C:\Windows\Setup\Scripts\UserSetup.FirstUser.ps1">
 <![CDATA[
+. "C:\MySetup\Scripts\Apply-Registry.ps1"
+. "C:\MySetup\Scripts\RegistryPlacement.ps1"
+
 $logsDir = "$env:LOCALAPPDATA\MySetup"
 if (-not (Test-Path $logsDir)) {
     New-Item -Path $logsDir -ItemType Directory -Force | Out-Null
@@ -586,7 +603,20 @@ if (-not (Test-Path $logsDir)) {
 
 $scripts = @(
 	{
-    
+        . "C:\MySetup\Scripts\ExplorerRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $ExplorerEntries -Scope FirstUser)
+	};
+    {
+        . "C:\MySetup\Scripts\PerformanceRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $Entries $PerformanceEntries -Scope FirstUser)
+	};
+    {
+        . "C:\MySetup\Scripts\ShellUIRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $ShellUIEntries -Scope FirstUser)
+	};
+    {
+        . "C:\MySetup\Scripts\SecurityAndPrivacyRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $SecurityAndPrivacyEntries -Scope FirstUser)
 	};
 );
 
@@ -615,6 +645,9 @@ $scripts = @(
         </File>
         <File path="C:\Windows\Setup\Scripts\UserSetup.PerUser.ps1">
 <![CDATA[
+. "C:\MySetup\Scripts\Apply-Registry.ps1"
+. "C:\MySetup\Scripts\RegistryPlacement.ps1"
+
 $logsDir = "$env:LOCALAPPDATA\MySetup"
 if (-not (Test-Path $logsDir)) {
     New-Item -Path $logsDir -ItemType Directory -Force | Out-Null
@@ -622,7 +655,20 @@ if (-not (Test-Path $logsDir)) {
 
 $scripts = @(
 	{
-    
+        . "C:\MySetup\Scripts\ExplorerRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $ExplorerEntries -Scope PerUser)
+	};
+    {
+        . "C:\MySetup\Scripts\PerformanceRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $Entries $PerformanceEntries -Scope PerUser)
+	};
+    {
+        . "C:\MySetup\Scripts\ShellUIRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $ShellUIEntries -Scope PerUser)
+	};
+    {
+        . "C:\MySetup\Scripts\SecurityAndPrivacyRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $SecurityAndPrivacyEntries -Scope PerUser)
 	};
 );
 
@@ -4054,6 +4100,225 @@ $entries = @(
     }
 )
 Apply-RegistryBatch $entries
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\ExplorerRegistry.User.ps1">
+<![CDATA[
+$ExplorerEntries = @(
+    @{
+        Operation   = "Delete"
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+        Name        = "OneDriveSetup"
+        Description = "Removes OneDriveSetup autorun entry for new users"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "HideFileExt"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Show file extensions for known file types"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "Hidden"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Show hidden files and folders"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "ShowSuperHidden"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Show protected operating system files"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
+        Name        = "UnattendedSetup"
+        Type        = "String"
+        Value       = "powershell.exe -WindowStyle ""Normal"" -ExecutionPolicy ""Unrestricted"" -NoProfile -File ""C:\MyMaintenance\Scripts\UserOnce.ps1"""
+        Description = "Run user setup script on first logon"
+    }
+)
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\PerformanceRegistry.User.ps1">
+<![CDATA[
+$PerformanceEntries = @(
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR"
+        Name        = "AppCaptureEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable Game DVR app capture for new users"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Mouse"
+        Name        = "MouseSpeed"
+        Type        = "String"
+        Value       = 0
+        Description = "Set mouse speed"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Mouse"
+        Name        = "MouseThreshold1"
+        Type        = "String"
+        Value       = 0
+        Description = "Set mouse threshold 1"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Mouse"
+        Name        = "MouseThreshold2"
+        Type        = "String"
+        Value       = 0
+        Description = "Set mouse threshold 2"
+    }
+)
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\ShellUIRegistry.User.ps1">
+<![CDATA[
+$ShellUIEntries = @(
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "ShowTaskViewButton"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Hide Task View button on the taskbar"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "TaskbarAl"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Align taskbar icons to the left"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings"
+        Name        = "TaskbarEndTask"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Enable End Task option in taskbar right-click menu"
+    }
+)
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\SecurityAndPrivacyRegistry.User.ps1">
+<![CDATA[
+SecurityAndPrivacyEntries = @(
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "ContentDeliveryAllowed"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable content delivery features"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "FeatureManagementEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable content delivery features"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "OEMPreInstalledAppsEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable OEM preinstalled apps"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "PreInstalledAppsEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable preinstalled apps"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "PreInstalledAppsEverEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable preinstalled apps"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SilentInstalledAppsEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable silent app installs"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SoftLandingEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable soft landing suggestions"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContentEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable subscribed content"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContent-310093Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable subscribed content"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContent-338387Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable subscribed content"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContent-338388Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable subscribed content"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContent-338389Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable subscribed content"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContent-338393Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable subscribed content"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContent-353694Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable subscribed content"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContent-353696Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable subscribed content"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContent-353698Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable subscribed content"
+    }
+)
 ]]>
         </File>
         <File path="C:\Windows\Setup\Scripts\PauseWindowsUpdate.ps1">
