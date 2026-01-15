@@ -294,6 +294,9 @@ $scripts = @(
         & "C:\MySetup\Scripts\Debloat.ps1"
     };
     {
+        & "C:\MySetup\Scripts\ConfigureSetupAndOOBE.System.ps1" >> "C:\MySetup\Logs\ConfigureSetupAndOOBE.System.log" 2>&1
+    };
+    {
         & "C:\MySetup\Scripts\ConfigurePowerSettings.System.ps1" >> "C:\MySetup\Logs\ConfigurePowerSettings.System.log" 2>&1
     };
     {
@@ -557,6 +560,51 @@ $entries = @(
 Apply-RegistryBatch $entries
 
 Write-Output "Active Setup registration done"
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\ConfigureSetupAndOOBE.System.ps1">
+<![CDATA[
+. "C:\MySetup\Scripts\Apply-Registry.ps1"
+
+$entries = @(
+    @{
+        Path        = "HKLM:\SYSTEM\Setup\MoSetup"
+        Name        = "AllowUpgradesWithUnsupportedTPMOrCPU"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Allow in-place upgrades on unsupported TPM or CPU hardware"
+        Category    = "Setup"
+    },
+    @{
+        Path        = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE"
+        Name        = "BypassNRO"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Bypass network requirement during Windows out-of-box experience"
+        Category    = "OOBE"
+    },
+    @{
+        Operation   = "Delete"
+        Path        = "HKLM:\Software\Microsoft\WindowsUpdate\Orchestrator\UScheduler_Oobe\DevHomeUpdate"
+        Description = "Remove Dev Home update scheduled during OOBE"
+        Category    = "OOBE"
+    },
+    @{
+        Operation   = "Delete"
+        Path        = "HKLM:\Software\Microsoft\WindowsUpdate\Orchestrator\UScheduler_Oobe\OutlookUpdate"
+        Description = "Remove Outlook update scheduled during OOBE"
+        Category    = "OOBE"
+    },
+    @{
+        Path        = "HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Education"
+        Name        = "IsEducationEnvironment"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Enable education environment mode"
+        Category    = "Setup"
+    }
+)
+Apply-RegistryBatch $entries
 ]]>
         </File>
         <File path="C:\Windows\Setup\Scripts\Debloat.ps1">
