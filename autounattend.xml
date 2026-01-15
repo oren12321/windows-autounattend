@@ -2805,6 +2805,13 @@ $entries = @(
         Type = "DWord"
         Value = 2
         Description="Automatically download and install updates for apps from the Microsoft Store"
+    },
+    @{
+        Path        = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System"
+        Name        = "DisableAutomaticRestartSignOn"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Disable automatic restart sign-on after updates"
     }
 )
 Apply-RegistryBatch $entries
@@ -3157,6 +3164,13 @@ $entries = @(
         Type        = "DWord"
         Value       = 0
         Description = "Reset last used voice activation state"
+    },
+    @{
+        Path        = "HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy"
+        Name        = "VerifiedAndReputablePolicyState"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable Smart App Control verified and reputable policy"
     }
 )
 Apply-RegistryBatch $entries
