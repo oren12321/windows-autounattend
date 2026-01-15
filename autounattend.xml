@@ -573,7 +573,6 @@ $entries = @(
         Type        = "DWord"
         Value       = 1
         Description = "Allow in-place upgrades on unsupported TPM or CPU hardware"
-        Category    = "Setup"
     },
     @{
         Path        = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE"
@@ -581,19 +580,16 @@ $entries = @(
         Type        = "DWord"
         Value       = 1
         Description = "Bypass network requirement during Windows out-of-box experience"
-        Category    = "OOBE"
     },
     @{
         Operation   = "Delete"
         Path        = "HKLM:\Software\Microsoft\WindowsUpdate\Orchestrator\UScheduler_Oobe\DevHomeUpdate"
         Description = "Remove Dev Home update scheduled during OOBE"
-        Category    = "OOBE"
     },
     @{
         Operation   = "Delete"
         Path        = "HKLM:\Software\Microsoft\WindowsUpdate\Orchestrator\UScheduler_Oobe\OutlookUpdate"
         Description = "Remove Outlook update scheduled during OOBE"
-        Category    = "OOBE"
     },
     @{
         Path        = "HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Education"
@@ -601,7 +597,6 @@ $entries = @(
         Type        = "DWord"
         Value       = 1
         Description = "Enable education environment mode"
-        Category    = "Setup"
     }
 )
 Apply-RegistryBatch $entries
@@ -3134,6 +3129,34 @@ $entries = @(
         Type = "DWord"
         Value = 1
         Description = "Prevents OneDrive from offering or enabling automatic backup of user folders."
+    },
+    @{
+        Path  = "HKLM:\SOFTWARE\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell"
+        Name  = "ExecutionPolicy"
+        Type  = "String"
+        Value = "RemoteSigned"
+        Description = "Set PowerShell execution policy"
+    },
+    @{
+        Path  = "HKLM:\SOFTWARE\Microsoft\PowerShellCore\ShellIds\Microsoft.PowerShell"
+        Name  = "ExecutionPolicy"
+        Type  = "String"
+        Value = "RemoteSigned"
+        Description = "Set PowerShell Core execution policy"
+    },
+    @{
+        Path        = "HKLM:\Software\Microsoft\Windows\CurrentVersion\SpeechOneCore\Settings"
+        Name        = "AgentActivationEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable voice activation features"
+    },
+    @{
+        Path        = "HKLM:\Software\Microsoft\Windows\CurrentVersion\SpeechOneCore\Settings"
+        Name        = "AgentActivationLastUsed"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Reset last used voice activation state"
     }
 )
 Apply-RegistryBatch $entries

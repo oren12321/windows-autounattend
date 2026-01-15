@@ -399,27 +399,10 @@ $scripts = @(
 		Remove-Item -LiteralPath 'C:\Users\Public\Desktop\Microsoft Edge.lnk' -ErrorAction 'SilentlyContinue' -Verbose;
 	};
 	{
-        #Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell' `
-        #    -Name 'ExecutionPolicy' -Value 'RemoteSigned' -Force
-        #Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\PowerShellCore\ShellIds\Microsoft.PowerShell' `
-        #    -Name 'ExecutionPolicy' -Value 'RemoteSigned' -Force
-		Set-ExecutionPolicy -Scope 'LocalMachine' -ExecutionPolicy 'RemoteSigned' -Force;
-	};
-	{
 		fsutil.exe behavior set disableLastAccess 1;
 	};
 	{
-		reg.exe add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v HiberbootEnabled /t REG_DWORD /d 0 /f;
-	};
-	{
 		reg.exe add "HKLM\Software\Policies\Microsoft\Windows\CloudContent" /v "DisableWindowsConsumerFeatures" /t REG_DWORD /d 1 /f;
-	};
-	{
-		reg.exe add "HKLM\Software\Policies\Microsoft\Edge" /v HideFirstRunExperience /t REG_DWORD /d 1 /f;
-	};
-	{
-		reg.exe add "HKLM\Software\Policies\Microsoft\Edge\Recommended" /v BackgroundModeEnabled /t REG_DWORD /d 0 /f;
-		reg.exe add "HKLM\Software\Policies\Microsoft\Edge\Recommended" /v StartupBoostEnabled /t REG_DWORD /d 0 /f;
 	};
 	{
 		& 'C:\MyMaintenance\Scripts\SetStartPins.ps1';
@@ -741,8 +724,6 @@ function Set-RegistryValue {
 
 Set-RegistryValue -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation' -Name 'DisableStartupSound' -Type 'DWord' -Value 1 -Description 'Play the Windows startup sound when your computer boots up'
 Set-RegistryValue -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\EditionOverrides' -Name 'UserSetting_DisableStartupSound' -Type 'DWord' -Value 1 -Description 'Play the Windows startup sound when your computer boots up'
-Set-RegistryValue -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\SpeechOneCore\Settings' -Name 'AgentActivationEnabled' -Type 'DWord' -Value 0 -Description 'Allow apps to listen and respond to voice commands like "Hey Cortana"'
-Set-RegistryValue -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\SpeechOneCore\Settings' -Name 'AgentActivationLastUsed' -Type 'DWord' -Value 0 -Description 'Remember and apply the most recently used voice activation configuration'
 ]]>
         </File>
         <File path="C:\Windows\Setup\Scripts\ExplorerSettings.ps1">
