@@ -65,15 +65,6 @@
 				<HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
 				<HideOnlineAccountScreens>true</HideOnlineAccountScreens>
 			</OOBE>
-            <FirstLogonCommands>
-                <SynchronousCommand wcm:action="add">
-                    <Order>1</Order>
-                    <CommandLine>
-                        powershell.exe -ExecutionPolicy Bypass -NoProfile -Command "Register-ScheduledTask -TaskName 'UserSetup.FirstUser' -Xml (Get-Content -LiteralPath 'C:\MySetup\Scripts\UserSetup.FirstUser.xml' -Raw) *>> 'C:\MySetup\Logs\UserSetup.FirstUser.RegisterTask.log'"
-                    </CommandLine>
-                    <Description>Register UserSetup.FirstUser Task</Description>
-                </SynchronousCommand>
-            </FirstLogonCommands>
 		</component>
 	</settings>
 	<Extensions xmlns="https://schneegans.de/windows/unattend-generator/">
@@ -134,6 +125,19 @@ if (Test-Path $Source) {
 $Build = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").CurrentBuildNumber
 $Build | Out-File -FilePath (Join-Path $StateDir "LastBuild.txt") -Encoding ASCII -Force
 ]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\SetupComplete.cmd">
+<![CDATA[
+@echo off
+echo [%DATE% %TIME%] SetupComplete.cmd started >> C:\MySetup\Logs\SetupComplete.log
+
+REM Register the scheduled task for the first user
+powershell.exe -ExecutionPolicy Bypass -NoProfile -Command "Register-ScheduledTask -TaskName 'UserSetup.FirstUser' -Xml (Get-Content -LiteralPath 'C:\MySetup\Scripts\UserSetup.FirstUser.xml' -Raw) *>> 'C:\MySetup\Logs\UserSetup.FirstUser.RegisterTask.log'"
+
+echo [%DATE% %TIME%] SetupComplete.cmd finished >> C:\MySetup\Logs\SetupComplete.log
+exit /b 0
+]]>
+        </File>
         </File>
         <File path="C:\Windows\Setup\Scripts\Apply-Registry.ps1">
 <![CDATA[
