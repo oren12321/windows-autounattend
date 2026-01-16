@@ -59,14 +59,41 @@ function Test-RegistryPlacement {
     }
 
     # ---------------------------------------------------------
-    # STEP 6 — Generic HKCU preferences - DefaultUser + PerUser
+    # STEP 6 — Explorer / shell keys - avoid specialize
+    # ---------------------------------------------------------
+    if ($p -match '^HKCU:\\SOFTWARE\\MICROSOFT\\WINDOWS\\CURRENTVERSION\\EXPLORER\\') {
+        # Explorer is heavily touched by OOBE / first-run
+        return ($Scope -in @('FirstUser','PerUser'))
+    }
+
+    # ---------------------------------------------------------
+    # STEP 7 — Search / Start / Feeds - first user only
+    # ---------------------------------------------------------
+    if ($p -match 'SEARCH' -or
+        $p -match 'STARTMENU' -or
+        $p -match 'FEEDS') {
+
+        return ($Scope -eq 'FirstUser')
+    }
+
+    # ---------------------------------------------------------
+    # STEP 8 — AppX / package-related keys - first user only
+    # ---------------------------------------------------------
+    if ($p -match 'APPX' -or
+        $p -match 'PACKAGE') {
+
+        return ($Scope -eq 'FirstUser')
+    }
+
+    # ---------------------------------------------------------
+    # STEP 9 — Generic HKCU preferences - DefaultUser + PerUser
     # ---------------------------------------------------------
     if ($p.StartsWith("HKCU:\")) {
         return ($Scope -in @('DefaultUser','PerUser'))
     }
 
     # ---------------------------------------------------------
-    # STEP 7 — Fallback - DefaultUser + PerUser
+    # STEP 10 — Fallback - DefaultUser + PerUser
     # ---------------------------------------------------------
     return ($Scope -in @('DefaultUser','PerUser'))
 }

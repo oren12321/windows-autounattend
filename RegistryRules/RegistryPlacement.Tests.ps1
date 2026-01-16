@@ -57,21 +57,71 @@ Describe "Test-RegistryPlacement - First-run semantics" {
     }
 }
 
-Describe "Test-RegistryPlacement - Generic HKCU preferences" {
+# ---------------------------------------------------------
+# NEW TESTS FOR THE REFINED ALGORITHM
+# ---------------------------------------------------------
 
-    It "Generic HKCU goes to DefaultUser + PerUser" {
+Describe "Test-RegistryPlacement - Explorer keys" {
+
+    It "Explorer keys go to FirstUser + PerUser only" {
         $p = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
 
-        Test-RegistryPlacement -Path $p -Scope DefaultUser | Should -BeTrue
+        Test-RegistryPlacement -Path $p -Scope FirstUser   | Should -BeTrue
         Test-RegistryPlacement -Path $p -Scope PerUser     | Should -BeTrue
-        Test-RegistryPlacement -Path $p -Scope FirstUser   | Should -BeFalse
+        Test-RegistryPlacement -Path $p -Scope DefaultUser | Should -BeFalse
         Test-RegistryPlacement -Path $p -Scope SYSTEM      | Should -BeFalse
     }
 }
 
-Describe "Test-RegistryPlacement - Fallback" {
+Describe "Test-RegistryPlacement - Search / Start / Feeds rules" {
 
-    It "Fallback HKCU goes to DefaultUser + PerUser" {
+    It "Search keys go only to FirstUser" {
+        $p = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search"
+
+        Test-RegistryPlacement -Path $p -Scope FirstUser   | Should -BeTrue
+        Test-RegistryPlacement -Path $p -Scope DefaultUser | Should -BeFalse
+        Test-RegistryPlacement -Path $p -Scope PerUser     | Should -BeFalse
+    }
+
+    It "StartMenu keys go only to FirstUser" {
+        $p = "HKCU:\Software\Microsoft\Windows\CurrentVersion\StartMenu"
+
+        Test-RegistryPlacement -Path $p -Scope FirstUser   | Should -BeTrue
+        Test-RegistryPlacement -Path $p -Scope DefaultUser | Should -BeFalse
+        Test-RegistryPlacement -Path $p -Scope PerUser     | Should -BeFalse
+    }
+
+    It "Feeds keys go only to FirstUser" {
+        $p = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Feeds"
+
+        Test-RegistryPlacement -Path $p -Scope FirstUser   | Should -BeTrue
+        Test-RegistryPlacement -Path $p -Scope DefaultUser | Should -BeFalse
+        Test-RegistryPlacement -Path $p -Scope PerUser     | Should -BeFalse
+    }
+}
+
+Describe "Test-RegistryPlacement - AppX / Package rules" {
+
+    It "AppX keys go only to FirstUser" {
+        $p = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Appx"
+
+        Test-RegistryPlacement -Path $p -Scope FirstUser   | Should -BeTrue
+        Test-RegistryPlacement -Path $p -Scope DefaultUser | Should -BeFalse
+        Test-RegistryPlacement -Path $p -Scope PerUser     | Should -BeFalse
+    }
+
+    It "Package keys go only to FirstUser" {
+        $p = "HKCU:\Software\Microsoft\Windows\CurrentVersion\PackageRepository"
+
+        Test-RegistryPlacement -Path $p -Scope FirstUser   | Should -BeTrue
+        Test-RegistryPlacement -Path $p -Scope DefaultUser | Should -BeFalse
+        Test-RegistryPlacement -Path $p -Scope PerUser     | Should -BeFalse
+    }
+}
+
+Describe "Test-RegistryPlacement - Generic HKCU preferences" {
+
+    It "Generic HKCU goes to DefaultUser + PerUser" {
         $p = "HKCU:\Software\Vendor\App"
 
         Test-RegistryPlacement -Path $p -Scope DefaultUser | Should -BeTrue
