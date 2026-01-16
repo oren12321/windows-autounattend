@@ -138,7 +138,6 @@ echo [%DATE% %TIME%] SetupComplete.cmd finished >> C:\MySetup\Logs\SetupComplete
 exit /b 0
 ]]>
         </File>
-        </File>
         <File path="C:\Windows\Setup\Scripts\Apply-Registry.ps1">
 <![CDATA[
 function Apply-RegistryEntry {
