@@ -433,7 +433,7 @@ $scripts = @(
         & "C:\MySetup\Scripts\ConfigureShellUI.System.ps1" >> "C:\MySetup\Scripts\ConfigureShellUI.System.log" 2>&1
     };
     {
-        & "C:\MySetup\Scripts\ConfigureSound.System.ps1" >> "C:\MySetup\Scripts\ConfigureSound.System.log" 2>&1
+        & "C:\MySetup\Scripts\ConfigureSoundAndNotifications.System.ps1" >> "C:\MySetup\Scripts\ConfigureSoundAndNotifications.System.log" 2>&1
     };
     {
         # First user logon schedule task registration
@@ -492,6 +492,10 @@ $scripts = @(
     {
         . "C:\MySetup\Scripts\SecurityAndPrivacyRegistry.User.ps1"
         Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $SecurityAndPrivacyEntries -Scope DefaultUser))
+	};
+    {
+        . "C:\MySetup\Scripts\SoundAndNotificationsRegistry.User.ps1"
+        Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $SoundAndNotificationsEntries -Scope DefaultUser))
 	};
     {
         reg.exe unload "HKU\DefaultUser"
@@ -618,6 +622,10 @@ $scripts = @(
         . "C:\MySetup\Scripts\SecurityAndPrivacyRegistry.User.ps1"
         Apply-RegistryBatch $(Get-EntriesForScope -Entries $SecurityAndPrivacyEntries -Scope FirstUser)
 	};
+    {
+        . "C:\MySetup\Scripts\SoundAndNotificationsRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $SoundAndNotificationsEntries -Scope FirstUser)
+	};
 );
 
 & {
@@ -669,6 +677,10 @@ $scripts = @(
     {
         . "C:\MySetup\Scripts\SecurityAndPrivacyRegistry.User.ps1"
         Apply-RegistryBatch $(Get-EntriesForScope -Entries $SecurityAndPrivacyEntries -Scope PerUser)
+	};
+    {
+        . "C:\MySetup\Scripts\SoundAndNotificationsRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $SoundAndNotificationsEntries -Scope PerUser)
 	};
 );
 
@@ -4079,7 +4091,7 @@ Invoke-ConfigureStartPins
 
 ]]>
         </File>
-        <File path="C:\Windows\Setup\Scripts\ConfigureSound.System.ps1">
+        <File path="C:\Windows\Setup\Scripts\ConfigureSoundAndNotifications.System.ps1">
 <![CDATA[
 . "C:\MySetup\Scripts\Apply-Registry.ps1"
 
@@ -4138,6 +4150,414 @@ $ExplorerEntries = @(
         Type        = "String"
         Value       = "powershell.exe -WindowStyle ""Normal"" -ExecutionPolicy ""Unrestricted"" -NoProfile -File ""C:\MyMaintenance\Scripts\UserOnce.ps1"""
         Description = "Run user setup script on first logon"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Desktop"
+        Name        = "MenuShowDelay"
+        Type        = "String"
+        Value       = "0"
+        Description = "Add a brief delay before displaying menus, or show them instantly for faster navigation"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\DWM"
+        Name        = "CompositionPolicy"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Enable visual effects managed by the Desktop Window Manager"
+    },
+    @{
+        Operation   = "SetBit"
+        Path        = "HKCU:\Control Panel\Desktop"
+        Name        = "UserPreferencesMask"
+        Offset      = 4
+        BitIndex    = 1
+        BitValue    = 0
+        Description = "Enables animation effects for controls and UI elements"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Desktop\WindowMetrics"
+        Name        = "MinAnimate"
+        Type        = "String"
+        Value       = "0"
+        Description = "Shows smooth animation when windows are minimized or maximized"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\DWM"
+        Name        = "EnableAeroPeek"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Allows peeking at desktop when hovering over Show Desktop"
+    },
+    @{
+        Operation   = "SetBit"
+        Path        = "HKCU:\Control Panel\Desktop"
+        Name        = "UserPreferencesMask"
+        Offset      = 0
+        BitIndex    = 1
+        BitValue    = 0
+        Description = "Animates menus when they appear using fade or slide effects"
+    },
+    @{
+        Operation   = "SetBit"
+        Path        = "HKCU:\Control Panel\Desktop"
+        Name        = "UserPreferencesMask"
+        Offset      = 1
+        BitIndex    = 3
+        BitValue    = 0
+        Description = "Animates tooltips when they appear using fade or slide effects"
+    },
+    @{
+        Operation   = "SetBit"
+        Path        = "HKCU:\Control Panel\Desktop"
+        Name        = "UserPreferencesMask"
+        Offset      = 1
+        BitIndex    = 2
+        BitValue    = 0
+        Description = "Fades menu items after selection before closing the menu"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\DWM"
+        Name        = "AlwaysHibernateThumbnails"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Saves thumbnail previews of taskbar windows for faster display"
+    },
+    @{
+        Operation   = "SetBit"
+        Path        = "HKCU:\Control Panel\Desktop"
+        Name        = "UserPreferencesMask"
+        Offset      = 1
+        BitIndex    = 5
+        BitValue    = 0
+        Description = "Displays shadow effect underneath the mouse cursor"
+    },
+    @{
+        Operation   = "SetBit"
+        Path        = "HKCU:\Control Panel\Desktop"
+        Name        = "UserPreferencesMask"
+        Offset      = 2
+        BitIndex    = 2
+        BitValue    = 0
+        Description = "Displays shadow effects underneath windows"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "IconsOnly"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Displays image and document previews instead of generic file icons"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "ListviewAlphaSelect"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Display a semi-transparent selection box when dragging"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Desktop"
+        Name        = "DragFullWindows"
+        Type        = "String"
+        Value       = "1"
+        Description = "Displays window contents when dragging instead of just an outline"
+    },
+    @{
+        Operation   = "SetBit"
+        Path        = "HKCU:\Control Panel\Desktop"
+        Name        = "UserPreferencesMask"
+        Offset      = 0
+        BitIndex    = 2
+        BitValue    = 0
+        Description = "Animates combo boxes when they open with a sliding effect"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Desktop"
+        Name        = "FontSmoothing"
+        Type        = "String"
+        Value       = "2"
+        Description = "Apply anti-aliasing to text for smoother, more readable fonts"
+    },
+    @{
+        Operation   = "SetBit"
+        Path        = "HKCU:\Control Panel\Desktop"
+        Name        = "UserPreferencesMask"
+        Offset      = 0
+        BitIndex    = 3
+        BitValue    = 0
+        Description = "Enables smooth scrolling in list boxes instead of jumping"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "ListviewShadow"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Add shadow effects behind desktop icon text"
+    },
+    @{
+        Operation   = "EnsureKey"
+        Path        = "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32"
+        Description = "Use the Windows 10-style right-click menu with all options visible instead of the simplified Windows 11 menu"
+    },
+    @{
+        Path        = "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32"
+        Name        = "(Default)"
+        Type        = "String"
+        Value       = ""
+        Description = "Use the Windows 10-style right-click menu with all options visible instead of the simplified Windows 11 menu"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Lighting"
+        Name        = "AmbientLightingEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Allow Windows Dynamic Lighting to control ambient RGB effects on compatible devices"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Lighting"
+        Name        = "ControlledByForegroundApp"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Allow compatible apps to control device lighting effects"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Windows"
+        Name        = "LegacyDefaultPrinterMode"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Prevents Windows from automatically changing your default printer based on location or last used printer"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "LaunchTo"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Choose what happens when File Explorer is opened"
+    },
+    @{
+        Operation   = "SetByte"
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CabinetState"
+        Name        = "Settings"
+        Offset      = 4
+        ByteValue   = 0x0A
+        Description = "Choose whether each folder opens in the same window or in its own window"
+    },
+    @{
+        Operation   = "SetByte"
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer"
+        Name        = "ShellState"
+        Offset      = 4
+        ByteValue   = 0x3E
+        Description = "Choose whether to open files and folders with a single click or double-click"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer"
+        Name        = "IconUnderline"
+        Type        = "DWord"
+        Value       = 3
+        Description = "Choose whether to open files and folders with a single click or double-click"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer"
+        Name        = "ShowRecent"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Displays recently accessed files and recommendations in Quick Access"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer"
+        Name        = "ShowRecommendations"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Displays recently accessed files and recommendations in Quick Access"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer"
+        Name        = "ShowFrequent"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Displays your most accessed folders in Quick Access"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer"
+        Name        = "ShowCloudFilesInQuickAccess"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Displays cloud files from your Office.com account in Quick Access"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "IconsOnly"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Displays generic file icons instead of image/document previews"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "UseCompactMode"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Reduces vertical spacing between files and folders for denser view"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "ShowTypeOverlay"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Shows file type icon overlay on thumbnail previews"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "FolderContentsInfoTip"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Shows total size and file count when hovering over folders"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CabinetState"
+        Name        = "FullPath"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Shows complete directory path in window title"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "Hidden"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Displays items with the hidden attribute set"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "HideDrivesWithNoMedia"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Hides drives with no media inserted"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "HideFileExt"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Displays file type extensions"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "HideMergeConflicts"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Automatically merges folders with same name without confirmation"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "ShowSuperHidden"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Displays system files marked with the SuperHidden attribute"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "SeparateProcess"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Runs each Explorer window in its own process"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "PersistBrowsers"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Reopens Explorer windows from last session"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "ShowDriveLettersFirst"
+        Type        = "DWord"
+        Value       = 4
+        Description = "Displays drive letters before drive names"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "ShowEncryptCompressedColor"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Displays encrypted files in green and compressed files in blue"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "ShowInfoTip"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Displays tooltip with item details when hovering"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "ShowPreviewHandlers"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Enables file content preview when selecting files"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "ShowStatusBar"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Displays bar at bottom showing item count and file sizes"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "ShowSyncProviderNotifications"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Displays cloud sync status notifications"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "AutoCheckSelect"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Adds checkboxes next to items for easier multi-selection"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "SharingWizardOn"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Shows simplified sharing dialog instead of advanced permissions"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "TypeAhead"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Chooses whether typing selects matching items or searches automatically"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "NavPaneShowAllCloudStates"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Shows cloud sync status icons in navigation pane"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "NavPaneExpandToCurrentFolder"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Automatically expands navigation tree to current folder"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "NavPaneShowAllFolders"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Shows all folders in the navigation pane"
+    },
+    @{
+        Path        = "HKCU:\Software\Classes\CLSID\{031E4825-7B94-4dc3-B131-E946B44C8DD5}"
+        Name        = "System.IsPinnedToNameSpaceTree"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Displays Libraries container grouping Documents, Music, Pictures, and Videos"
     }
 )
 ]]>
@@ -4172,6 +4592,83 @@ $PerformanceEntries = @(
         Type        = "String"
         Value       = 0
         Description = "Set mouse threshold 2"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\GameBar"
+        Name        = "AutoGameModeEnabled"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Optimize your PC for play by turning things off in the background"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Mouse"
+        Name        = "MouseSpeed"
+        Type        = "String"
+        Value       = "0"
+        Description = "Adjust cursor speed based on movement velocity (mouse acceleration). Most competitive gamers disable this for consistent aiming in FPS games"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize"
+        Name        = "StartupDelayInMSec"
+        Type        = "DWord"
+        Value       = 10000
+        Description = "Delay startup applications by 10 seconds after boot to improve initial system responsiveness"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Search\Preferences"
+        Name        = "WholeFileSystem"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Search your entire file system instead of only indexed locations"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Desktop"
+        Name        = "JPEGImportQuality"
+        Type        = "DWord"
+        Value       = 100
+        Description = "Allow Windows to compress wallpapers to save disk space and improve performance"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\DirectX\UserGpuPreferences"
+        Name        = "DirectXUserGlobalSettings"
+        Type        = "String"
+        Value       = "SwapEffectUpgradeEnable=1;"
+        Description = "Reduce latency and use advanced features in compatible games by using DirectX flip presentation model"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\DirectX\UserGpuPreferences"
+        Name        = "VRROptimizeEnable"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Enable VRR optimizations for smoother gameplay"
+    },
+    @{
+        Path        = "HKCU:\System\GameConfigStore"
+        Name        = "GameDVR_FSEBehaviorMode"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Allow Windows to optimize games running in fullscreen mode"
+    },
+    @{
+        Path        = "HKCU:\System\GameConfigStore"
+        Name        = "GameDVR_Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disable Game DVR to reduce CPU/GPU usage"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\GameBar"
+        Name        = "UseNexusForGameBarEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Allow your Xbox/compatible controller to open Game Bar with the Xbox button"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\GameBar"
+        Name        = "ShowStartupPanel"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Show tips and hints about Game Bar features when opening the overlay"
     }
 )
 ]]>
@@ -4199,6 +4696,111 @@ $ShellUIEntries = @(
         Type        = "DWord"
         Value       = 1
         Description = "Enable End Task option in taskbar right-click menu"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "ShowNotificationIcon"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Display the notification bell icon in the system tray"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Start"
+        Name        = "ShowAllPinsList"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Automatically expand to show all pinned apps instead of requiring you to click 'All apps'"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Start"
+        Name        = "ShowRecentList"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Display a list of recently installed applications at the top of the All Apps list"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Start"
+        Name        = "ShowFrequentList"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Display your frequently launched applications at the top of the All Apps list for quick access"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "Start_TrackDocs"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Display your recently opened documents and files in the Start Menu's Recommended section for quick access"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "Start_IrisRecommendations"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Display personalized suggestions from Windows for tips, app shortcuts, and Microsoft Store apps in the Recommended section"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "Start_AccountNotifications"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Display notifications about Microsoft account sign-in, sync status, and account-related suggestions"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search"
+        Name        = "SearchboxTaskbarMode"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Choose how the Windows search appears on your taskbar: hidden, icon only, icon with label, or full search box"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "TaskbarAl"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Align taskbar icons to the left (classic Windows style) or center (Windows 11 default)"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "ShowTaskViewButton"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Show the Task View button for managing virtual desktops and viewing all open windows at once"
+    },
+    @{
+        Path        = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+        Name        = "HideSCAMeetNow"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Disable Meet Now Icon"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings"
+        Name        = "TaskbarEndTask"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Adds an 'End Task' option when right-clicking applications on the taskbar for quick termination"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "Start_TrackProgs"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Windows records which apps you use most frequently to personalize your Start menu and improve search results, making your most-used apps more accessible"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "MultiTaskingAltTabFilter"
+        Type        = "DWord"
+        Value       = 3
+        Description = "Show only traditional open windows in Alt+Tab instead of including Microsoft Edge tabs"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Name        = "TaskbarAnimations"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Controls taskbar animation effects"
     }
 )
 ]]>
@@ -4317,6 +4919,448 @@ SecurityAndPrivacyEntries = @(
         Type        = "DWord"
         Value       = 0
         Description = "Disable subscribed content"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContent-310093Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Show what's new and suggested after updates and when signed in"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement"
+        Name        = "ScoobeSystemSettingEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Show suggestions to help you complete device setup and optimize Windows features"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContent-338389Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Show helpful tips and suggestions while using Windows"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SystemPaneSuggestionsEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Display helpful suggestions in the Action Center and Notification Center"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location"
+        Name        = "ShowGlobalPrompts"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Show notifications when apps attempt to access your location information"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.SecurityAndMaintenance"
+        Name        = "Enabled"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Show notifications from the Security and Maintenance Action Center"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "ContentDeliveryAllowed"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Allows Windows to deliver promotional content and automatically install suggested apps"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContentEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Enables promotional content subscriptions from Microsoft and partners throughout Windows"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "FeatureManagementEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Enables Windows feature management functionality for promotional features and automatic app installations"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SoftLandingEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Displays tips and notifications about Windows features as you use the operating system"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "OEMPreInstalledAppsEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Prevents OEM manufacturers from automatically installing bloatware apps"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "PreInstalledAppsEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Prevents Microsoft from automatically installing suggested apps"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "PreInstalledAppsEverEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Disables tracking of whether pre-installed apps were ever enabled"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SilentInstalledAppsEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Prevents apps from being silently installed in the background"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "RotatingLockScreenEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Displays rotating Windows Spotlight images on your lock screen instead of a static background"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "RotatingLockScreenOverlayEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Displays fun facts, tips, and tricks as an overlay on your lock screen"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SlideshowEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Enables slideshow option for lock screen background"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo"
+        Name        = "Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Windows generates a unique advertising ID that apps use to track your activity and deliver personalized ads based on your behavior across different apps"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\International\User Profile"
+        Name        = "HttpAcceptLanguageOptOut"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Allows websites to access your language preferences so they can automatically display content in your preferred language without requiring manual configuration on each site"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContent-338393Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Microsoft displays promotional content, tips, and feature suggestions within the Windows Settings app to help you discover new features and functionality"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContent-353694Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Microsoft displays promotional content, tips, and feature suggestions within the Windows Settings app to help you discover new features and functionality"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        Name        = "SubscribedContent-353696Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Microsoft displays promotional content, tips, and feature suggestions within the Windows Settings app to help you discover new features and functionality"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\SystemSettings\AccountNotifications"
+        Name        = "EnableAccountNotifications"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Shows account notifications in the Settings app, including prompts to reauthenticate, backup your device, and manage subscriptions"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy"
+        Name        = "HasAccepted"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Use your voice for apps using Microsoft's online speech recognition technology"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Narrator\NoRoam"
+        Name        = "OnlineServicesEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Allow Narrator to use Microsoft cloud services for features like intelligent image descriptions and enhanced voice models"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Narrator\NoRoam"
+        Name        = "ScriptingEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Allow Narrator to execute scripts for automation and custom functionality"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\CPSS\Store\InkingAndTypingPersonalization"
+        Name        = "Value"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Personalization\Settings"
+        Name        = "AcceptedPrivacyPolicy"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\InputPersonalization\TrainedDataStore"
+        Name        = "HarvestContacts"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Diagnostics\DiagTrack"
+        Name        = "ShowedToastAtLevel"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Send diagnostic data to Microsoft to help improve Windows and keep it secure"
+    },
+    @{
+        Path        = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection"
+        Name        = "AllowTelemetry"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Send diagnostic data to Microsoft to help improve Windows and keep it secure"
+    },
+    @{
+        Path        = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection"
+        Name        = "MaxTelemetryAllowed"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Send diagnostic data to Microsoft to help improve Windows and keep it secure"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Input\TIPC"
+        Name        = "Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Send optional inking and typing diagnostic data to Microsoft"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\CPSS\Store\ImproveInkingAndTyping"
+        Name        = "Value"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Send optional inking and typing diagnostic data to Microsoft"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Privacy"
+        Name        = "TailoredExperiencesWithDiagnosticDataEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Let Microsoft use your diagnostic data to show personalized tips, ads and recommendations"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings"
+        Name        = "IsDeviceSearchHistoryEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Improves search results by allowing Windows Search to store your search history locally on this device (Does not clear existing history)"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings"
+        Name        = "IsDynamicSearchBoxEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "See content suggestions in search"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings"
+        Name        = "IsMSACloudSearchEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Allow Windows Search to show results from apps and services that you are signed in to with your Microsoft account"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings"
+        Name        = "IsAADCloudSearchEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Allow Windows Search to show results from apps and services that you are signed in to with your work or school account"
+    }
+)
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\SoundAndNotificationsRegistry.User.ps1">
+<![CDATA[
+function Get-AppEventsClearCurrentEntries {
+    param()
+
+    $eventLabelsPath = "HKCU:\AppEvents\EventLabels"
+    $schemesRoot     = "HKCU:\AppEvents\Schemes\Apps"
+
+    # Determine excluded event labels
+    $excludes = Get-ChildItem -LiteralPath $eventLabelsPath |
+        Where-Object { ($_ | Get-ItemProperty).ExcludeFromCPL -eq 1 } |
+        Select-Object -ExpandProperty PSChildName
+
+    $entries = @()
+
+    Get-ChildItem -Path "$schemesRoot\*\*" |
+        Where-Object { $_.PSChildName -notin $excludes } |
+        Get-ChildItem -Include ".Current" |
+        ForEach-Object {
+            # .Name is like: HKEY_CURRENT_USER\AppEvents\Schemes\Apps\.Default\ChangeTheme\.Current
+            $name = $_.Name
+            $rel  = $name -replace '^HKEY_CURRENT_USER\\', '' -replace '^HKEY_LOCAL_MACHINE\\', ''
+            $path = "HKCU:\$rel"
+
+            $entries += @{
+                Operation   = "Set"
+                Path        = $path
+                Name        = "(Default)"
+                Type        = "String"
+                Value       = ""
+                Description = "Clear the current sound assigned to an application event"
+            }
+        }
+
+    return $entries
+}
+
+$SoundAndNotificationsEntries = @(
+    Get-AppEventsClearCurrentEntries
+    
+    @{
+        Path        = "HKCU:\Software\Microsoft\Multimedia\Audio"
+        Name        = "UserDuckingPreference"
+        Type        = "DWord"
+        Value       = 3
+        Description = "Automatically lower volume of media and apps when Windows detects communication activity"
+    }
+    @{
+        Path        = "HKCU:\Software\Microsoft\Narrator\NoRoam"
+        Name        = "DuckAudio"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Allow Narrator to automatically lower the volume of other applications when it speaks"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Accessibility"
+        Name        = "Sound on Activation"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Play sounds when accessibility features like StickyKeys or FilterKeys are activated"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Accessibility"
+        Name        = "Warning Sounds"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Play warning sounds when attempting to activate accessibility features or when accessibility-related events occur"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications"
+        Name        = "ToastEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Get notifications from apps and other senders in Windows"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings"
+        Name        = "NOC_GLOBAL_SETTING_ALLOW_NOTIFICATION_SOUND"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Play audio alerts when notifications arrive from apps and system senders"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings"
+        Name        = "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Display toast notifications on the lock screen when your device is locked"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications"
+        Name        = "LockScreenToastEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Display toast notifications on the lock screen when your device is locked"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings"
+        Name        = "NOC_GLOBAL_SETTING_ALLOW_CRITICAL_TOASTS_ABOVE_LOCK"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Display critical notifications like reminders and VoIP calls when your device is locked"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.CapabilityAccess"
+        Name        = "Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Show notifications when apps request access to system capabilities and permissions"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.StartupApp"
+        Name        = "Enabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Show notifications when apps are added to your Windows startup list"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Desktop"
+        Name        = "DstNotification"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Show notifications when daylight saving time changes occur"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Narrator\NoRoam"
+        Name        = "WinEnterLaunchEnabled"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Enable the Win+Ctrl+Enter keyboard shortcut to quickly launch Windows Narrator"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Accessibility\StickyKeys"
+        Name        = "Flags"
+        Type        = "String"
+        Value       = "2"
+        Description = "Enable the keyboard shortcut to activate StickyKeys"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Accessibility\Keyboard Response"
+        Name        = "Flags"
+        Type        = "String"
+        Value       = "2"
+        Description = "Enable the keyboard shortcut to activate FilterKeys"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Accessibility\ToggleKeys"
+        Name        = "Flags"
+        Type        = "String"
+        Value       = "34"
+        Description = "Enable the keyboard shortcut to activate ToggleKeys"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Accessibility\MouseKeys"
+        Name        = "Flags"
+        Type        = "String"
+        Value       = "130"
+        Description = "Enable the keyboard shortcut to activate MouseKeys"
+    },
+    @{
+        Path        = "HKCU:\Control Panel\Accessibility\HighContrast"
+        Name        = "Flags"
+        Type        = "String"
+        Value       = "4194"
+        Description = "Enable the keyboard shortcut to activate High Contrast mode"
     }
 )
 ]]>
