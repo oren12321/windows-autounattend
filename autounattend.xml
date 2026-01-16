@@ -4259,13 +4259,6 @@ $ExplorerEntries = @(
         Description = "Show protected operating system files"
     },
     @{
-        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
-        Name        = "UnattendedSetup"
-        Type        = "String"
-        Value       = "powershell.exe -WindowStyle ""Normal"" -ExecutionPolicy ""Unrestricted"" -NoProfile -File ""C:\MyMaintenance\Scripts\UserOnce.ps1"""
-        Description = "Run user setup script on first logon"
-    },
-    @{
         Path        = "HKCU:\Control Panel\Desktop"
         Name        = "MenuShowDelay"
         Type        = "String"
