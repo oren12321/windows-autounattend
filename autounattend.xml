@@ -19,15 +19,15 @@
 			<RunSynchronous>
 				<RunSynchronousCommand wcm:action="add">
 					<Order>1</Order>
-					<Path>reg.exe add "HKLM:\SYSTEM\Setup\LabConfig" /v BypassTPMCheck /t REG_DWORD /d 1 /f</Path>
+					<Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassTPMCheck /t REG_DWORD /d 1 /f</Path>
 				</RunSynchronousCommand>
 				<RunSynchronousCommand wcm:action="add">
 					<Order>2</Order>
-					<Path>reg.exe add "HKLM:\SYSTEM\Setup\LabConfig" /v BypassSecureBootCheck /t REG_DWORD /d 1 /f</Path>
+					<Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassSecureBootCheck /t REG_DWORD /d 1 /f</Path>
 				</RunSynchronousCommand>
 				<RunSynchronousCommand wcm:action="add">
 					<Order>3</Order>
-					<Path>reg.exe add "HKLM:\SYSTEM\Setup\LabConfig" /v BypassRAMCheck /t REG_DWORD /d 1 /f</Path>
+					<Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassRAMCheck /t REG_DWORD /d 1 /f</Path>
 				</RunSynchronousCommand>
 			</RunSynchronous>
 		</component>
@@ -1302,7 +1302,7 @@ catch {
 }
 
 # 3.6: Configure default user registry to prevent OneDrive auto-install
-$markerKey = "HKLM:\SOFTWARE\Winhance\OneDriveRemoval"
+$markerKey = "HKLM\SOFTWARE\Winhance\OneDriveRemoval"
 $markerValue = reg.exe query $markerKey /v "DefaultUserConfigured" 2>$null
 
 if ($LASTEXITCODE -eq 0) {
@@ -1615,12 +1615,12 @@ set ".=!.:{=%%!" & endlocal& set "URL=%.:}=!%" & exit /b
     reg.exe add "HKCR\microsoft-edge\shell\open\command" /f /ve /d "$stubTargetPath %1" 2>&1 | Out-Null
     reg.exe add "HKCR\MSEdgeHTM" /f /v "NoOpenWith" /d `"`" 2>&1 | Out-Null
     reg.exe add "HKCR\MSEdgeHTM\shell\open\command" /f /ve /d "$stubTargetPath %1" 2>&1 | Out-Null
-    reg.exe add "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\ie_to_edge_stub.exe" /f /v UseFilter /d 1 /t reg_dword 2>&1 | Out-Null
-    reg.exe add "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\ie_to_edge_stub.exe\0" /f /v FilterFullPath /d "$stubTargetPath" 2>&1 | Out-Null
-    reg.exe add "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\ie_to_edge_stub.exe\0" /f /v Debugger /d "$conhostDebugger" 2>&1 | Out-Null
-    reg.exe add "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe" /f /v UseFilter /d 1 /t reg_dword 2>&1 | Out-Null
-    reg.exe add "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe\0" /f /v FilterFullPath /d "$msedgePath" 2>&1 | Out-Null
-    reg.exe add "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe\0" /f /v Debugger /d "$conhostDebugger" 2>&1 | Out-Null
+    reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\ie_to_edge_stub.exe" /f /v UseFilter /d 1 /t reg_dword 2>&1 | Out-Null
+    reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\ie_to_edge_stub.exe\0" /f /v FilterFullPath /d "$stubTargetPath" 2>&1 | Out-Null
+    reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\ie_to_edge_stub.exe\0" /f /v Debugger /d "$conhostDebugger" 2>&1 | Out-Null
+    reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe" /f /v UseFilter /d 1 /t reg_dword 2>&1 | Out-Null
+    reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe\0" /f /v FilterFullPath /d "$msedgePath" 2>&1 | Out-Null
+    reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe\0" /f /v Debugger /d "$conhostDebugger" 2>&1 | Out-Null
     Write-Output "Registry configuration completed"
 
     $repairScriptPath = "$scriptsDir\OpenWebSearchRepair.cmd"
