@@ -533,8 +533,15 @@ $scripts = @(
         Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $SoundAndNotificationsEntries -Scope DefaultUser))
 	};
     {
-        # Should not be unload in specialize pass since it's being used.
-        #reg.exe unload "HKU\DefaultUser"
+        $setup = Get-ItemProperty -Path 'HKLM:\SYSTEM\Setup'
+
+        # Only unload the hive when Windows Setup is NOT running
+        if ($setup.SystemSetupInProgress -eq 0 -and $setup.OOBEInProgress -eq 0) {
+            reg.exe unload "HKU\DefaultUser"
+        }
+        else {
+            Write-Output "Default user hive should not be unloaded during Windows setup"
+        }
     };
 );
 
