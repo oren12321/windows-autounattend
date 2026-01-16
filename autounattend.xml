@@ -533,7 +533,8 @@ $scripts = @(
         Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $SoundAndNotificationsEntries -Scope DefaultUser))
 	};
     {
-        reg.exe unload "HKU\DefaultUser"
+        # Should not be unload in specialize pass since it's being used.
+        #reg.exe unload "HKU\DefaultUser"
     };
 );
 
