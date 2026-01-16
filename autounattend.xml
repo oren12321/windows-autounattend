@@ -4116,6 +4116,89 @@ Apply-RegistryBatch $entries
         </File>
         <File path="C:\Windows\Setup\Scripts\ExplorerRegistry.User.ps1">
 <![CDATA[
+function Get-WallpaperConfigurationEntries {
+
+    $entries = @()
+
+    # Detect OS build
+    $buildNumber = [System.Environment]::OSVersion.Version.Build
+    $wallpaperPath = $null
+
+    # Determine wallpaper based on OS version and theme
+    if ($buildNumber -ge 22000) {
+        $themeKey = 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize'
+        $lightTheme = $false
+
+        if (Test-Path $themeKey) {
+            $value = Get-ItemProperty -Path $themeKey -Name 'SystemUsesLightTheme' -ErrorAction SilentlyContinue
+            if ($value.SystemUsesLightTheme -eq 1) {
+                $lightTheme = $true
+            }
+        }
+
+        if ($lightTheme) {
+            $wallpaperPath = 'C:\Windows\Web\Wallpaper\Windows\img0.jpg'
+        } else {
+            $wallpaperPath = 'C:\Windows\Web\Wallpaper\Windows\img19.jpg'
+        }
+    }
+    else {
+        $wallpaperPath = 'C:\Windows\Web\4K\Wallpaper\Windows\img0_3840x2160.jpg'
+    }
+
+    # If wallpaper file does not exist, return no entries
+    if (-not (Test-Path $wallpaperPath)) {
+        return @()   # No entries produced
+    }
+
+    # Wallpaper registry entries
+    $entries += @(
+        @{
+            Operation   = "Set"
+            Path        = "HKCU:\Control Panel\Desktop"
+            Name        = "Wallpaper"
+            Type        = "String"
+            Value       = $wallpaperPath
+            Description = "Set desktop wallpaper"
+            Category    = "Theme"
+        },
+        @{
+            Operation   = "Set"
+            Path        = "HKCU:\Control Panel\Desktop"
+            Name        = "WallpaperStyle"
+            Type        = "String"
+            Value       = "10"
+            Description = "Set wallpaper style (fill)"
+            Category    = "Theme"
+        },
+        @{
+            Operation   = "Set"
+            Path        = "HKCU:\Control Panel\Desktop"
+            Name        = "TileWallpaper"
+            Type        = "String"
+            Value       = "0"
+            Description = "Disable wallpaper tiling"
+            Category    = "Theme"
+        },
+        @{
+            Operation   = "Delete"
+            Path        = "HKCU:\Control Panel\Desktop"
+            Name        = "TranscodedImageCache"
+            Description = "Remove cached wallpaper image"
+            Category    = "Theme"
+        },
+        @{
+            Operation   = "Delete"
+            Path        = "HKCU:\Control Panel\Desktop"
+            Name        = "TranscodedImageCache_000"
+            Description = "Remove cached wallpaper image (secondary)"
+            Category    = "Theme"
+        }
+    )
+
+    return $entries
+}
+
 $ExplorerEntries = @(
     @{
         Operation   = "Delete"
@@ -4558,7 +4641,29 @@ $ExplorerEntries = @(
         Type        = "DWord"
         Value       = 0
         Description = "Displays Libraries container grouping Documents, Music, Pictures, and Videos"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+        Name        = "AppsUseLightTheme"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Choose between Light and Dark mode for Windows and apps"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+        Name        = "SystemUsesLightTheme"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Choose between Light and Dark mode for Windows and apps"
+    },
+    @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+        Name        = "EnableTransparency"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Enable translucent effects for the Start Menu, taskbar, and other Windows interface elements"
     }
+    Get-WallpaperConfigurationEntries
 )
 ]]>
         </File>
