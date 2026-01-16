@@ -19,15 +19,15 @@
 			<RunSynchronous>
 				<RunSynchronousCommand wcm:action="add">
 					<Order>1</Order>
-					<Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassTPMCheck /t REG_DWORD /d 1 /f</Path>
+					<Path>reg.exe add "HKLM:\SYSTEM\Setup\LabConfig" /v BypassTPMCheck /t REG_DWORD /d 1 /f</Path>
 				</RunSynchronousCommand>
 				<RunSynchronousCommand wcm:action="add">
 					<Order>2</Order>
-					<Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassSecureBootCheck /t REG_DWORD /d 1 /f</Path>
+					<Path>reg.exe add "HKLM:\SYSTEM\Setup\LabConfig" /v BypassSecureBootCheck /t REG_DWORD /d 1 /f</Path>
 				</RunSynchronousCommand>
 				<RunSynchronousCommand wcm:action="add">
 					<Order>3</Order>
-					<Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassRAMCheck /t REG_DWORD /d 1 /f</Path>
+					<Path>reg.exe add "HKLM:\SYSTEM\Setup\LabConfig" /v BypassRAMCheck /t REG_DWORD /d 1 /f</Path>
 				</RunSynchronousCommand>
 			</RunSynchronous>
 		</component>
@@ -65,6 +65,15 @@
 				<HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
 				<HideOnlineAccountScreens>true</HideOnlineAccountScreens>
 			</OOBE>
+            <FirstLogonCommands>
+                <SynchronousCommand wcm:action="add">
+                    <Order>1</Order>
+                    <CommandLine>
+                        powershell.exe -ExecutionPolicy Bypass -NoProfile -Command "Register-ScheduledTask -TaskName 'UserSetup.FirstUser' -Xml (Get-Content -LiteralPath 'C:\MySetup\Scripts\UserSetup.FirstUser.xml' -Raw) *>> 'C:\MySetup\Logs\UserSetup.FirstUser.RegisterTask.log'"
+                    </CommandLine>
+                    <Description>Register UserSetup.FirstUser Task</Description>
+                </SynchronousCommand>
+            </FirstLogonCommands>
 		</component>
 	</settings>
 	<Extensions xmlns="https://schneegans.de/windows/unattend-generator/">
@@ -185,7 +194,20 @@ function Apply-RegistryEntry {
                 if (-not $Name) { throw "SetByte requires Name" }
                 if ($Offset -lt 0) { throw "Offset must be >= 0" }
 
-                $data = (Get-ItemProperty -Path $Path -Name $Name -ErrorAction Stop).$Name
+                $data = (Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue).$Name
+
+                # If missing → create empty byte array and write it
+                if (-not $data) {
+                    $data = New-Object byte[] ($Offset + 1)
+                    New-ItemProperty -Path $Path -Name $Name -Value $data -PropertyType Binary -Force | Out-Null
+                }
+
+                # If too small → expand
+                if ($data.Length -le $Offset) {
+                    $newData = New-Object byte[] ($Offset + 1)
+                    $data.CopyTo($newData, 0)
+                    $data = $newData
+                }
 
                 if ($data.Length -le $Offset) {
                     throw "Offset $Offset is outside data length $($data.Length)"
@@ -203,7 +225,20 @@ function Apply-RegistryEntry {
                 if ($Offset -lt 0) { throw "Offset must be >= 0" }
                 if ($BitIndex -lt 0 -or $BitIndex -gt 7) { throw "BitIndex must be 0-7" }
 
-                $data = (Get-ItemProperty -Path $Path -Name $Name -ErrorAction Stop).$Name
+                $data = (Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue).$Name
+
+                # If missing → create empty byte array and write it
+                if (-not $data) {
+                    $data = New-Object byte[] ($Offset + 1)
+                    New-ItemProperty -Path $Path -Name $Name -Value $data -PropertyType Binary -Force | Out-Null
+                }
+
+                # If too small → expand
+                if ($data.Length -le $Offset) {
+                    $newData = New-Object byte[] ($Offset + 1)
+                    $data.CopyTo($newData, 0)
+                    $data = $newData
+                }
 
                 if ($data.Length -le $Offset) {
                     throw "Offset $Offset is outside data length $($data.Length)"
@@ -265,7 +300,6 @@ function Apply-RegistryEntry {
 
 function Apply-RegistryBatch {
     param(
-        [Parameter(Mandatory)]
         [array]$Items
     )
 
@@ -435,10 +469,6 @@ $scripts = @(
     };
     {
         & "C:\MySetup\Scripts\ConfigureSoundAndNotifications.System.ps1" >> "C:\MySetup\Scripts\ConfigureSoundAndNotifications.System.log" 2>&1
-    };
-    {
-        # First user logon schedule task registration
-        Register-ScheduledTask -TaskName 'UserSetup.FirstUser' -Xml $( Get-Content -LiteralPath 'C:\MySetup\Scripts\UserSetup.FirstUser.xml' -Raw );
     };
     {
         # Per user Active Setup
@@ -1272,7 +1302,7 @@ catch {
 }
 
 # 3.6: Configure default user registry to prevent OneDrive auto-install
-$markerKey = "HKLM\SOFTWARE\Winhance\OneDriveRemoval"
+$markerKey = "HKLM:\SOFTWARE\Winhance\OneDriveRemoval"
 $markerValue = reg.exe query $markerKey /v "DefaultUserConfigured" 2>$null
 
 if ($LASTEXITCODE -eq 0) {
@@ -1585,12 +1615,12 @@ set ".=!.:{=%%!" & endlocal& set "URL=%.:}=!%" & exit /b
     reg.exe add "HKCR\microsoft-edge\shell\open\command" /f /ve /d "$stubTargetPath %1" 2>&1 | Out-Null
     reg.exe add "HKCR\MSEdgeHTM" /f /v "NoOpenWith" /d `"`" 2>&1 | Out-Null
     reg.exe add "HKCR\MSEdgeHTM\shell\open\command" /f /ve /d "$stubTargetPath %1" 2>&1 | Out-Null
-    reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\ie_to_edge_stub.exe" /f /v UseFilter /d 1 /t reg_dword 2>&1 | Out-Null
-    reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\ie_to_edge_stub.exe\0" /f /v FilterFullPath /d "$stubTargetPath" 2>&1 | Out-Null
-    reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\ie_to_edge_stub.exe\0" /f /v Debugger /d "$conhostDebugger" 2>&1 | Out-Null
-    reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe" /f /v UseFilter /d 1 /t reg_dword 2>&1 | Out-Null
-    reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe\0" /f /v FilterFullPath /d "$msedgePath" 2>&1 | Out-Null
-    reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe\0" /f /v Debugger /d "$conhostDebugger" 2>&1 | Out-Null
+    reg.exe add "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\ie_to_edge_stub.exe" /f /v UseFilter /d 1 /t reg_dword 2>&1 | Out-Null
+    reg.exe add "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\ie_to_edge_stub.exe\0" /f /v FilterFullPath /d "$stubTargetPath" 2>&1 | Out-Null
+    reg.exe add "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\ie_to_edge_stub.exe\0" /f /v Debugger /d "$conhostDebugger" 2>&1 | Out-Null
+    reg.exe add "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe" /f /v UseFilter /d 1 /t reg_dword 2>&1 | Out-Null
+    reg.exe add "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe\0" /f /v FilterFullPath /d "$msedgePath" 2>&1 | Out-Null
+    reg.exe add "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe\0" /f /v Debugger /d "$conhostDebugger" 2>&1 | Out-Null
     Write-Output "Registry configuration completed"
 
     $repairScriptPath = "$scriptsDir\OpenWebSearchRepair.cmd"
@@ -3012,140 +3042,140 @@ Register-ScheduledTask -TaskName 'MoveActiveHoursBackup' -Xml $( Get-Content -Li
 
 $entries = @(
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot"
         Name = "TurnOffWindowsCopilot"
         Type = "DWord"
         Value = 1
         Description = "Disables the Windows Copilot feature for the system."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI"
         Name = "DisableAIDataAnalysis"
         Type = "DWord"
         Value = 1
         Description = "Prevents Windows AI components from analyzing user data."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI"
         Name = "DisableAIRecall"
         Type = "DWord"
         Value = 1
         Description = "Disables the Windows Recall feature in Windows AI."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\System"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System"
         Name = "DisableSuggestions"
         Type = "DWord"
         Value = 1
         Description = "Turns off Suggested Actions within the Windows system UI."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Dsh"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Dsh"
         Name = "AllowNewsAndInterests"
         Type = "DWord"
         Value = 0
         Description = "Disables the News and Interests widget on the taskbar."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds"
         Name = "EnableFeeds"
         Type = "DWord"
         Value = 0
         Description = "Disables Windows Feeds and related widget content."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
         Name = "DisableSearchBoxSuggestions"
         Type = "DWord"
         Value = 1
         Description = "Disables AI-powered search box suggestions in Windows Search."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
         Name = "ConnectedSearchUseWeb"
         Type = "DWord"
         Value = 0
         Description = "Prevents Windows Search from using web-based results."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
         Name = "AllowSearchToUseLocation"
         Type = "DWord"
         Value = 0
         Description = "Blocks Windows Search from accessing the device's location."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer"
         Name = "HideRecommendedSection"
         Type = "DWord"
         Value = 1
         Description = "Hides the Recommended section in the Start Menu."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
         Name = "DisableTailoredExperiencesWithDiagnosticData"
         Type = "DWord"
         Value = 1
         Description = "Disables personalized experiences based on diagnostic data."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
         Name = "DisableConsumerFeatures"
         Type = "DWord"
         Value = 1
         Description = "Disables consumer-focused cloud content and features."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\InputPersonalization"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\InputPersonalization"
         Name = "AllowInputPersonalization"
         Type = "DWord"
         Value = 0
         Description = "Prevents Windows from personalizing typing and input behavior."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\InputPersonalization"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\InputPersonalization"
         Name = "RestrictImplicitTextCollection"
         Type = "DWord"
         Value = 1
         Description = "Blocks Windows from collecting text input for AI learning."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\InputPersonalization"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\InputPersonalization"
         Name = "RestrictImplicitInkCollection"
         Type = "DWord"
         Value = 1
         Description = "Blocks Windows from collecting handwriting input for AI learning."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\WindowsStore"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore"
         Name = "DisableStoreApps"
         Type = "DWord"
         Value = 1
         Description = "Prevents the Microsoft Store from updating system components."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds"
         Name = "AllowWebExperiencePackUpdates"
         Type = "DWord"
         Value = 0
         Description = "Blocks updates to the Web Experience Pack, including widget and Copilot components."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
         Name = "DisableOnlineContent"
         Type = "DWord"
         Value = 1
         Description = "Disables Online Service Experience Packs and cloud-delivered content."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy"
         Name = "LetAppsRunAI"
         Type = "DWord"
         Value = 0
         Description = "Prevents inbox apps from using AI-powered preview features."
     },
     @{
-        Path = "HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
         Name = "DisableWindowsSpotlightFeatures"
         Type = "DWord"
         Value = 1
@@ -4059,7 +4089,6 @@ $entries = @(
         Type        = "DWord"
         Value       = 1
         Description = "Show or hide the lower section that displays recently opened files and suggested apps"
-        Category    = "Start Menu"
     },
     @{
         Path        = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
@@ -4067,7 +4096,6 @@ $entries = @(
         Type        = "DWord"
         Value       = 1
         Description = "Disable Meet Now Icon"
-        Category    = "Taskbar"
     },
     @{
         Path        = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Chat"
@@ -4075,7 +4103,6 @@ $entries = @(
         Type        = "DWord"
         Value       = 3
         Description = "Disable Windows 11 Chat Icon"
-        Category    = "Taskbar"
     }
 )
 Apply-RegistryBatch $entries
@@ -4162,7 +4189,6 @@ function Get-WallpaperConfigurationEntries {
             Type        = "String"
             Value       = $wallpaperPath
             Description = "Set desktop wallpaper"
-            Category    = "Theme"
         },
         @{
             Operation   = "Set"
@@ -4171,7 +4197,6 @@ function Get-WallpaperConfigurationEntries {
             Type        = "String"
             Value       = "10"
             Description = "Set wallpaper style (fill)"
-            Category    = "Theme"
         },
         @{
             Operation   = "Set"
@@ -4180,21 +4205,18 @@ function Get-WallpaperConfigurationEntries {
             Type        = "String"
             Value       = "0"
             Description = "Disable wallpaper tiling"
-            Category    = "Theme"
         },
         @{
             Operation   = "Delete"
             Path        = "HKCU:\Control Panel\Desktop"
             Name        = "TranscodedImageCache"
             Description = "Remove cached wallpaper image"
-            Category    = "Theme"
         },
         @{
             Operation   = "Delete"
             Path        = "HKCU:\Control Panel\Desktop"
             Name        = "TranscodedImageCache_000"
             Description = "Remove cached wallpaper image (secondary)"
-            Category    = "Theme"
         }
     )
 
@@ -4921,7 +4943,7 @@ $ShellUIEntries = @(
         </File>
         <File path="C:\Windows\Setup\Scripts\SecurityAndPrivacyRegistry.User.ps1">
 <![CDATA[
-SecurityAndPrivacyEntries = @(
+$SecurityAndPrivacyEntries = @(
     @{
         Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
         Name        = "ContentDeliveryAllowed"

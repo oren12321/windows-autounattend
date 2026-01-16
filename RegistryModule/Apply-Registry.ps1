@@ -55,7 +55,20 @@ function Apply-RegistryEntry {
                 if (-not $Name) { throw "SetByte requires Name" }
                 if ($Offset -lt 0) { throw "Offset must be >= 0" }
 
-                $data = (Get-ItemProperty -Path $Path -Name $Name -ErrorAction Stop).$Name
+                $data = (Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue).$Name
+
+                # If missing → create empty byte array and write it
+                if (-not $data) {
+                    $data = New-Object byte[] ($Offset + 1)
+                    New-ItemProperty -Path $Path -Name $Name -Value $data -PropertyType Binary -Force | Out-Null
+                }
+
+                # If too small → expand
+                if ($data.Length -le $Offset) {
+                    $newData = New-Object byte[] ($Offset + 1)
+                    $data.CopyTo($newData, 0)
+                    $data = $newData
+                }
 
                 if ($data.Length -le $Offset) {
                     throw "Offset $Offset is outside data length $($data.Length)"
@@ -73,7 +86,20 @@ function Apply-RegistryEntry {
                 if ($Offset -lt 0) { throw "Offset must be >= 0" }
                 if ($BitIndex -lt 0 -or $BitIndex -gt 7) { throw "BitIndex must be 0-7" }
 
-                $data = (Get-ItemProperty -Path $Path -Name $Name -ErrorAction Stop).$Name
+                $data = (Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue).$Name
+
+                # If missing → create empty byte array and write it
+                if (-not $data) {
+                    $data = New-Object byte[] ($Offset + 1)
+                    New-ItemProperty -Path $Path -Name $Name -Value $data -PropertyType Binary -Force | Out-Null
+                }
+
+                # If too small → expand
+                if ($data.Length -le $Offset) {
+                    $newData = New-Object byte[] ($Offset + 1)
+                    $data.CopyTo($newData, 0)
+                    $data = $newData
+                }
 
                 if ($data.Length -le $Offset) {
                     throw "Offset $Offset is outside data length $($data.Length)"
@@ -135,7 +161,6 @@ function Apply-RegistryEntry {
 
 function Apply-RegistryBatch {
     param(
-        [Parameter(Mandatory)]
         [array]$Items
     )
 
