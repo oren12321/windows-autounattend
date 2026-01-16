@@ -398,41 +398,17 @@ $scripts = @(
 		<File path="C:\Windows\Setup\Scripts\UserOnce.ps1">
 <![CDATA[
 $scripts = @(
-	{
-		Get-AppxPackage -Name 'Microsoft.Windows.Ai.Copilot.Provider' | Remove-AppxPackage;
-	};
-	{
-		Remove-Item -LiteralPath "${env:USERPROFILE}\Desktop\Microsoft Edge.lnk" -ErrorAction 'SilentlyContinue' -Verbose;
-	};
-	{
-		Set-ItemProperty -LiteralPath 'Registry::HKCU\AppEvents\Schemes' -Name '(Default)' -Type 'String' -Value '.None';
-	};
-	{
-		reg.exe add "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" /ve /f;
-	};
-	{
-		Set-ItemProperty -LiteralPath 'Registry::HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'LaunchTo' -Type 'DWord' -Value 1;
-	};
-	{
-		Set-ItemProperty -LiteralPath 'Registry::HKCU\Software\Microsoft\Windows\CurrentVersion\Search' -Name 'SearchboxTaskbarMode' -Type 'DWord' -Value 0;
-	};
-	{
-		Set-ItemProperty -LiteralPath 'Registry::HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' -Name 'VisualFXSetting' -Type 'DWord' -Value 3 -Force;
-	};
-    {
-		& 'C:\MyMaintenance\Scripts\AdditionalUserSpecificSettings.ps1';
-	};
-	{
-        $tag = "$env:LOCALAPPDATA\RestartNag_Done.tag"
-        if (-not (Test-Path $tag)) {
-            New-Item -Path $tag -ItemType "File" -Force;
-        }
-        $rebootPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"
-        if (-not (Test-Path $rebootPath)) {
-            New-Item -Path $rebootPath -Force | Out-Null
-        }
-        Start-ScheduledTask -TaskName "RestartNag";
-	};
+	#{
+    #    $tag = "$env:LOCALAPPDATA\RestartNag_Done.tag"
+    #    if (-not (Test-Path $tag)) {
+    #        New-Item -Path $tag -ItemType "File" -Force;
+    #    }
+    #    $rebootPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"
+    #    if (-not (Test-Path $rebootPath)) {
+    #        New-Item -Path $rebootPath -Force | Out-Null
+    #    }
+    #    Start-ScheduledTask -TaskName "RestartNag";
+	#};
 );
 
 & {
