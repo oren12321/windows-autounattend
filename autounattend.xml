@@ -529,6 +529,7 @@ $scripts = @(
     {
         . "C:\MySetup\Scripts\ExplorerRegistry.User.ps1"
         Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $ExplorerEntries -Scope DefaultUser))
+        Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $(Get-WallpaperConfigurationEntries) -Scope DefaultUser))
 	};
     {
         . "C:\MySetup\Scripts\PerformanceRegistry.User.ps1"
@@ -597,6 +598,8 @@ function Write-Log {
     "$timestamp | $Message" | Out-File $logFile -Append
 }
 
+<#
+###############################################################
 <#  
     Waits for Windows first‑logon initialization to finish before applying HKCU tweaks.
     Includes:
@@ -718,6 +721,8 @@ function Wait-Until {
     Write-Output "$env:LOCALAPPDATA\Packages detected — waiting 5 seconds for stabilization..."
     Start-Sleep -Seconds 5
 } *>&1 | Out-String -Width 1KB -Stream >> "C:\MySetup\Logs\UserSetup.log";
+###############################################################
+#>
 
 Write-Log "Starting UserSetup.ps1 with Mode='$Mode'"
 
@@ -772,6 +777,7 @@ $scripts = @(
 	{
         . "C:\MySetup\Scripts\ExplorerRegistry.User.ps1"
         Apply-RegistryBatch $(Get-EntriesForScope -Entries $ExplorerEntries -Scope FirstUser)
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $(Get-WallpaperConfigurationEntries) -Scope FirstUser)
 	};
     {
         . "C:\MySetup\Scripts\PerformanceRegistry.User.ps1"
@@ -828,6 +834,7 @@ $scripts = @(
 	{
         . "C:\MySetup\Scripts\ExplorerRegistry.User.ps1"
         Apply-RegistryBatch $(Get-EntriesForScope -Entries $ExplorerEntries -Scope PerUser)
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $(Get-WallpaperConfigurationEntries) -Scope PerUser)
 	};
     {
         . "C:\MySetup\Scripts\PerformanceRegistry.User.ps1"
@@ -4831,7 +4838,6 @@ $ExplorerEntries = @(
         Value       = 0
         Description = "Enable translucent effects for the Start Menu, taskbar, and other Windows interface elements"
     }
-    Get-WallpaperConfigurationEntries
 )
 ]]>
         </File>
