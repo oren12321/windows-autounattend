@@ -905,7 +905,7 @@ $entries = @(
         Name = "StubPath"
         Type = "String"
         Value = @"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\MySetup\Scripts\RunActiveSetup.ps1"
+cmd.exe /c start "Customizing User ... - Do Not Close The Window" powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\MySetup\Scripts\RunActiveSetup.ps1"
 "@
     },
     @{
