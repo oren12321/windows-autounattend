@@ -126,18 +126,6 @@ $Build = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion")
 $Build | Out-File -FilePath (Join-Path $StateDir "LastBuild.txt") -Encoding ASCII -Force
 ]]>
         </File>
-        <File path="C:\Windows\Setup\Scripts\SetupComplete.cmd">
-<![CDATA[
-@echo off
-echo [%DATE% %TIME%] SetupComplete.cmd started >> C:\MySetup\Logs\SetupComplete.log
-
-REM Register the scheduled task for the first user
-powershell.exe -ExecutionPolicy Bypass -NoProfile -Command "Register-ScheduledTask -TaskName 'UserSetup.FirstUser' -Xml (Get-Content -LiteralPath 'C:\MySetup\Scripts\UserSetup.FirstUser.xml' -Raw) *>> 'C:\MySetup\Logs\UserSetup.FirstUser.RegisterTask.log'"
-
-echo [%DATE% %TIME%] SetupComplete.cmd finished >> C:\MySetup\Logs\SetupComplete.log
-exit /b 0
-]]>
-        </File>
         <File path="C:\Windows\Setup\Scripts\Apply-Registry.ps1">
 <![CDATA[
 function Apply-RegistryEntry {
@@ -489,16 +477,16 @@ $scripts = @(
         & "C:\MySetup\Scripts\ConfigureSecurityAndPrivacy.System.ps1" >> "C:\MySetup\Logs\ConfigureSecurityAndPrivacy.System.log" 2>&1
     };
     {
-        & "C:\MySetup\Scripts\ConfigurePerformance.System.ps1" >> "C:\MySetup\Scripts\ConfigurePerformance.System.log" 2>&1
+        & "C:\MySetup\Scripts\ConfigurePerformance.System.ps1" >> "C:\MySetup\Logs\ConfigurePerformance.System.log" 2>&1
     };
     {
-        & "C:\MySetup\Scripts\ConfigureExplorer.System.ps1" >> "C:\MySetup\Scripts\ConfigureExplorer.System.log" 2>&1
+        & "C:\MySetup\Scripts\ConfigureExplorer.System.ps1" >> "C:\MySetup\Logs\ConfigureExplorer.System.log" 2>&1
     };
     {
-        & "C:\MySetup\Scripts\ConfigureShellUI.System.ps1" >> "C:\MySetup\Scripts\ConfigureShellUI.System.log" 2>&1
+        & "C:\MySetup\Scripts\ConfigureShellUI.System.ps1" >> "C:\MySetup\Logs\ConfigureShellUI.System.log" 2>&1
     };
     {
-        & "C:\MySetup\Scripts\ConfigureSoundAndNotifications.System.ps1" >> "C:\MySetup\Scripts\ConfigureSoundAndNotifications.System.log" 2>&1
+        & "C:\MySetup\Scripts\ConfigureSoundAndNotifications.System.ps1" >> "C:\MySetup\Logs\ConfigureSoundAndNotifications.System.log" 2>&1
     };
     {
         # Per user Active Setup
@@ -609,85 +597,14 @@ function Write-Log {
     "$timestamp | $Message" | Out-File $logFile -Append
 }
 
-Write-Log "Starting UserSetup.ps1 with Mode='$Mode'"
-
-switch ($Mode) {
-
-    "FirstUser" {
-        Write-Log "Executing FirstUser mode"
-    
-        try {
-            # Things ONLY the first user should get
-            # Example: OEM branding, one-time app installs, etc.
-            & "C:\MySetup\Scripts\UserSetup.FirstUser.ps1"
-        }
-        catch {
-            Write-Log "ERROR in FirstUser script: $_"
-        }
-        
-        # Remove the scheduled task so it never runs again
-        $taskName = "UserSetup.FirstUser"
-        
-        try {
-            if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
-                Write-Log "Removing scheduled task '$taskName'"
-                Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
-            }
-            else {
-                Write-Log "No scheduled task '$taskName' to remove"
-            }
-        }
-        catch {
-            Write-Log "ERROR in '$taskName' schedule task removal: $_"
-        }
-    }
-
-    "PerUser" {
-        Write-Log "Executing PerUser mode"
-    
-        try {
-            # Things EVERY user should get
-            # Example: Explorer defaults, Taskbar tweaks, Start menu tweaks
-            & "C:\MySetup\Scripts\UserSetup.PerUser.ps1"
-        }
-        catch {
-            Write-Log "ERROR in PerUser script: $_"
-        }
-        
-        # Remove the scheduled task so it never runs again
-        $taskName = "UserSetup.PerUser"
-        
-        try {
-            if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
-                Write-Log "Removing scheduled task '$taskName'"
-                Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
-            }
-            else {
-                Write-Log "No scheduled task '$taskName' to remove"
-            }
-        }
-        catch {
-            Write-Log "ERROR in '$taskName' schedule task removal: $_"
-        }
-    }
-    
-    default {
-        Write-Log "WARNING: Invalid mode '$Mode'. Expected 'FirstUser' or 'PerUser'."
-        return
-    }
-}
-
-Write-Log "UserSetup.ps1 finished"
-]]>
-        </File>
-        <File path="C:\Windows\Setup\Scripts\UserSetup.FirstUser.ps1">
-<![CDATA[
 <#  
     Waits for Windows first‑logon initialization to finish before applying HKCU tweaks.
     Includes:
       - ShellExperienceHost readiness
       - ContentDeliveryManager completion
-      - Explorer idle state
+      - CloudExperienceHostBroker readiness
+      - Explorer readiness
+      - %LOCALAPPDATA%\Packages present
     Each condition has a timeout to prevent hangs.
 #>
 
@@ -720,53 +637,129 @@ function Wait-Until {
     return $false
 }
 
-# ---------------------------------------------------------
-# CONDITION 1 — ShellExperienceHost is running and stable
-# ---------------------------------------------------------
+& {
+    # ---------------------------------------------------------
+    # CONDITION 1 — ShellExperienceHost is running and stable
+    # ---------------------------------------------------------
 
-Wait-Until `
-    -Description "ShellExperienceHost.exe to start" `
-    -Condition {
-        Get-Process ShellExperienceHost -ErrorAction SilentlyContinue
-    } `
-    -TimeoutSeconds 180 `
-    -IntervalSeconds 2
+    Wait-Until `
+        -Description "ShellExperienceHost.exe to start" `
+        -Condition {
+            Get-Process ShellExperienceHost -ErrorAction SilentlyContinue
+        } `
+        -TimeoutSeconds 60 `
+        -IntervalSeconds 2
 
-# Give it a moment to finish writing theme defaults
-Write-Output "ShellExperienceHost detected — waiting 10 seconds for stabilization..."
-Start-Sleep -Seconds 10
+    # Give it a moment to finish writing theme defaults
+    Write-Output "ShellExperienceHost detected — waiting 5 seconds for stabilization..."
+    Start-Sleep -Seconds 5
 
 
-# ---------------------------------------------------------
-# CONDITION 2 — ContentDeliveryManager (CDM) background tasks finished
-# ---------------------------------------------------------
+    # ---------------------------------------------------------
+    # CONDITION 2 — ContentDeliveryManager (CDM) background tasks finished
+    # ---------------------------------------------------------
 
-Wait-Until `
-    -Description "ContentDeliveryManager background tasks to finish" `
-    -Condition {
-        -not (
-            Get-Process -Name "backgroundTaskHost" -ErrorAction SilentlyContinue |
-            Where-Object { $_.Path -like "*ContentDeliveryManager*" }
-        )
-    } `
-    -TimeoutSeconds 300 `
-    -IntervalSeconds 2
+    Wait-Until `
+        -Description "ContentDeliveryManager background tasks to finish" `
+        -Condition {
+            -not (
+                Get-Process -Name "backgroundTaskHost" -ErrorAction SilentlyContinue |
+                Where-Object { $_.Path -like "*ContentDeliveryManager*" }
+            )
+        } `
+        -TimeoutSeconds 60 `
+        -IntervalSeconds 2
+
+    # ---------------------------------------------------------
+    # CONDITION 3 — CloudExperienceHostBroker is running and stable
+    # ---------------------------------------------------------
+
+    Wait-Until `
+        -Description "CloudExperienceHostBroker.exe to start" `
+        -Condition {
+            Get-Process CloudExperienceHostBroker -ErrorAction SilentlyContinue
+        } `
+        -TimeoutSeconds 60 `
+        -IntervalSeconds 2
+
+    # Give it a moment to finish writing theme defaults
+    Write-Output "CloudExperienceHostBroker detected — waiting 5 seconds for stabilization..."
+    Start-Sleep -Seconds 5
+
+    # ---------------------------------------------------------
+    # CONDITION 4 — explorer is running and stable
+    # ---------------------------------------------------------
+
+    Wait-Until `
+        -Description "explorer.exe to start" `
+        -Condition {
+            Get-Process explorer -ErrorAction SilentlyContinue
+        } `
+        -TimeoutSeconds 60 `
+        -IntervalSeconds 2
+
+    # Give it a moment to finish writing theme defaults
+    Write-Output "explorer detected — waiting 5 seconds for stabilization..."
+    Start-Sleep -Seconds 5
+
+    # ---------------------------------------------------------
+    # CONDITION 5 — Packages folder is present
+    # ---------------------------------------------------------
+
+    Wait-Until `
+        -Description "$env:LOCALAPPDATA\Packages to be present" `
+        -Condition {
+            Test-Path "$env:LOCALAPPDATA\Packages"
+        } `
+        -TimeoutSeconds 60 `
+        -IntervalSeconds 2
+
+    # Give it a moment to finish writing theme defaults
+    Write-Output "$env:LOCALAPPDATA\Packages detected — waiting 5 seconds for stabilization..."
+    Start-Sleep -Seconds 5
+} *>&1 | Out-String -Width 1KB -Stream >> "C:\MySetup\Logs\UserSetup.log";
+
+Write-Log "Starting UserSetup.ps1 with Mode='$Mode'"
+
+switch ($Mode) {
+
+    "FirstUser" {
+        Write-Log "Executing FirstUser mode"
     
-# ---------------------------------------------------------
-# CONDITION 3 — Explorer is started and stabilized
-# ---------------------------------------------------------
+        try {
+            # Things ONLY the first user should get
+            # Example: OEM branding, one-time app installs, etc.
+            & "C:\MySetup\Scripts\UserSetup.FirstUser.ps1"
+        }
+        catch {
+            Write-Log "ERROR in FirstUser script: $_"
+        }
+    }
 
-Wait-Until `
-    -Description "explorer.exe to start" `
-    -Condition {
-        Get-Process explorer -ErrorAction SilentlyContinue
-    } `
-    -TimeoutSeconds 120 `
-    -IntervalSeconds 2
+    "PerUser" {
+        Write-Log "Executing PerUser mode"
+    
+        try {
+            # Things EVERY user should get
+            # Example: Explorer defaults, Taskbar tweaks, Start menu tweaks
+            & "C:\MySetup\Scripts\UserSetup.PerUser.ps1"
+        }
+        catch {
+            Write-Log "ERROR in PerUser script: $_"
+        }
+    }
+    
+    default {
+        Write-Log "WARNING: Invalid mode '$Mode'. Expected 'FirstUser' or 'PerUser'."
+        return
+    }
+}
 
-Write-Output "Explorer started — waiting 20 seconds for stabilization..."
-Start-Sleep -Seconds 20
-
+Write-Log "UserSetup.ps1 finished"
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\UserSetup.FirstUser.ps1">
+<![CDATA[
 . "C:\MySetup\Scripts\Apply-Registry.ps1"
 . "C:\MySetup\Scripts\RegistryPlacement.ps1"
 
@@ -823,91 +816,6 @@ $scripts = @(
         </File>
         <File path="C:\Windows\Setup\Scripts\UserSetup.PerUser.ps1">
 <![CDATA[
-<#  
-    Waits for Windows first‑logon initialization to finish before applying HKCU tweaks.
-    Includes:
-      - ShellExperienceHost readiness
-      - ContentDeliveryManager completion
-      - Explorer idle state
-    Each condition has a timeout to prevent hangs.
-#>
-
-function Wait-Until {
-    param(
-        [Parameter(Mandatory)]
-        [scriptblock]$Condition,
-
-        [int]$TimeoutSeconds = 300,   # 5 minutes max
-        [int]$IntervalSeconds = 2,
-        [string]$Description = "Unnamed condition"
-    )
-
-    Write-Output "Waiting for: $Description (timeout: $TimeoutSeconds seconds)"
-
-    $end = (Get-Date).AddSeconds($TimeoutSeconds)
-
-    while ((Get-Date) -lt $end) {
-
-        if (& $Condition) {
-            Write-Output "Condition met: $Description"
-            return $true
-        }
-
-        Write-Output "Still waiting for: $Description..."
-        Start-Sleep -Seconds $IntervalSeconds
-    }
-
-    Write-Output "Timeout reached for: $Description — continuing anyway"
-    return $false
-}
-
-# ---------------------------------------------------------
-# CONDITION 1 — ShellExperienceHost is running and stable
-# ---------------------------------------------------------
-
-Wait-Until `
-    -Description "ShellExperienceHost.exe to start" `
-    -Condition {
-        Get-Process ShellExperienceHost -ErrorAction SilentlyContinue
-    } `
-    -TimeoutSeconds 180 `
-    -IntervalSeconds 2
-
-# Give it a moment to finish writing theme defaults
-Write-Output "ShellExperienceHost detected — waiting 10 seconds for stabilization..."
-Start-Sleep -Seconds 10
-
-
-# ---------------------------------------------------------
-# CONDITION 2 — ContentDeliveryManager (CDM) background tasks finished
-# ---------------------------------------------------------
-
-Wait-Until `
-    -Description "ContentDeliveryManager background tasks to finish" `
-    -Condition {
-        -not (
-            Get-Process -Name "backgroundTaskHost" -ErrorAction SilentlyContinue |
-            Where-Object { $_.Path -like "*ContentDeliveryManager*" }
-        )
-    } `
-    -TimeoutSeconds 300 `
-    -IntervalSeconds 2
-    
-# ---------------------------------------------------------
-# CONDITION 3 — Explorer is started and stabilized
-# ---------------------------------------------------------
-
-Wait-Until `
-    -Description "explorer.exe to start" `
-    -Condition {
-        Get-Process explorer -ErrorAction SilentlyContinue
-    } `
-    -TimeoutSeconds 120 `
-    -IntervalSeconds 2
-
-Write-Output "Explorer started — waiting 20 seconds for stabilization..."
-Start-Sleep -Seconds 20
-
 . "C:\MySetup\Scripts\Apply-Registry.ps1"
 . "C:\MySetup\Scripts\RegistryPlacement.ps1"
 
@@ -962,6 +870,16 @@ $scripts = @(
 } *>&1 | Out-String -Width 1KB -Stream >> "$logsDir\UserSetup.PerUser.log";
 ]]>
         </File>
+        <File path="C:\Windows\Setup\Scripts\RunActiveSetup.ps1">
+<![CDATA[
+$donePath = "C:\MySetup\State\FirstUserDone.txt";
+if (-not (Test-Path $donePath)) {
+    New-Item -Path "$donePath" -ItemType "File" -Force | Out-Null
+    & "C:\MySetup\Scripts\UserSetup.ps1" "FirstUser"
+}
+& "C:\MySetup\Scripts\UserSetup.ps1" "PerUser"
+]]>
+        </File>
         <File path="C:\Windows\Setup\Scripts\ConfigureActiveSetup.ps1">
 <![CDATA[
 . "C:\MySetup\Scripts\Apply-Registry.ps1"
@@ -980,7 +898,7 @@ $entries = @(
         Name = "StubPath"
         Type = "String"
         Value = @"
-powershell.exe -ExecutionPolicy Bypass -NoProfile -Command "Register-ScheduledTask -TaskName 'UserSetup.PerUser' -Xml (Get-Content -LiteralPath 'C:\MySetup\Scripts\UserSetup.PerUser.xml' -Raw) *>> 'C:\MySetup\Logs\UserSetup.PerUser.RegisterTask.log'"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\MySetup\Scripts\RunActiveSetup.ps1"
 "@
     },
     @{
@@ -5917,91 +5835,5 @@ reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
 </Task>
 ]]>
 		</File>
-        <File path="C:\Windows\Setup\Scripts\UserSetup.FirstUser.xml">
-<![CDATA[
-<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-  <Triggers>
-    <LogonTrigger>
-      <Enabled>true</Enabled>
-      <Delay>PT30S</Delay>
-    </LogonTrigger>
-  </Triggers>
-  <Principals>
-    <Principal id="Author">
-      <LogonType>InteractiveToken</LogonType>
-      <RunLevel>HighestAvailable</RunLevel>
-    </Principal>
-  </Principals>
-  <Settings>
-    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
-    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
-    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
-    <AllowHardTerminate>true</AllowHardTerminate>
-    <StartWhenAvailable>true</StartWhenAvailable>
-    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
-    <IdleSettings>
-      <StopOnIdleEnd>false</StopOnIdleEnd>
-      <RestartOnIdle>false</RestartOnIdle>
-    </IdleSettings>
-    <AllowStartOnDemand>true</AllowStartOnDemand>
-    <Enabled>true</Enabled>
-    <Hidden>false</Hidden>
-    <RunOnlyIfIdle>false</RunOnlyIfIdle>
-    <WakeToRun>false</WakeToRun>
-    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
-    <Priority>5</Priority>
-  </Settings>
-  <Actions Context="Author">
-    <Exec>
-      <Command>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Command>
-      <Arguments>-NoProfile -ExecutionPolicy Bypass -File "C:\MySetup\Scripts\UserSetup.ps1" FirstUser</Arguments>
-    </Exec>
-  </Actions>
-</Task>
-]]>
-        </File>
-        <File path="C:\Windows\Setup\Scripts\UserSetup.PerUser.xml">
-<![CDATA[
-<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-  <Triggers>
-    <LogonTrigger>
-      <Enabled>true</Enabled>
-      <Delay>PT30S</Delay>
-    </LogonTrigger>
-  </Triggers>
-  <Principals>
-    <Principal id="Author">
-      <LogonType>InteractiveToken</LogonType>
-      <RunLevel>HighestAvailable</RunLevel>
-    </Principal>
-  </Principals>
-  <Settings>
-    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
-    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
-    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
-    <AllowHardTerminate>true</AllowHardTerminate>
-    <StartWhenAvailable>true</StartWhenAvailable>
-    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
-    <IdleSettings>
-      <StopOnIdleEnd>false</StopOnIdleEnd>
-      <RestartOnIdle>false</RestartOnIdle>
-    </IdleSettings>
-    <AllowStartOnDemand>true</AllowStartOnDemand>
-    <Enabled>true</Enabled>
-    <Hidden>false</Hidden>
-    <RunOnlyIfIdle>false</RunOnlyIfIdle>
-    <WakeToRun>false</WakeToRun>
-    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
-    <Priority>5</Priority>
-  </Settings>
-  <Actions Context="Author">
-    <Exec>
-      <Command>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Command>
-      <Arguments>-NoProfile -ExecutionPolicy Bypass -File "C:\MySetup\Scripts\UserSetup.ps1" PerUser</Arguments>
-    </Exec>
-  </Actions>
-</Task>
-]]>
-        </File>
     </Extensions>
 </unattend>
