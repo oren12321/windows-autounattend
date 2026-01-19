@@ -461,12 +461,6 @@ if (Get-Process -Name "powershell" | Where-Object { $_.MainWindowTitle -eq "Rest
     exit 
 }
 
-# FORCE STA MODE (Essential for Windows 10)
-if ($Host.Runspace.ApartmentState -ne 'STA') {
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Sta -File `"$PSCommandPath`""
-    return
-}
-
 # LOAD TYPES & ENABLE STYLES
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
@@ -529,6 +523,14 @@ $closeBtn.ForeColor = $titleColor
 $closeBtn.Add_Click({ $form.Close() })
 $form.Controls.Add($closeBtn)
 
+$timer = New-Object System.Windows.Forms.Timer
+$timer.Interval = 30000   # 30 seconds
+$timer.Add_Tick({
+    $timer.Stop()
+    $form.Close()
+})
+$timer.Start()
+
 # SHOW DIALOG
 $form.ShowDialog() | Out-Null
 ]]>
@@ -538,10 +540,10 @@ $form.ShowDialog() | Out-Null
 $ScriptPath = "C:\MyMaintenance\Scripts\RestartNag.ps1"
 
 # Point to conhost.exe as the primary executable
-$ConhostPath = "C:\Windows\System32\conhost.exe"
+$ConhostPath = "powershell.exe"
 
 # The command to run as an argument for conhost
-$PSArguments = "powershell.exe -NoProfile -ExecutionPolicy Bypass -NonInteractive -File `"$ScriptPath`""
+$PSArguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Sta -File `"$ScriptPath`""
 
 # Use --headless to ensure NO window is allocated
 $Action = New-ScheduledTaskAction -Execute $ConhostPath `

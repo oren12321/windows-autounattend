@@ -187,13 +187,13 @@ function Apply-RegistryEntry {
 
                 $data = (Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue).$Name
 
-                # If missing → create empty byte array and write it
+                # If missing - create empty byte array and write it
                 if (-not $data) {
                     $data = New-Object byte[] ($Offset + 1)
                     New-ItemProperty -Path $Path -Name $Name -Value $data -PropertyType Binary -Force | Out-Null
                 }
 
-                # If too small → expand
+                # If too small - expand
                 if ($data.Length -le $Offset) {
                     $newData = New-Object byte[] ($Offset + 1)
                     $data.CopyTo($newData, 0)
@@ -218,13 +218,13 @@ function Apply-RegistryEntry {
 
                 $data = (Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue).$Name
 
-                # If missing → create empty byte array and write it
+                # If missing - create empty byte array and write it
                 if (-not $data) {
                     $data = New-Object byte[] ($Offset + 1)
                     New-ItemProperty -Path $Path -Name $Name -Value $data -PropertyType Binary -Force | Out-Null
                 }
 
-                # If too small → expand
+                # If too small - expand
                 if ($data.Length -le $Offset) {
                     $newData = New-Object byte[] ($Offset + 1)
                     $data.CopyTo($newData, 0)
@@ -877,7 +877,7 @@ $scripts = @(
 } *>&1 | Out-String -Width 1KB -Stream >> "$logsDir\UserSetup.PerUser.log";
 ]]>
         </File>
-        <File path="C:\Windows\Setup\Scripts\RunActiveSetup.ps1">
+        <File path="C:\Windows\Setup\Scripts\ActiveSetup\UserSetup.PostInstall.ps1">
 <![CDATA[
 $donePath = "C:\MySetup\State\FirstUserDone.txt";
 if (-not (Test-Path $donePath)) {
@@ -885,6 +885,142 @@ if (-not (Test-Path $donePath)) {
     & "C:\MySetup\Scripts\UserSetup.ps1" "FirstUser"
 }
 & "C:\MySetup\Scripts\UserSetup.ps1" "PerUser"
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\EnterPostInstall.ps1">
+<![CDATA[
+# EnterPostInstall.ps1
+# Initializes the per-user PostInstall state machine after Active Setup scripts finish.
+
+. "C:\MySetup\Scripts\Apply-Registry.ps1"
+
+$RegPath = "HKCU:\Software\MySetup\PostInstall"
+
+function Get-SetupCycle {
+    $SetupCycle = (Get-ItemProperty -Path $RegPath -Name SetupCycle -ErrorAction SilentlyContinue).SetupCycle
+    if (-not $SetupCycle) {
+        $SetupCycle = 1
+    }
+    return @{
+        Path = "$RegPath"
+        Name = "SetupCycle"
+        Type = "Dword"
+        Value = $SetupCycle
+        Description = "Determine the next SetupCycle value"
+    }
+}
+
+function Get-LastBootTime {
+    $BootTime = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+    return @{
+        Path = "$RegPath"
+        Name = "LastBootTime"
+        Type = "QWord"
+        Value = ([long]$BootTime.ToFileTimeUtc())
+        Description = "Record the current boot time"
+    }
+}
+
+$entries = @(
+    Get-SetupCycle
+    @{
+        Path = "$RegPath"
+        Name = "SetupComplete"
+        Type = "DWord"
+        Value = 1
+        Description = "Mark setup as complete"
+    },
+    @{
+        Path = "$RegPath"
+        Name = "ActionRequired"
+        Type = "DWord"
+        Value = 1
+        Description = "Mark that an action is required for this cycle"
+    },
+    @{
+        Path = "$RegPath"
+        Name = "ActionCompleted"
+        Type = "DWord"
+        Value = 0
+        Description = "Reset ActionCompleted"
+    },
+    @{
+        Path = "$RegPath"
+        Name = "ActionCompleted"
+        Type = "DWord"
+        Value = 0
+        Description = "Reset ActionCompleted"
+    }
+    Get-LastBootTime
+)
+Apply-RegistryBatch $entries
+
+Write-Output "[Info] PostInstall state initialized for SetupCycle $SetupCycle."
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\RunActiveSetup.ps1">
+<![CDATA[
+# RunActiveSetup.ps1
+# Executes all Active Setup scripts in order, then initializes the PostInstall state.
+
+$logFile = "C:\MySetup\Logs\RunActiveSetup.log"
+
+# Logging helper
+function Write-Log {
+    param([string]$Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$timestamp | $Message" | Out-File $logFile -Append
+}
+
+$ActiveSetupDir = "C:\MySetup\Scripts\ActiveSetup"
+$Initializer = "C:\MySetup\Scripts\EnterPostInstall.ps1"
+
+Write-Log "[Info] Starting Active Setup execution..."
+
+# --- 1. Run all scripts in ActiveSetup folder ---
+if (Test-Path $ActiveSetupDir) {
+
+    # Get all .ps1 files sorted alphabetically
+    $Scripts = Get-ChildItem -Path $ActiveSetupDir -Filter *.ps1 -File | Sort-Object Name
+
+    foreach ($Script in $Scripts) {
+        Write-Log "[Info] Running Active Setup script: $($Script.Name)"
+
+        try {
+            & "$Script.FullName"
+        }
+        catch {
+            Write-Log "[Warning] Active Setup script failed: $($Script.Name)"
+            Write-Log "$_.Exception.Message"
+
+            # Optional: uncomment to stop on error
+            # throw
+        }
+    }
+}
+else {
+    Write-Log "[Info] ActiveSetup folder not found: $ActiveSetupDir"
+}
+
+
+# --- 2. Run the fixed state initializer ---
+if (Test-Path $Initializer) {
+    Write-Log "[Info] Running EnterPostInstall.ps1..."
+    try {
+        & "$Initializer" >> "C:\MySetup\Logs\EnterPostInstall.log" 2>&1
+    }
+    catch {
+        Write-Log "[Error] EnterPostInstall.ps1 failed!"
+        Write-Log "$_.Exception.Message"
+        return
+    }
+}
+else {
+    Write-Log "[Error] EnterPostInstall.ps1 not found: $Initializer"
+    return
+}
+
+Write-Log "[Info] Active Setup execution completed."
 ]]>
         </File>
         <File path="C:\Windows\Setup\Scripts\ConfigureActiveSetup.ps1">
@@ -5841,5 +5977,295 @@ reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
 </Task>
 ]]>
 		</File>
+        <File path="C:\Windows\Setup\Scripts\PostInstallMonitor.xml">
+<![CDATA[
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <Triggers>
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+    </LogonTrigger>
+    <BootTrigger>
+      <Enabled>true</Enabled>
+    </BootTrigger>
+    <TimeTrigger>
+      <Repetition>
+        <Interval>PT1H</Interval>
+        <Duration>P1D</Duration>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+      <StartBoundary>2000-01-01T00:00:00</StartBoundary>
+      <Enabled>true</Enabled>
+    </TimeTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <GroupId>S-1-5-32-545</GroupId>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT1H</ExecutionTimeLimit>
+    <Priority>7</Priority>
+    <RestartOnFailure>
+      <Interval>PT5M</Interval>
+      <Count>5</Count>
+    </RestartOnFailure>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>powershell.exe</Command>
+      <Arguments>-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\MySetup\Scripts\PostInstallMonitor.ps1"</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\PostInstallMonitor.ps1">
+<![CDATA[
+# PostInstallMonitor.ps1
+# Drives the PostInstall state machine by invoking PostInstallAction.ps1
+# whenever ActionRequired=1 and ActionCompleted=0.
+
+. "C:\MySetup\Scripts\Apply-Registry.ps1"
+
+$logFile = "C:\MySetup\Logs\PostInstallMonitor.log"
+
+# Logging helper
+function Write-Log {
+    param([string]$Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$timestamp | $Message" | Out-File $logFile -Append
+}
+
+$HKCU = "HKCU:\Software\MySetup\PostInstall"
+$HKLM = "HKLM:\Software\MySetup\PostInstall"
+$ActionScript = "C:\MySetup\Scripts\PostInstallAction.ps1"
+
+# --- 1. Ensure state exists ---
+if (-not (Test-Path $RegPath)) {
+    Write-Log "[Info] PostInstall state not initialized. Exiting."
+    exit 0
+}
+
+$State = Get-ItemProperty -Path $RegPath
+
+$SetupComplete   = $State.SetupComplete
+$ActionRequired  = $State.ActionRequired
+$ActionCompleted = $State.ActionCompleted
+$SetupCycle      = $UserState.SetupCycle
+
+# --- 2. Read target cycle from HKLM (default = 1) ---
+$TargetCycle = 1
+if (Test-Path $HKLM) {
+    $TargetCycle = (Get-ItemProperty -Path $HKLM -Name TargetCycle -ErrorAction SilentlyContinue).TargetCycle
+    if (-not $TargetCycle) {
+        Write-Log "[Warning] Defaulting TargetCycle to 1"
+        $TargetCycle = 1
+    }
+}
+else {
+    Write-Log "[Warning] $HKLM not found"
+}
+
+# --- 3. If user cycle is behind - start new cycle ---
+if ($SetupCycle -lt $TargetCycle) {
+    Write-Log "[Info] Cycle is behind - starting new one."
+
+    Apply-RegistryEntry -Path $HKCU -Name SetupCycle -Type "DWord" -Value $TargetCycle
+    Apply-RegistryEntry -Path $HKCU -Name ActionRequired -Type "DWord" -Value 1
+    Apply-RegistryEntry -Path $HKCU -Name ActionCompleted -Type "DWord" -Value 0
+
+    # Continue into normal logic below
+    $ActionRequired  = 1
+    $ActionCompleted = 0
+}
+
+# --- 4. If setup not complete, exit ---
+if ($SetupComplete -ne 1) {
+    Write-Log "[Info] SetupComplete != 1. Exiting."
+    exit 0
+}
+
+# --- 3. If no action required, exit ---
+if ($ActionRequired -ne 1) {
+    Write-Log "[Info] ActionRequired != 1. Exiting."
+    exit 0
+}
+
+# --- 4. If action already completed, exit ---
+if ($ActionCompleted -eq 1) {
+    Write-Log "[Info] ActionCompleted == 1. Exiting."
+    exit 0
+}
+
+# --- 5. Action still required - invoke PostInstallAction.ps1 ---
+if (Test-Path $ActionScript) {
+    Write-Log "[Info] Invoking PostInstallAction.ps1..."
+    try {
+        & $ActionScript
+    }
+    catch {
+        Write-Log "[Warning] PostInstallAction.ps1 failed: $($_.Exception.Message)"
+    }
+}
+else {
+    Write-Log "[Warning] PostInstallAction.ps1 not found: $ActionScript"
+}
+
+exit 0
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\PostInstallAction.ps1">
+<![CDATA[
+# PostInstallAction.ps1
+# Demonstrates how an action script can:
+# - show a toast
+# - detect restart OR logoff/logon
+# - mark ActionCompleted=1 when done
+
+. "C:\MySetup\Scripts\Apply-Registry.ps1"
+
+$logFile = "C:\MySetup\Logs\PostInstallAction.log"
+
+# Logging helper
+function Write-Log {
+    param([string]$Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$timestamp | $Message" | Out-File $logFile -Append
+}
+
+$RegPath = "HKCU:\Software\MySetup\PostInstall"
+
+# Load state
+$State = Get-ItemProperty -Path $RegPath
+$LastBootTimeRaw = $State.LastBootTime
+
+# --- 1. Detect restart completion ---
+$CurrentBootTime = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+$CurrentBootTimeRaw = [long]$CurrentBootTime.ToFileTimeUtc()
+
+$RestartCompleted = $CurrentBootTimeRaw -gt $LastBootTimeRaw
+
+# --- 2. Detect logoff/logon completion ---
+# Session start time changes on logon
+$SessionStart = (Get-Process -Id $PID).StartTime
+$SessionStartRaw = [long]$SessionStart.ToFileTimeUtc()
+
+$LastSessionStartRaw = ($State | Select-Object -ExpandProperty LastSessionStart -ErrorAction SilentlyContinue)
+
+$LogonCompleted = $false
+if ($LastSessionStartRaw) {
+    $LogonCompleted = $SessionStartRaw -gt $LastSessionStartRaw
+}
+
+# --- 3. If either condition is satisfied - mark action completed ---
+if ($RestartCompleted -or $LogonCompleted) {
+    Apply-RegistryEntry -Path $RegPath -Name ActionCompleted -Type "DWord" -Value 1
+    Apply-RegistryEntry -Path $RegPath -Name ActionRequired -Type "DWord" -Value 0
+    Write-Log "[Info] Action completed (restart or logon detected)."
+    exit 0
+}
+
+# --- 4. Otherwise - show toast and update LastSessionStart ---
+# (This is where you put your toast logic)
+# Example placeholder:
+Write-Log "[Info] Showing toast: Please restart or log off and log back in."
+
+# Update LastSessionStart so next logon can be detected
+Apply-RegistryEntry -Path $RegPath -Name LastSessionStart -Type "QWord" -Value $SessionStartRaw
+
+exit 0
+]]>
+        </File>
+        <File path="C:\Windows\Setup\Scripts\ShowToast.ps1">
+<![CDATA[
+param(
+    [string]$ToastTitle = "User Restart Required",
+    [string]$ToastText = "Please log in/out or restart to complete user customizations."
+)
+
+# PREVENT DUPLICATE WINDOWS
+# If the window is already open, don't open another one
+if (Get-Process -Name "powershell" | Where-Object { $_.MainWindowTitle -eq "Restart Required" }) { 
+    exit 
+}
+
+# LOAD TYPES & ENABLE STYLES
+Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+[System.Windows.Forms.Application]::EnableVisualStyles()
+
+# THEME DETECTION (Windows 10 Taskbar match)
+$bgColor = [System.Drawing.Color]::FromArgb(45, 45, 48) # Dark Taskbar Gray
+$titleColor = [System.Drawing.Color]::White
+$descColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
+
+# Check for Light Mode
+$themePath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+$isLightTheme = Get-ItemPropertyValue -Path $themePath -Name "AppsUseLightTheme" -ErrorAction SilentlyContinue
+if ($isLightTheme -eq 1) {
+    $bgColor = [System.Drawing.Color]::FromArgb(240, 240, 240)
+    $titleColor = [System.Drawing.Color]::Black
+    $descColor = [System.Drawing.Color]::FromArgb(100, 100, 100)
+}
+
+# CREATE FORM
+$form = New-Object System.Windows.Forms.Form
+$form.Text = "Toast"
+$form.Size = New-Object System.Drawing.Size(360, 100)
+$form.FormBorderStyle = "None"
+$form.BackColor = $bgColor
+$form.TopMost = $true
+$form.Opacity = 0.95
+$form.ShowInTaskbar = $false
+
+# Position (Bottom-Right)
+$workingArea = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+$form.Location = New-Object System.Drawing.Point(($workingArea.Width - 370), ($workingArea.Height - 115))
+$form.StartPosition = "Manual"
+
+# UI Elements (Title)
+$title = New-Object System.Windows.Forms.Label
+$title.Text = $ToastTitle
+$title.ForeColor = $titleColor
+$title.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10.5)
+$title.AutoSize = $true
+$title.Location = New-Object System.Drawing.Point(15, 15)
+$form.Controls.Add($title)
+
+# UI Elements (Description)
+$desc = New-Object System.Windows.Forms.Label
+$desc.Text = $ToastText
+$desc.ForeColor = $descColor
+$desc.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+$desc.Size = New-Object System.Drawing.Size(300, 40)
+$desc.Location = New-Object System.Drawing.Point(15, 40)
+$form.Controls.Add($desc)
+
+# Close Button
+$closeBtn = New-Object System.Windows.Forms.Button
+$closeBtn.Text = "X"
+$closeBtn.Size = New-Object System.Drawing.Size(25, 25)
+$closeBtn.Location = New-Object System.Drawing.Point(325, 12)
+$closeBtn.FlatStyle = "Flat"
+$closeBtn.FlatAppearance.BorderSize = 0
+$closeBtn.ForeColor = $titleColor
+$closeBtn.Add_Click({ $form.Close() })
+$form.Controls.Add($closeBtn)
+
+# SHOW DIALOG
+$form.ShowDialog() | Out-Null
+]]>
+        </File>
     </Extensions>
 </unattend>
