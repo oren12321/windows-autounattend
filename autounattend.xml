@@ -1055,6 +1055,13 @@ cmd.exe /c start "Customizing User ... - Do Not Close The Window" powershell.exe
         Name = "IsInstalled"
         Type = "DWord"
         Value = 1
+    },
+    # A custom TargetCycle field for the post install framework
+    @{
+        Path = "HKLM:\Software\MySetup\PostInstall"
+        Name = "TargetCycle"
+        Type = "DWord"
+        Value = 1
     }
 )
 Apply-RegistryBatch $entries
