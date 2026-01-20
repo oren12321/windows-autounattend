@@ -1066,6 +1066,9 @@ cmd.exe /c start "Customizing User ... - Do Not Close The Window" powershell.exe
 )
 Apply-RegistryBatch $entries
 
+# Registrer post install (i.e. post Active Setup) scheduled task.
+Register-ScheduledTask -TaskName "PostInstallMonitor" -Xml $(Get-Content -LiteralPath "C:\MySetup\Scripts\PostInstallMonitor.xml" -Raw)
+
 Write-Output "Active Setup registration done"
 ]]>
         </File>
