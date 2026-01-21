@@ -5781,8 +5781,8 @@ reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>C:\Windows\System32\wscript.exe</Command>
-      <Arguments>"C:\MySetup\Scripts\MoveActiveHours.vbs" &gt;&gt; "C:\MySetup\Logs\MoveActiveHours.log" 2&gt;&amp;1</Arguments>
+      <Command>powershell.exe</Command>
+      <Arguments>"C:\Windows\System32\wscript.exe 'C:\MySetup\Scripts\MoveActiveHours.vbs' | Out-File 'C:\MySetup\Logs\MoveActiveHours.log' -Append"</Arguments>
     </Exec>
   </Actions>
 </Task>
@@ -5834,8 +5834,8 @@ reg.SetDWORDValue HKLM, key, "SmartActiveHoursState", 2
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>C:\Windows\System32\wscript.exe</Command>
-      <Arguments>"C:\MySetup\Scripts\MoveActiveHours.vbs" &gt;&gt; "C:\MySetup\Logs\MoveActiveHours.log" 2&gt;&amp;1</Arguments>
+      <Command>powershell.exe</Command>
+      <Arguments>"C:\Windows\System32\wscript.exe 'C:\MySetup\Scripts\MoveActiveHours.vbs' | Out-File 'C:\MySetup\Logs\MoveActiveHours.log' -Append"</Arguments>
     </Exec>
   </Actions>
 </Task>
