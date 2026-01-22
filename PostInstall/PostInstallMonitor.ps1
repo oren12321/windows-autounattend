@@ -1,16 +1,13 @@
-$logFile = Join-Path $PSScriptRoot 'PostInstallMonitor.log'
-
-# Logging helper
-function Write-Log {
+function Write-Timestamped {
     param([string]$Message)
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$timestamp | $Message" | Out-File $logFile -Append
+    Write-Output "$timestamp | $Message"
 }
 
 function Invoke-PostInstallMonitor {
     param()
 
-    Write-Log "=== PostInstallMonitor started ==="
+    Write-Timestamped "=== PostInstallMonitor started ==="
 
     $HKCU = 'HKCU:\Software\MyCompany\PostInstall'
     $HKLM = 'HKLM:\Software\MyCompany\PostInstall'
@@ -26,24 +23,24 @@ function Invoke-PostInstallMonitor {
     #
     # Wait for HKCU key to appear
     #
-    Write-Log "Waiting for HKCU key: $HKCU"
+    Write-Timestamped "Waiting for HKCU key: $HKCU"
     while (-not (Test-Path $HKCU) -and $elapsed -lt $maxWaitSeconds) {
         Start-Sleep -Seconds $waitInterval
         $elapsed += $waitInterval
     }
 
     if (-not (Test-Path $HKCU)) {
-        Write-Log "HKCU key did not appear within timeout. Exiting."
+        Write-Timestamped "HKCU key did not appear within timeout. Exiting."
         return
     }
 
-    Write-Log "HKCU key detected."
+    Write-Timestamped "HKCU key detected."
 
     #
     # Wait for SetupComplete = 1
     #
     $elapsed = 0
-    Write-Log "Waiting for SetupComplete = 1"
+    Write-Timestamped "Waiting for SetupComplete = 1"
     do {
         $state = Get-ItemProperty -Path $HKCU
         $setupComplete = $state.SetupComplete
@@ -56,11 +53,11 @@ function Invoke-PostInstallMonitor {
     while ($setupComplete -ne 1 -and $elapsed -lt $maxWaitSeconds)
 
     if ($setupComplete -ne 1) {
-        Write-Log "SetupComplete did not reach 1 within timeout. Exiting."
+        Write-Timestamped "SetupComplete did not reach 1 within timeout. Exiting."
         return
     }
 
-    Write-Log "SetupComplete = 1 detected."
+    Write-Timestamped "SetupComplete = 1 detected."
 
     #
     # Read state
@@ -70,7 +67,7 @@ function Invoke-PostInstallMonitor {
     $actionCompleted= $state.ActionCompleted
     $setupCycle     = $state.SetupCycle
 
-    Write-Log "State: SetupCycle=$setupCycle, ActionRequired=$actionRequired, ActionCompleted=$actionCompleted"
+    Write-Timestamped "State: SetupCycle=$setupCycle, ActionRequired=$actionRequired, ActionCompleted=$actionCompleted"
 
     #
     # Determine target cycle
@@ -83,13 +80,13 @@ function Invoke-PostInstallMonitor {
         }
     }
 
-    Write-Log "TargetCycle = $targetCycle"
+    Write-Timestamped "TargetCycle = $targetCycle"
 
     #
     # If user cycle is behind, bump it
     #
     if ($setupCycle -lt $targetCycle) {
-        Write-Log "SetupCycle ($setupCycle) is behind TargetCycle ($targetCycle). Updating user state."
+        Write-Timestamped "SetupCycle ($setupCycle) is behind TargetCycle ($targetCycle). Updating user state."
 
         Set-ItemProperty -Path $HKCU -Name SetupCycle      -Value $targetCycle
         Set-ItemProperty -Path $HKCU -Name ActionRequired  -Value 1
@@ -98,14 +95,14 @@ function Invoke-PostInstallMonitor {
         $actionRequired  = 1
         $actionCompleted = 0
 
-        Write-Log "User state updated: SetupCycle=$targetCycle, ActionRequired=1, ActionCompleted=0"
+        Write-Timestamped "User state updated: SetupCycle=$targetCycle, ActionRequired=1, ActionCompleted=0"
     }
 
     #
     # If no action required or already completed, exit
     #
     if ($actionRequired -ne 1 -or $actionCompleted -eq 1) {
-        Write-Log "No action required (ActionRequired=$actionRequired, ActionCompleted=$actionCompleted). Exiting."
+        Write-Timestamped "No action required (ActionRequired=$actionRequired, ActionCompleted=$actionCompleted). Exiting."
         return
     }
 
@@ -113,18 +110,20 @@ function Invoke-PostInstallMonitor {
     # Execute action script
     #
     if (Test-Path $ActionScript) {
-        Write-Log "Executing PostInstallAction.ps1"
+        Write-Timestamped "Executing PostInstallAction.ps1"
         Invoke-PostInstallAction
-        Write-Log "PostInstallAction.ps1 completed."
+        Write-Timestamped "PostInstallAction.ps1 completed."
     }
     else {
-        Write-Log "Action script not found: $ActionScript"
+        Write-Timestamped "Action script not found: $ActionScript"
     }
 
-    Write-Log "=== PostInstallMonitor finished ==="
+    Write-Timestamped "=== PostInstallMonitor finished ==="
 }
 
 # Auto-run only when executed directly, not when dot-sourced
 if ($MyInvocation.InvocationName -eq $MyInvocation.MyCommand.Name) {
-    Invoke-PostInstallMonitor
+    & {
+        Invoke-PostInstallMonitor
+    } *>&1 | Out-String -Width 1KB -Stream >> "$PSScriptRoot\..\Logs\PostInstallMonitor.log"
 }
