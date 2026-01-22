@@ -85,6 +85,15 @@ foreach( $file in $Document.unattend.Extensions.File ) {
     [System.IO.File]::WriteAllBytes( $path, $bytes );
 }
 		</ExtractScript>
+        <File path="C:\Windows\Setup\Scripts\Utils\Output.ps1">
+<![CDATA[
+function Write-Timestamped {
+    param([string]$Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    Write-Output "$timestamp | $Message"
+}
+]]>
+        </File>
         <File path="C:\Windows\Setup\Scripts\MySetup.ps1">
 <![CDATA[
 # ============================================================
