@@ -18,14 +18,12 @@ Describe 'Post-install integration' {
                 $script:regHKCU = [ordered]@{}
             }
 
-            # Remove existing key (case-insensitive)
             foreach ($key in @($script:regHKCU.Keys)) {
                 if ($key -ieq $Name) {
                     $script:regHKCU.Remove($key)
                 }
             }
 
-            # Add with correct casing
             $script:regHKCU[$Name] = $Value
         }
 
@@ -91,6 +89,7 @@ Describe 'Post-install integration' {
         $here = Split-Path -Parent $PSCommandPath
         $scriptRoot = Split-Path -Parent $here
 
+        . (Join-Path $scriptRoot "Utils\PostInstallComponent.ps1")
         . (Join-Path $scriptRoot "EnterPostInstall.ps1")
         . (Join-Path $scriptRoot "PostInstallMonitor.ps1")
         . (Join-Path $scriptRoot "PostInstallAction.ps1")

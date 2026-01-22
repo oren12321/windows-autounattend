@@ -1,11 +1,10 @@
-function Write-Timestamped {
-    param([string]$Message)
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Write-Output "$timestamp | $Message"
-}
+. (Join-Path $PSScriptRoot '..\Utils\Output.ps1')
+. (Join-Path $PSScriptRoot 'Utils\PostInstallComponent.ps1')
 
 function Invoke-PostInstallMonitor {
-    param()
+    param(
+        $Component
+    )
 
     Write-Timestamped "=== PostInstallMonitor started ==="
 
@@ -35,29 +34,6 @@ function Invoke-PostInstallMonitor {
     }
 
     Write-Timestamped "HKCU key detected."
-
-    #
-    # Wait for SetupComplete = 1
-    #
-    $elapsed = 0
-    Write-Timestamped "Waiting for SetupComplete = 1"
-    do {
-        $state = Get-ItemProperty -Path $HKCU
-        $setupComplete = $state.SetupComplete
-
-        if ($setupComplete -ne 1) {
-            Start-Sleep -Seconds $waitInterval
-            $elapsed += $waitInterval
-        }
-    }
-    while ($setupComplete -ne 1 -and $elapsed -lt $maxWaitSeconds)
-
-    if ($setupComplete -ne 1) {
-        Write-Timestamped "SetupComplete did not reach 1 within timeout. Exiting."
-        return
-    }
-
-    Write-Timestamped "SetupComplete = 1 detected."
 
     #
     # Read state
@@ -99,23 +75,67 @@ function Invoke-PostInstallMonitor {
     }
 
     #
-    # If no action required or already completed, exit
+    # Build default component if none injected
     #
-    if ($actionRequired -ne 1 -or $actionCompleted -eq 1) {
-        Write-Timestamped "No action required (ActionRequired=$actionRequired, ActionCompleted=$actionCompleted). Exiting."
-        return
+    if (-not $Component) {
+        $Component = New-PostInstallComponent `
+            -StartCondition {
+                param($s)
+                # Default: run when ActionRequired=1 and not completed
+                $s.ActionRequired -eq 1 -and $s.ActionCompleted -ne 1
+            } `
+            -Action {
+                Invoke-PostInstallAction
+            } `
+            -StopCondition {
+                param($s)
+                # Default: stop when ActionCompleted=1
+                $s.ActionCompleted -eq 1
+            }
     }
 
     #
-    # Execute action script
+    # 1. Evaluate StartCondition: if true, mark ActionRequired=1, ActionCompleted=0
     #
-    if (Test-Path $ActionScript) {
-        Write-Timestamped "Executing PostInstallAction.ps1"
-        Invoke-PostInstallAction
-        Write-Timestamped "PostInstallAction.ps1 completed."
+    $state = Get-ItemProperty -Path $HKCU
+    if (& $Component.StartCondition $state) {
+        Write-Timestamped "StartCondition met. Marking ActionRequired=1, ActionCompleted=0"
+        Set-ItemProperty -Path $HKCU -Name ActionRequired  -Value 1
+        Set-ItemProperty -Path $HKCU -Name ActionCompleted -Value 0
+        $state = Get-ItemProperty -Path $HKCU
+    }
+
+    #
+    # 2. Run action whenever ActionRequired=1 and not completed
+    #
+    if ($state.ActionRequired -eq 1 -and $state.ActionCompleted -ne 1) {
+        if ($Component.Action) {
+            Write-Timestamped "Executing component action."
+            & $Component.Action $state
+            Write-Timestamped "Component action completed."
+        }
+        elseif (Test-Path $ActionScript) {
+            Write-Timestamped "Executing PostInstallAction.ps1"
+            Invoke-PostInstallAction
+            Write-Timestamped "PostInstallAction.ps1 completed."
+        }
+        else {
+            Write-Timestamped "Action script not found: $ActionScript"
+        }
+
+        $state = Get-ItemProperty -Path $HKCU
     }
     else {
-        Write-Timestamped "Action script not found: $ActionScript"
+        Write-Timestamped "No action required (ActionRequired=$($state.ActionRequired), ActionCompleted=$($state.ActionCompleted))."
+    }
+
+    #
+    # 3. Evaluate StopCondition: if true, mark ActionCompleted=1, ActionRequired=0
+    #
+    if (& $Component.StopCondition $state) {
+        Write-Timestamped "StopCondition met. Marking ActionCompleted=1, ActionRequired=0"
+        Set-ItemProperty -Path $HKCU -Name ActionCompleted -Value 1
+        Set-ItemProperty -Path $HKCU -Name ActionRequired  -Value 0
     }
 
     Write-Timestamped "=== PostInstallMonitor finished ==="
