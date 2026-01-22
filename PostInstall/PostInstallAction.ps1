@@ -1,3 +1,7 @@
+param(
+    [switch]$InTestContext
+)
+
 . (Join-Path $PSScriptRoot '..\Utils\Output.ps1')
 
 function Invoke-PostInstallAction {
@@ -54,8 +58,6 @@ function Invoke-PostInstallAction {
 }
 
 # Auto-run only when executed directly, not when dot-sourced
-if ($MyInvocation.InvocationName -eq $MyInvocation.MyCommand.Name) {
-    & {
-        Invoke-PostInstallAction
-    } *>&1 | Out-String -Width 1KB -Stream >> "$PSScriptRoot\..\Logs\PostInstallAction.log"
+if ($MyInvocation.InvocationName -eq $MyInvocation.MyCommand.Name -or $InTestContext) {
+    Invoke-PostInstallAction
 }

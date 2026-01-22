@@ -1,9 +1,13 @@
+param(
+    [switch]$InTestContext
+)
+
 . (Join-Path $PSScriptRoot '..\Utils\Output.ps1')
 . (Join-Path $PSScriptRoot 'Utils\PostInstallComponent.ps1')
 
 function Invoke-PostInstallMonitor {
     param(
-        $Component
+        $Component  # Can be a single component OR an array of components
     )
 
     Write-Timestamped "=== PostInstallMonitor started ==="
@@ -74,14 +78,30 @@ function Invoke-PostInstallMonitor {
         Write-Timestamped "User state updated: SetupCycle=$targetCycle, ActionRequired=1, ActionCompleted=0"
     }
 
+    # =====================================================================
+    # NEW COMPONENT HANDLING BLOCK (replaces your old "Build default component" block)
+    # =====================================================================
+
     #
-    # Build default component if none injected
+    # Normalize to array
     #
-    if (-not $Component) {
-        $Component = New-PostInstallComponent `
+    $components = @()
+    if ($Component -is [array]) {
+        $components = $Component
+    }
+    elseif ($Component) {
+        $components = @($Component)
+    }
+
+    #
+    # If no components were injected, build the default one
+    #
+    if ($components.Count -eq 0) {
+        Write-Timestamped "No injected components. Using default component."
+
+        $default = New-PostInstallComponent `
             -StartCondition {
                 param($s)
-                # Default: run when ActionRequired=1 and not completed
                 $s.ActionRequired -eq 1 -and $s.ActionCompleted -ne 1
             } `
             -Action {
@@ -89,61 +109,152 @@ function Invoke-PostInstallMonitor {
             } `
             -StopCondition {
                 param($s)
-                # Default: stop when ActionCompleted=1
                 $s.ActionCompleted -eq 1
             }
+
+        $components = @($default)
     }
 
+    # =====================================================================
+    # END OF NEW COMPONENT HANDLING BLOCK
+    # =====================================================================
+
     #
-    # 1. Evaluate StartCondition: if true, mark ActionRequired=1, ActionCompleted=0
+    # Execute each component in order
     #
-    $state = Get-ItemProperty -Path $HKCU
-    if (& $Component.StartCondition $state) {
-        Write-Timestamped "StartCondition met. Marking ActionRequired=1, ActionCompleted=0"
-        Set-ItemProperty -Path $HKCU -Name ActionRequired  -Value 1
-        Set-ItemProperty -Path $HKCU -Name ActionCompleted -Value 0
+    foreach ($comp in $components) {
+
+        # 1. Evaluate StartCondition
         $state = Get-ItemProperty -Path $HKCU
-    }
-
-    #
-    # 2. Run action whenever ActionRequired=1 and not completed
-    #
-    if ($state.ActionRequired -eq 1 -and $state.ActionCompleted -ne 1) {
-        if ($Component.Action) {
-            Write-Timestamped "Executing component action."
-            & $Component.Action $state
-            Write-Timestamped "Component action completed."
+        if (& $comp.StartCondition $state) {
+            Write-Timestamped "StartCondition met for component. Marking ActionRequired=1, ActionCompleted=0"
+            Set-ItemProperty -Path $HKCU -Name ActionRequired  -Value 1
+            Set-ItemProperty -Path $HKCU -Name ActionCompleted -Value 0
+            $state = Get-ItemProperty -Path $HKCU
         }
-        elseif (Test-Path $ActionScript) {
-            Write-Timestamped "Executing PostInstallAction.ps1"
-            Invoke-PostInstallAction
-            Write-Timestamped "PostInstallAction.ps1 completed."
+
+        # 2. Run action if required
+        if ($state.ActionRequired -eq 1 -and $state.ActionCompleted -ne 1) {
+            if ($comp.Action) {
+                Write-Timestamped "Executing component action."
+                & $comp.Action $state
+                Write-Timestamped "Component action completed."
+            }
+            elseif (Test-Path $ActionScript) {
+                Write-Timestamped "Executing PostInstallAction.ps1"
+                Invoke-PostInstallAction
+                Write-Timestamped "PostInstallAction.ps1 completed."
+            }
+            else {
+                Write-Timestamped "Action script not found: $ActionScript"
+            }
+
+            $state = Get-ItemProperty -Path $HKCU
         }
         else {
-            Write-Timestamped "Action script not found: $ActionScript"
+            Write-Timestamped "No action required (ActionRequired=$($state.ActionRequired), ActionCompleted=$($state.ActionCompleted))."
         }
 
-        $state = Get-ItemProperty -Path $HKCU
-    }
-    else {
-        Write-Timestamped "No action required (ActionRequired=$($state.ActionRequired), ActionCompleted=$($state.ActionCompleted))."
-    }
-
-    #
-    # 3. Evaluate StopCondition: if true, mark ActionCompleted=1, ActionRequired=0
-    #
-    if (& $Component.StopCondition $state) {
-        Write-Timestamped "StopCondition met. Marking ActionCompleted=1, ActionRequired=0"
-        Set-ItemProperty -Path $HKCU -Name ActionCompleted -Value 1
-        Set-ItemProperty -Path $HKCU -Name ActionRequired  -Value 0
+        # 3. Evaluate StopCondition
+        if (& $comp.StopCondition $state) {
+            Write-Timestamped "StopCondition met for component. Marking ActionCompleted=1, ActionRequired=0"
+            Set-ItemProperty -Path $HKCU -Name ActionCompleted -Value 1
+            Set-ItemProperty -Path $HKCU -Name ActionRequired  -Value 0
+        }
     }
 
     Write-Timestamped "=== PostInstallMonitor finished ==="
 }
 
 # Auto-run only when executed directly, not when dot-sourced
-if ($MyInvocation.InvocationName -eq $MyInvocation.MyCommand.Name) {
-    & {
+if ($MyInvocation.InvocationName -eq $MyInvocation.MyCommand.Name -or $InTestContext) {
+
+    Write-Timestamped "=== Component loader started ==="
+
+    $componentsDir = Join-Path $PSScriptRoot "Components"
+    $singleComponentPath = Join-Path $PSScriptRoot "Component.ps1"
+
+    $loadedComponents = @()
+
+    try {
+        if (Test-Path $componentsDir) {
+            Write-Timestamped "Loading components from folder: $componentsDir"
+
+            $files = Get-ChildItem -Path $componentsDir -Filter *.ps1 | Sort-Object Name
+
+            foreach ($file in $files) {
+                Write-Timestamped "Loading component file: $($file.Name)"
+
+                try {
+                    . $file.FullName
+
+                    if (-not $Component) {
+                        Write-Timestamped "ERROR: Component file '$($file.Name)' did not define a `$Component variable. Skipping."
+                        continue
+                    }
+
+                    # Validate structure
+                    if (-not ($Component.StartCondition -is [scriptblock] -and
+                              $Component.Action         -is [scriptblock] -and
+                              $Component.StopCondition  -is [scriptblock])) {
+
+                        Write-Timestamped "ERROR: Component '$($file.Name)' is missing required scriptblocks. Skipping."
+                        continue
+                    }
+
+                    $loadedComponents += $Component
+                    Write-Timestamped "Component '$($file.Name)' loaded successfully."
+                }
+                catch {
+                    Write-Timestamped "ERROR: Failed to load component '$($file.Name)': $_"
+                }
+
+                Remove-Variable Component -ErrorAction SilentlyContinue
+            }
+        }
+        elseif (Test-Path $singleComponentPath) {
+            Write-Timestamped "Loading single component file: $singleComponentPath"
+
+            try {
+                . $singleComponentPath
+
+                if (-not $Component) {
+                    Write-Timestamped "ERROR: Component.ps1 did not define a `$Component variable."
+                }
+                elseif (-not ($Component.StartCondition -is [scriptblock] -and
+                              $Component.Action         -is [scriptblock] -and
+                              $Component.StopCondition  -is [scriptblock])) {
+
+                    Write-Timestamped "ERROR: Component.ps1 is missing required scriptblocks."
+                }
+                else {
+                    $loadedComponents += $Component
+                    Write-Timestamped "Component.ps1 loaded successfully."
+                }
+            }
+            catch {
+                Write-Timestamped "ERROR: Failed to load Component.ps1: $_"
+            }
+        }
+        else {
+            Write-Timestamped "No component files found. Using default component."
+        }
+    }
+    catch {
+        Write-Timestamped "ERROR: Unexpected failure during component loading: $_"
+    }
+
+    # Fallback to default component if none loaded
+    if ($loadedComponents.Count -eq 0) {
+        Write-Timestamped "WARNING: No valid components loaded. Falling back to default component."
+
         Invoke-PostInstallMonitor
-    } *>&1 | Out-String -Width 1KB -Stream >> "$PSScriptRoot\..\Logs\PostInstallMonitor.log"
+    }
+    else {
+        Write-Timestamped "Executing monitor with $($loadedComponents.Count) component(s)."
+
+        Invoke-PostInstallMonitor -Component $loadedComponents
+    }
+
+    Write-Timestamped "=== Component loader finished ==="
 }
