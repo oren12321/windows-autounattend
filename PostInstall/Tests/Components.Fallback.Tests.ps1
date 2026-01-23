@@ -39,7 +39,7 @@ Describe "PostInstallMonitor - Default Component Fallback" {
         . "$PSScriptRoot\..\PostInstallMonitor.ps1"
 
         # Run script (executes top-level loader)
-        $output = & "$PSScriptRoot\..\PostInstallMonitor.ps1" -InTestContext *>&1
+        $output = & "$PSScriptRoot\..\PostInstallMonitor.ps1" *>&1
         $text   = $output -join "`n"
 
         $text | Should -Match "WARNING: No valid components loaded"

@@ -37,7 +37,7 @@ Describe "PostInstallMonitor - Single Component.ps1" {
         . "$PSScriptRoot\..\PostInstallMonitor.ps1"
 
         # Run script (executes top-level loader)
-        $output = & "$PSScriptRoot\..\PostInstallMonitor.ps1" -InTestContext *>&1
+        $output = & "$PSScriptRoot\..\PostInstallMonitor.ps1" *>&1
         $text   = $output -join "`n"
 
         $text | Should -Match "SingleAction"

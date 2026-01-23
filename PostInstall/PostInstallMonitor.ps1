@@ -1,7 +1,3 @@
-param(
-    [switch]$InTestContext
-)
-
 . (Join-Path $PSScriptRoot '..\Utils\Output.ps1')
 . (Join-Path $PSScriptRoot 'Utils\PostInstallComponent.ps1')
 
@@ -167,7 +163,7 @@ function Invoke-PostInstallMonitor {
 }
 
 # Auto-run only when executed directly, not when dot-sourced
-if ($MyInvocation.InvocationName -eq $MyInvocation.MyCommand.Name -or $InTestContext) {
+if ($MyInvocation.InvocationName -ne '.') {
 
     Write-Timestamped "=== Component loader started ==="
 

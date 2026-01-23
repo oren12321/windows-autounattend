@@ -4,7 +4,6 @@ Describe 'EnterPostInstall.ps1' {
 
     BeforeAll {
         . "$PSScriptRoot\..\EnterPostInstall.ps1"
-        Get-Command Invoke-EnterPostInstall -ErrorAction SilentlyContinue | Write-Host
     }
 
     BeforeEach {

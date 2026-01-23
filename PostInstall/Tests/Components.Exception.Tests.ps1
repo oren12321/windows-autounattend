@@ -27,7 +27,7 @@ throw 'Boom'
     }
 
     It "logs the exception and continues" {
-        $output = & "$PSScriptRoot\..\PostInstallMonitor.ps1" -InTestContext *>&1
+        $output = & "$PSScriptRoot\..\PostInstallMonitor.ps1" *>&1
 
         $text = $output -join "`n"
         $text | Should -Match "Failed to load component"

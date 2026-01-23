@@ -32,7 +32,7 @@ Write-Output 'This file is invalid'
         . "$PSScriptRoot\..\PostInstallMonitor.ps1"
 
         # Run script (executes top-level loader)
-        $output = & "$PSScriptRoot\..\PostInstallMonitor.ps1" -InTestContext *>&1
+        $output = & "$PSScriptRoot\..\PostInstallMonitor.ps1" *>&1
         $text   = $output -join "`n"
 
         $text | Should -Match "did not define a `\`$Component"

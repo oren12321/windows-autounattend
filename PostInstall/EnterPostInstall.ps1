@@ -1,7 +1,3 @@
-param(
-    [switch]$InTestContext
-)
-
 . (Join-Path $PSScriptRoot '..\Utils\Output.ps1')
 
 function Invoke-EnterPostInstall {
@@ -48,6 +44,6 @@ function Invoke-EnterPostInstall {
 }
 
 # Auto-run only when executed directly, not when dot-sourced
-if ($MyInvocation.InvocationName -eq $MyInvocation.MyCommand.Name) {
+if ($MyInvocation.InvocationName -ne '.') {
     Invoke-EnterPostInstall
 }
