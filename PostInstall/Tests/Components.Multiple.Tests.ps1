@@ -3,9 +3,9 @@ Import-Module Pester
 Describe "PostInstallMonitor - Multiple Components" {
     
     BeforeAll {
-            $here = Split-Path -Parent $PSCommandPath
-            . "$here\..\PostInstallAction.ps1"
-        }
+        $here = Split-Path -Parent $PSCommandPath
+        . "$here\..\PostInstallAction.ps1"
+    }
         
     BeforeEach {
         # Replace Write-Timestamped with a stub that writes to output
@@ -27,17 +27,17 @@ Describe "PostInstallMonitor - Multiple Components" {
         # Component 1
         @"
 `$Component = New-PostInstallComponent `
-    -StartCondition { param(\$s) \$true } `
-    -Action        { param(\$s) Write-Timestamped 'Action1' } `
-    -StopCondition { param(\$s) \$true }
+    -StartCondition { param(\$context) \$true } `
+    -Action        { param(\$context) Write-Timestamped 'Action1' } `
+    -StopCondition { param(\$context) \$true }
 "@ | Set-Content (Join-Path $testDir "10-First.ps1")
 
         # Component 2
         @"
 `$Component = New-PostInstallComponent `
-    -StartCondition { param(\$s) \$true } `
-    -Action        { param(\$s) Write-Timestamped 'Action2' } `
-    -StopCondition { param(\$s) \$true }
+    -StartCondition { param(\$context) \$true } `
+    -Action        { param(\$context) Write-Timestamped 'Action2' } `
+    -StopCondition { param(\$context) \$true }
 "@ | Set-Content (Join-Path $testDir "20-Second.ps1")
     }
 

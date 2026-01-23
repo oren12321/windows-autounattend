@@ -1,6 +1,28 @@
 . (Join-Path $PSScriptRoot '..\Utils\Output.ps1')
 . (Join-Path $PSScriptRoot 'Utils\PostInstallComponent.ps1')
 
+function Get-CurrentLogonId {
+    $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+
+    $sessions = Get-CimInstance Win32_LogonSession -Filter "LogonType = 2 OR LogonType = 10" |
+        ForEach-Object {
+            $id = $_.LogonId
+            $links = Get-CimAssociatedInstance -InputObject $_ -ResultClassName Win32_LoggedOnUser
+            foreach ($link in $links) {
+                $acc = $link.Antecedent -replace '"', ''
+                if ($acc -match 'Domain="([^"]+)",Name="([^"]+)"') {
+                    [pscustomobject]@{
+                        LogonId = $id
+                        User    = "$($matches[1])\$($matches[2])"
+                    }
+                }
+            }
+        }
+
+    $current = $sessions | Where-Object { $_.User -eq $user } | Select-Object -First 1
+    return $current.LogonId
+}
+
 function Invoke-PostInstallMonitor {
     param(
         $Component  # Can be a single component OR an array of components
@@ -74,13 +96,30 @@ function Invoke-PostInstallMonitor {
         Write-Timestamped "User state updated: SetupCycle=$targetCycle, ActionRequired=1, ActionCompleted=0"
     }
 
-    # =====================================================================
-    # NEW COMPONENT HANDLING BLOCK (replaces your old "Build default component" block)
-    # =====================================================================
+    # -----------------------------------------------------------------
+    # Build context (public API for components)
+    # -----------------------------------------------------------------
+    $context = [pscustomobject]@{
+        UserName        = $env:USERNAME
+        UserProfile     = $env:USERPROFILE
+        LocalAppData    = $env:LOCALAPPDATA
+        ProgramData     = $env:ProgramData
 
-    #
+        LogonId         = Get-CurrentLogonId
+        BootTime        = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+
+        Log             = { param($msg) Write-Timestamped $msg }
+
+        ComponentRegistry = $null
+
+        Now             = Get-Date
+    }
+
+    # -----------------------------------------------------------------
+    # Component handling
+    # -----------------------------------------------------------------
+
     # Normalize to array
-    #
     $components = @()
     if ($Component -is [array]) {
         $components = $Component
@@ -89,51 +128,50 @@ function Invoke-PostInstallMonitor {
         $components = @($Component)
     }
 
-    #
-    # If no components were injected, build the default one
-    #
+    # Default component (keeps old HKCU behavior, but via context)
     if ($components.Count -eq 0) {
         Write-Timestamped "No injected components. Using default component."
 
         $default = New-PostInstallComponent `
             -StartCondition {
-                param($s)
+                param($context)
+                $hkcu = 'HKCU:\Software\MyCompany\PostInstall'
+                if (-not (Test-Path $hkcu)) { return $false }
+                $s = Get-ItemProperty -Path $hkcu
                 $s.ActionRequired -eq 1 -and $s.ActionCompleted -ne 1
             } `
             -Action {
+                param($context)
                 Invoke-PostInstallAction
             } `
             -StopCondition {
-                param($s)
+                param($context)
+                $hkcu = 'HKCU:\Software\MyCompany\PostInstall'
+                if (-not (Test-Path $hkcu)) { return $false }
+                $s = Get-ItemProperty -Path $hkcu
                 $s.ActionCompleted -eq 1
             }
 
         $components = @($default)
     }
 
-    # =====================================================================
-    # END OF NEW COMPONENT HANDLING BLOCK
-    # =====================================================================
-
     #
     # Execute each component in order
     #
     foreach ($comp in $components) {
 
-        # 1. Evaluate StartCondition
-        $state = Get-ItemProperty -Path $HKCU
-        if (& $comp.StartCondition $state) {
-            Write-Timestamped "StartCondition met for component. Marking ActionRequired=1, ActionCompleted=0"
-            Set-ItemProperty -Path $HKCU -Name ActionRequired  -Value 1
-            Set-ItemProperty -Path $HKCU -Name ActionCompleted -Value 0
-            $state = Get-ItemProperty -Path $HKCU
-        }
+        # Per-component registry root
+        $context.ComponentRegistry = "HKCU:\Software\MyCompany\PostInstall\Components\$($comp.Name)"
+        $context.Now = Get-Date
 
-        # 2. Run action if required
-        if ($state.ActionRequired -eq 1 -and $state.ActionCompleted -ne 1) {
+        # 1. Evaluate StartCondition
+        if (& $comp.StartCondition $context) {
+            Write-Timestamped "StartCondition met for component."
+
+            # 2. Run action
             if ($comp.Action) {
                 Write-Timestamped "Executing component action."
-                & $comp.Action $state
+                & $comp.Action $context
                 Write-Timestamped "Component action completed."
             }
             elseif (Test-Path $ActionScript) {
@@ -145,17 +183,15 @@ function Invoke-PostInstallMonitor {
                 Write-Timestamped "Action script not found: $ActionScript"
             }
 
-            $state = Get-ItemProperty -Path $HKCU
+            # 3. Evaluate StopCondition
+            if (& $comp.StopCondition $context) {
+                Write-Timestamped "StopCondition met for component."
+                # For now, we just log; components own their own state.
+                # You can later add global bookkeeping here if needed.
+            }
         }
         else {
-            Write-Timestamped "No action required (ActionRequired=$($state.ActionRequired), ActionCompleted=$($state.ActionCompleted))."
-        }
-
-        # 3. Evaluate StopCondition
-        if (& $comp.StopCondition $state) {
-            Write-Timestamped "StopCondition met for component. Marking ActionCompleted=1, ActionRequired=0"
-            Set-ItemProperty -Path $HKCU -Name ActionCompleted -Value 1
-            Set-ItemProperty -Path $HKCU -Name ActionRequired  -Value 0
+            Write-Timestamped "StartCondition not met for component."
         }
     }
 
@@ -189,7 +225,6 @@ if ($MyInvocation.InvocationName -ne '.') {
                         continue
                     }
 
-                    # Validate structure
                     if (-not ($Component.StartCondition -is [scriptblock] -and
                               $Component.Action         -is [scriptblock] -and
                               $Component.StopCondition  -is [scriptblock])) {
@@ -240,15 +275,12 @@ if ($MyInvocation.InvocationName -ne '.') {
         Write-Timestamped "ERROR: Unexpected failure during component loading: $_"
     }
 
-    # Fallback to default component if none loaded
     if ($loadedComponents.Count -eq 0) {
         Write-Timestamped "WARNING: No valid components loaded. Falling back to default component."
-
         Invoke-PostInstallMonitor
     }
     else {
         Write-Timestamped "Executing monitor with $($loadedComponents.Count) component(s)."
-
         Invoke-PostInstallMonitor -Component $loadedComponents
     }
 

@@ -3,9 +3,9 @@ Import-Module Pester
 Describe "PostInstallMonitor - Single Component.ps1" {
 
     BeforeAll {
-            $here = Split-Path -Parent $PSCommandPath
-            . "$here\..\PostInstallAction.ps1"
-        }
+        $here = Split-Path -Parent $PSCommandPath
+        . "$here\..\PostInstallAction.ps1"
+    }
 
     BeforeEach {
         # Replace Write-Timestamped with a stub that writes to output
@@ -22,9 +22,9 @@ Describe "PostInstallMonitor - Single Component.ps1" {
 
         @"
 `$Component = New-PostInstallComponent `
-    -StartCondition { param(\$s) \$true } `
-    -Action        { param(\$s) Write-Timestamped 'SingleAction' } `
-    -StopCondition { param(\$s) \$true }
+    -StartCondition { param(\$context) \$true } `
+    -Action        { param(\$context) Write-Timestamped 'SingleAction' } `
+    -StopCondition { param(\$context) \$true }
 "@ | Set-Content (Join-Path $PSScriptRoot "..\Component.ps1")
     }
 

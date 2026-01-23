@@ -68,16 +68,17 @@ Describe 'Invoke-PostInstallMonitor' {
 
         $component = New-PostInstallComponent `
             -StartCondition {
-                param($state)
+                param($context)
                 # Start when SetupComplete = 1
-                $state.SetupComplete -eq 1
+                $context | Out-Null
+                $script:regHKCU.SetupComplete -eq 1
             } `
             -Action {
-                param($state)
+                param($context)
                 $script:customRuns++
             } `
             -StopCondition {
-                param($state)
+                param($context)
                 # Stop after first run by simulating completion
                 $script:regHKCU.ActionCompleted = 1
                 $true
@@ -87,8 +88,10 @@ Describe 'Invoke-PostInstallMonitor' {
 
         # Default action not called
         Assert-MockCalled Invoke-PostInstallAction -Times 0
+
         # Custom action called once
         $script:customRuns | Should -Be 1
+
         # Flags updated by StopCondition
         $script:regHKCU.ActionRequired  | Should -Be 0
         $script:regHKCU.ActionCompleted | Should -Be 1
