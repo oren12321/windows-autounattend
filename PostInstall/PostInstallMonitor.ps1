@@ -1,24 +1,37 @@
 . (Join-Path $PSScriptRoot '..\Utils\Output.ps1')
 . (Join-Path $PSScriptRoot 'Utils\PostInstallComponent.ps1')
 
-function Get-CurrentLogonId {
-    $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+function Get-CurrentWindowsIdentityName {
+    [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+}
 
-    $sessions = Get-CimInstance Win32_LogonSession -Filter "LogonType = 2 OR LogonType = 10" |
-        ForEach-Object {
-            $id = $_.LogonId
-            $links = Get-CimAssociatedInstance -InputObject $_ -ResultClassName Win32_LoggedOnUser
-            foreach ($link in $links) {
-                $acc = $link.Antecedent -replace '"', ''
-                if ($acc -match 'Domain="([^"]+)",Name="([^"]+)"') {
-                    [pscustomobject]@{
-                        LogonId = $id
-                        User    = "$($matches[1])\$($matches[2])"
-                    }
+function Get-LogonSessions {
+    Get-CimInstance Win32_LogonSession -Filter "LogonType = 2 OR LogonType = 10"
+}
+
+function Get-LoggedOnUsersForSession {
+    param($Session)
+    Get-CimAssociatedInstance -InputObject $Session -ResultClassName Win32_LoggedOnUser
+}
+
+function Get-CurrentLogonId {
+    $user = Get-CurrentWindowsIdentityName
+    $sessions = Get-LogonSessions | ForEach-Object {
+        $id    = $_.LogonId
+        $links = Get-LoggedOnUsersForSession $_
+
+        foreach ($link in $links) {
+            $acc = $link.Antecedent -replace '"', ''
+
+            if ($acc -match 'Domain=([^,]+),Name=([^,]+)') {
+                [pscustomobject]@{
+                    LogonId = $id
+                    User    = "$($matches[1])\$($matches[2])"
                 }
             }
         }
-
+    }
+    
     $current = $sessions | Where-Object { $_.User -eq $user } | Select-Object -First 1
     return $current.LogonId
 }
