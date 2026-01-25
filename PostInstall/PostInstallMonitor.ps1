@@ -6,35 +6,46 @@ function Get-CurrentWindowsIdentityName {
 }
 
 function Get-LogonSessions {
-    Get-CimInstance Win32_LogonSession -Filter "LogonType = 2 OR LogonType = 10"
-}
-
-function Get-LoggedOnUsersForSession {
-    param($Session)
-    Get-CimAssociatedInstance -InputObject $Session -ResultClassName Win32_LoggedOnUser
+    Get-CimInstance Win32_LoggedOnUser
 }
 
 function Get-CurrentLogonId {
-    $user = Get-CurrentWindowsIdentityName
-    $sessions = Get-LogonSessions | ForEach-Object {
-        $id    = $_.LogonId
-        $links = Get-LoggedOnUsersForSession $_
+    $currentUser = Get-CurrentWindowsIdentityName
+    
+    # Get all associations
+    $assoc = Get-LogonSessions
+    
+    # Convert them into usable objects
+    $mapped = foreach ($a in $assoc) {
+        $acc = [string]$a.Antecedent
+        $ses = [string]$a.Dependent
+        
+        $isAccMatch = $acc -match 'Name[ ]*=[ ]*"([^"]+)"[ ]*,[ ]*Domain[ ]*=[ ]*"([^"]+)"'
+        if ($isAccMatch) {
+            $user = "$($Matches[2])\$($Matches[1])"
+        }
+        
+        $isSesMatch = $ses -match 'LogonId[ ]*=[ ]*"([^"]+)"'
+        if ($isSesMatch) {
+            $logonId = $Matches[1]
+        }
 
-        foreach ($link in $links) {
-            $acc = $link.Antecedent -replace '"', ''
+        if ($isAccMatch -and $isSesMatch) {
 
-            if ($acc -match 'Domain=([^,]+),Name=([^,]+)') {
-                [pscustomobject]@{
-                    LogonId = $id
-                    User    = "$($matches[1])\$($matches[2])"
-                }
+            [pscustomobject]@{
+                User    = $user
+                LogonId = $logonId
             }
         }
     }
-    
-    $current = $sessions | Where-Object { $_.User -eq $user } | Select-Object -First 1
-    return $current.LogonId
+
+    # Find the current user
+    $mapped |
+        Where-Object { $_.User -eq $currentUser } |
+        Select-Object -First 1 |
+        ForEach-Object { $_.LogonId }
 }
+
 
 function Invoke-PostInstallMonitor {
     param(

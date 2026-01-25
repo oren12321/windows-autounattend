@@ -10,30 +10,20 @@ Describe "Get-CurrentLogonId - Behavior Coverage" {
     BeforeEach {
         Mock Get-CurrentWindowsIdentityName { "MYDOMAIN\TestUser" }
         Mock Get-LogonSessions { @() }
-        Mock Get-LoggedOnUsersForSession { @() }
     }
 
     It "returns the LogonId of the session matching the current user" {
 
+        # Mock the CIM call used by Get-CurrentLogonId
         Mock Get-LogonSessions {
             @(
-                [pscustomobject]@{ LogonId = 1001 }
-                [pscustomobject]@{ LogonId = 2002 }
-            )
-        }
-
-        Mock Get-LoggedOnUsersForSession -ParameterFilter { $Session.LogonId -eq 1001 } {
-            @(
                 [pscustomobject]@{
-                    Antecedent = 'Win32_Account.Domain="MYDOMAIN",Name="TestUser"'
+                    Antecedent = 'Win32_Account.Name="TestUser",Domain="MYDOMAIN"'
+                    Dependent  = 'Win32_LogonSession.LogonId="1001"'
                 }
-            )
-        }
-
-        Mock Get-LoggedOnUsersForSession -ParameterFilter { $Session.LogonId -eq 2002 } {
-            @(
                 [pscustomobject]@{
-                    Antecedent = 'Win32_Account.Domain="OTHER",Name="User"'
+                    Antecedent = 'Win32_Account.Name="User",Domain="OTHER"'
+                    Dependent  = 'Win32_LogonSession.LogonId="2002"'
                 }
             )
         }
@@ -42,19 +32,18 @@ Describe "Get-CurrentLogonId - Behavior Coverage" {
         $result | Should -Be 1001
     }
 
+
     It "returns the first matching session when multiple sessions belong to the same user" {
 
         Mock Get-LogonSessions {
             @(
-                [pscustomobject]@{ LogonId = 3003 }
-                [pscustomobject]@{ LogonId = 3004 }
-            )
-        }
-
-        Mock Get-LoggedOnUsersForSession {
-            @(
                 [pscustomobject]@{
-                    Antecedent = 'Win32_Account.Domain="MYDOMAIN",Name="TestUser"'
+                    Antecedent = 'Win32_Account.Name="TestUser",Domain="MYDOMAIN"'
+                    Dependent  = 'Win32_LogonSession.LogonId="3003"'
+                }
+                [pscustomobject]@{
+                    Antecedent = 'Win32_Account.Name="TestUser",Domain="MYDOMAIN"'
+                    Dependent  = 'Win32_LogonSession.LogonId="3004"'
                 }
             )
         }
@@ -67,15 +56,13 @@ Describe "Get-CurrentLogonId - Behavior Coverage" {
 
         Mock Get-LogonSessions {
             @(
-                [pscustomobject]@{ LogonId = 4001 }
-                [pscustomobject]@{ LogonId = 4002 }
-            )
-        }
-
-        Mock Get-LoggedOnUsersForSession {
-            @(
                 [pscustomobject]@{
-                    Antecedent = 'Win32_Account.Domain="OTHER",Name="SomeoneElse"'
+                    Antecedent = 'Win32_Account.Name="SomeoneElse",Domain="OTHER"'
+                    Dependent  = 'Win32_LogonSession.LogonId="4001"'
+                }
+                [pscustomobject]@{
+                    Antecedent = 'Win32_Account.Name="SomeoneElse",Domain="OTHER"'
+                    Dependent  = 'Win32_LogonSession.LogonId="4002"'
                 }
             )
         }
@@ -96,11 +83,12 @@ Describe "Get-CurrentLogonId - Behavior Coverage" {
 
         Mock Get-LogonSessions {
             @(
-                [pscustomobject]@{ LogonId = 5001 }
+                [pscustomobject]@{
+                    Antecedent = ''
+                    Dependent  = 'Win32_LogonSession.LogonId="5001"'
+                }
             )
         }
-
-        Mock Get-LoggedOnUsersForSession { @() }
 
         $result = Get-CurrentLogonId
         $result | Should -Be $null
@@ -110,14 +98,9 @@ Describe "Get-CurrentLogonId - Behavior Coverage" {
 
         Mock Get-LogonSessions {
             @(
-                [pscustomobject]@{ LogonId = 6001 }
-            )
-        }
-
-        Mock Get-LoggedOnUsersForSession {
-            @(
                 [pscustomobject]@{
                     Antecedent = 'INVALID_FORMAT'
+                    Dependent  = 'Win32_LogonSession.LogonId="6001"'
                 }
             )
         }
