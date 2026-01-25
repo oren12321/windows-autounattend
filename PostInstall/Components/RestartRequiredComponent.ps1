@@ -5,7 +5,6 @@
 
 $Component = New-PostInstallComponent `
     -Name "RestartRequired" `
-
     -StartCondition {
         param($context)
 
@@ -23,7 +22,6 @@ $Component = New-PostInstallComponent `
         # Active Setup completed for this user
         return ($state.SetupComplete -eq 1)
     } `
-
     -Action {
         param($context)
 
@@ -40,7 +38,6 @@ $Component = New-PostInstallComponent `
             & $context.Log "Toast script not found: $toastScript"
         }
     } `
-
     -StopCondition {
         param($context)
 
