@@ -56,10 +56,6 @@ function Invoke-PostInstallMonitor {
 
     $HKCU = 'HKCU:\Software\MyCompany\PostInstall'
     $HKLM = 'HKLM:\Software\MyCompany\PostInstall'
-    $ActionScript = Join-Path $PSScriptRoot 'PostInstallAction.ps1'
-
-    # Load action function
-    . (Join-Path $PSScriptRoot 'PostInstallAction.ps1')
 
     $maxWaitSeconds = 300
     $waitInterval   = 5
@@ -162,33 +158,6 @@ function Invoke-PostInstallMonitor {
         $components = @($Component)
     }
 
-    # Default component (keeps old HKCU behavior, but via context)
-    if ($components.Count -eq 0) {
-        Write-Timestamped "No injected components. Using default component."
-
-        $default = New-PostInstallComponent `
-            -StartCondition {
-                param($context)
-                $hkcu = 'HKCU:\Software\MyCompany\PostInstall'
-                if (-not (Test-Path $hkcu)) { return $false }
-                $s = Get-ItemProperty -Path $hkcu
-                $s.ActionRequired -eq 1 -and $s.ActionCompleted -ne 1
-            } `
-            -Action {
-                param($context)
-                Invoke-PostInstallAction
-            } `
-            -StopCondition {
-                param($context)
-                $hkcu = 'HKCU:\Software\MyCompany\PostInstall'
-                if (-not (Test-Path $hkcu)) { return $false }
-                $s = Get-ItemProperty -Path $hkcu
-                $s.ActionCompleted -eq 1
-            }
-
-        $components = @($default)
-    }
-
     #
     # Execute each component in order
     #
@@ -203,19 +172,9 @@ function Invoke-PostInstallMonitor {
             Write-Timestamped "StartCondition met for component."
 
             # 2. Run action
-            if ($comp.Action) {
-                Write-Timestamped "Executing component action."
-                & $comp.Action $context
-                Write-Timestamped "Component action completed."
-            }
-            elseif (Test-Path $ActionScript) {
-                Write-Timestamped "Executing PostInstallAction.ps1"
-                Invoke-PostInstallAction
-                Write-Timestamped "PostInstallAction.ps1 completed."
-            }
-            else {
-                Write-Timestamped "Action script not found: $ActionScript"
-            }
+            Write-Timestamped "Executing component action."
+            & $comp.Action $context
+            Write-Timestamped "Component action completed."
 
             # 3. Evaluate StopCondition
             if (& $comp.StopCondition $context) {
@@ -339,8 +298,8 @@ if ($MyInvocation.InvocationName -ne '.') {
     }
 
     if ($loadedComponents.Count -eq 0) {
-        Write-Timestamped "WARNING: No valid components loaded. Falling back to default component."
-        Invoke-PostInstallMonitor
+        Write-Timestamped "No components loaded. Nothing to do."
+        return
     }
     else {
         Write-Timestamped "Executing monitor with $($loadedComponents.Count) component(s)."
