@@ -57,25 +57,10 @@ function Invoke-PostInstallMonitor {
     $HKCU = 'HKCU:\Software\MyCompany\PostInstall'
     $HKLM = 'HKLM:\Software\MyCompany\PostInstall'
 
-    $maxWaitSeconds = 300
-    $waitInterval   = 5
-    $elapsed        = 0
-
-    #
-    # Wait for HKCU key to appear
-    #
-    Write-Timestamped "Waiting for HKCU key: $HKCU"
-    while (-not (Test-Path $HKCU) -and $elapsed -lt $maxWaitSeconds) {
-        Start-Sleep -Seconds $waitInterval
-        $elapsed += $waitInterval
-    }
-
     if (-not (Test-Path $HKCU)) {
-        Write-Timestamped "HKCU key did not appear within timeout. Exiting."
-        return
+        Write-Timestamped "$HKCU key missing. Creating it."
+        New-Item -Path $HKCU -Force | Out-Null
     }
-
-    Write-Timestamped "HKCU key detected."
 
     #
     # Read state
