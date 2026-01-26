@@ -138,6 +138,16 @@ function Invoke-PostInstallMonitor {
 
         Now             = Get-Date
     }
+    $PersistenceMap = @{
+        "UserName"     = "String"
+        "UserProfile"  = "String"
+        "LocalAppData" = "String"
+        "ProgramData"  = "String"
+
+        "LogonId"      = "DWord"   # numeric session ID
+        "BootTime"     = "QWord"   # DateTime.Ticks
+        "Now"          = "QWord"   # DateTime.Ticks
+    }
 
     # -----------------------------------------------------------------
     # Component handling
@@ -216,6 +226,35 @@ function Invoke-PostInstallMonitor {
         }
         else {
             Write-Timestamped "StartCondition not met for component."
+        }
+        
+        # Save context to component registry
+        $regPath = $context.ComponentRegistry
+
+        if (-not (Test-Path $regPath)) {
+            New-Item -Path $regPath -Force | Out-Null
+        }
+
+        foreach ($entry in $PersistenceMap.GetEnumerator()) {
+            $name = $entry.Key
+            $type = $entry.Value
+
+            if ($context.PSObject.Properties[$name]) {
+                $value = $context.$name
+
+                # Convert DateTime to ticks for QWORD storage
+                if ($type -eq "QWord" -and $value -is [DateTime]) {
+                    $value = $value.Ticks
+                }
+
+                # Create or update explicitly typed registry value
+                if (-not (Get-ItemProperty -Path $regPath -Name $name -ErrorAction SilentlyContinue)) {
+                    New-ItemProperty -Path $regPath -Name $name -Value $value -PropertyType $type -Force | Out-Null
+                }
+                else {
+                    Set-ItemProperty -Path $regPath -Name $name -Value $value -Force
+                }
+            }
         }
     }
 
