@@ -61,46 +61,7 @@ function Invoke-PostInstallMonitor {
         Write-Timestamped "$HKCU key missing. Creating it."
         New-Item -Path $HKCU -Force | Out-Null
     }
-
-    #
-    # Read state
-    #
-    $state          = Get-ItemProperty -Path $HKCU
-    $actionRequired = $state.ActionRequired
-    $actionCompleted= $state.ActionCompleted
-    $setupCycle     = $state.SetupCycle
-
-    Write-Timestamped "State: SetupCycle=$setupCycle, ActionRequired=$actionRequired, ActionCompleted=$actionCompleted"
-
-    #
-    # Determine target cycle
-    #
-    $targetCycle = 1
-    if (Test-Path $HKLM) {
-        $lm = Get-ItemProperty -Path $HKLM -ErrorAction SilentlyContinue
-        if ($lm -and $lm.TargetCycle) {
-            $targetCycle = $lm.TargetCycle
-        }
-    }
-
-    Write-Timestamped "TargetCycle = $targetCycle"
-
-    #
-    # If user cycle is behind, bump it
-    #
-    if ($setupCycle -lt $targetCycle) {
-        Write-Timestamped "SetupCycle ($setupCycle) is behind TargetCycle ($targetCycle). Updating user state."
-
-        Set-ItemProperty -Path $HKCU -Name SetupCycle      -Value $targetCycle
-        Set-ItemProperty -Path $HKCU -Name ActionRequired  -Value 1
-        Set-ItemProperty -Path $HKCU -Name ActionCompleted -Value 0
-
-        $actionRequired  = 1
-        $actionCompleted = 0
-
-        Write-Timestamped "User state updated: SetupCycle=$targetCycle, ActionRequired=1, ActionCompleted=0"
-    }
-
+    
     # -----------------------------------------------------------------
     # Build context (public API for components)
     # -----------------------------------------------------------------
@@ -125,9 +86,9 @@ function Invoke-PostInstallMonitor {
         "LocalAppData" = "String"
         "ProgramData"  = "String"
 
-        "LogonId"      = "DWord"   # numeric session ID
-        "BootTime"     = "QWord"   # DateTime.Ticks
-        "Now"          = "QWord"   # DateTime.Ticks
+        "LogonId"      = "DWord"
+        "BootTime"     = "QWord"
+        "Now"          = "QWord"
     }
 
     # -----------------------------------------------------------------
@@ -143,17 +104,45 @@ function Invoke-PostInstallMonitor {
         $components = @($Component)
     }
 
-    #
     # Execute each component in order
-    #
     foreach ($comp in $components) {
 
         # Per-component registry root
         $context.ComponentRegistry = "HKCU:\Software\MyCompany\PostInstall\Components\$($comp.Name)"
         $context.Now = Get-Date
 
-        # 1. Evaluate StartCondition
-        if (& $comp.StartCondition $context) {
+        ###
+        ### ADDED (Step 4): Per-component versioning
+        ###
+
+        # Read per-user SetupCycle (default 0)
+        $setupCycle = 0
+        if (Test-Path $context.ComponentRegistry) {
+            $cu = Get-ItemProperty -Path $context.ComponentRegistry -ErrorAction SilentlyContinue
+            if ($cu -and $cu.SetupCycle) {
+                $setupCycle = $cu.SetupCycle
+            }
+        }
+
+        # Determine TargetCycle (component default)
+        $targetCycle = $comp.TargetCycle
+
+        # HKLM override
+        $lmPath = "HKLM:\Software\MyCompany\PostInstall\Components\$($comp.Name)"
+        if (Test-Path $lmPath) {
+            $lm = Get-ItemProperty -Path $lmPath -ErrorAction SilentlyContinue
+            if ($lm -and $lm.TargetCycle -and $lm.TargetCycle -gt $setupCycle) {
+                $targetCycle = $lm.TargetCycle
+            }
+        }
+
+        Write-Timestamped "Component '$($comp.Name)': SetupCycle=$setupCycle, TargetCycle=$targetCycle"
+
+        # Version mismatch determines whether component *should* run
+        $shouldRun = ($setupCycle -lt $targetCycle)
+
+        # 1. Evaluate StartCondition + version check
+        if ($shouldRun -and (& $comp.StartCondition $context)) {
             Write-Timestamped "StartCondition met for component."
 
             # 2. Run action
@@ -164,14 +153,36 @@ function Invoke-PostInstallMonitor {
             # 3. Evaluate StopCondition
             if (& $comp.StopCondition $context) {
                 Write-Timestamped "StopCondition met for component."
-                # For now, we just log; components own their own state.
-                # You can later add global bookkeeping here if needed.
             }
+
+            ###
+            ### ADDED (Step 4): Update per-component SetupCycle + LastRun
+            ###
+            if (-not (Test-Path $context.ComponentRegistry)) {
+                New-Item -Path $context.ComponentRegistry -Force | Out-Null
+            }
+
+            if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -ErrorAction SilentlyContinue)) {
+                New-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -Value $targetCycle -PropertyType DWord -Force | Out-Null
+            } else {
+                Set-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -Value $targetCycle -Force
+            }
+            
+            if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -ErrorAction SilentlyContinue)) {
+                New-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -Value $targetCycle -PropertyType DWord -Force | Out-Null
+            }
+
+            if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name LastRun -ErrorAction SilentlyContinue)) {
+                New-ItemProperty -Path $context.ComponentRegistry -Name LastRun -Value (Get-Date).Ticks -PropertyType QWord -Force | Out-Null
+            } else {
+                Set-ItemProperty -Path $context.ComponentRegistry -Name LastRun -Value (Get-Date).Ticks -Force
+            }
+
         }
         else {
-            Write-Timestamped "StartCondition not met for component."
+            Write-Timestamped "StartCondition not met or component already up-to-date."
         }
-        
+
         # Save context to component registry
         $regPath = $context.ComponentRegistry
 
@@ -186,12 +197,10 @@ function Invoke-PostInstallMonitor {
             if ($context.PSObject.Properties[$name]) {
                 $value = $context.$name
 
-                # Convert DateTime to ticks for QWORD storage
                 if ($type -eq "QWord" -and $value -is [DateTime]) {
                     $value = $value.Ticks
                 }
 
-                # Create or update explicitly typed registry value
                 if (-not (Get-ItemProperty -Path $regPath -Name $name -ErrorAction SilentlyContinue)) {
                     New-ItemProperty -Path $regPath -Name $name -Value $value -PropertyType $type -Force | Out-Null
                 }
