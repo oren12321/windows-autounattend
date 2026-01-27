@@ -66,7 +66,7 @@ function Invoke-PostInstallMonitor {
 
         ComponentRegistry = $null
 
-        Now             = Get-Date
+        Now             = $null
     }
 
     $PersistenceMap = @{
@@ -88,6 +88,17 @@ function Invoke-PostInstallMonitor {
 
         $context.ComponentRegistry = "HKCU:\Software\PostInstall\Components\$($comp.Name)"
         $context.Now = Get-Date
+
+        # Assumption: given component via loader is valid - so let's create its registry if not exist
+        try {
+            if (-not (Test-Path $context.ComponentRegistry)) {
+                Write-Timestamped "Creating registry key: $($context.ComponentRegistry)"
+                New-Item -Path $context.ComponentRegistry -Force | Out-Null
+            }
+        }
+        catch {
+            Write-Timestamped "ERROR: Failed to create registry key for component '$($comp.Name)': $_"
+        }
 
         # Read per-user SetupCycle (default 0)
         $setupCycle = 0
@@ -130,11 +141,6 @@ function Invoke-PostInstallMonitor {
 
             # Update per-component SetupCycle + LastRun
             try {
-                if (-not (Test-Path $context.ComponentRegistry)) {
-                    Write-Timestamped "Creating registry key: $($context.ComponentRegistry)"
-                    New-Item -Path $context.ComponentRegistry -Force | Out-Null
-                }
-
                 Write-Timestamped "Updating SetupCycle to $targetCycle"
                 if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -ErrorAction SilentlyContinue)) {
                     New-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -Value $targetCycle -PropertyType DWord -Force | Out-Null
@@ -145,6 +151,8 @@ function Invoke-PostInstallMonitor {
                 Write-Timestamped "Ensuring TargetCycle=$targetCycle"
                 if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -ErrorAction SilentlyContinue)) {
                     New-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -Value $targetCycle -PropertyType DWord -Force | Out-Null
+                } else {
+                    Set-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -Value $targetCycle -Force
                 }
 
                 $ticks = (Get-Date).Ticks
@@ -165,14 +173,7 @@ function Invoke-PostInstallMonitor {
         }
 
         # Save context to component registry
-        $regPath = $context.ComponentRegistry
-
         try {
-            if (-not (Test-Path $regPath)) {
-                Write-Timestamped "Creating registry key: $regPath"
-                New-Item -Path $regPath -Force | Out-Null
-            }
-
             foreach ($entry in $PersistenceMap.GetEnumerator()) {
                 $name = $entry.Key
                 $type = $entry.Value
@@ -184,13 +185,13 @@ function Invoke-PostInstallMonitor {
                         $value = $value.Ticks
                     }
 
-                    if (-not (Get-ItemProperty -Path $regPath -Name $name -ErrorAction SilentlyContinue)) {
+                    if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name $name -ErrorAction SilentlyContinue)) {
                         Write-Timestamped "Writing registry value: $name = $value"
-                        New-ItemProperty -Path $regPath -Name $name -Value $value -PropertyType $type -Force | Out-Null
+                        New-ItemProperty -Path $context.ComponentRegistry -Name $name -Value $value -PropertyType $type -Force | Out-Null
                     }
                     else {
                         Write-Timestamped "Updating registry value: $name = $value"
-                        Set-ItemProperty -Path $regPath -Name $name -Value $value -Force
+                        Set-ItemProperty -Path $context.ComponentRegistry -Name $name -Value $value -Force
                     }
                 }
             }
