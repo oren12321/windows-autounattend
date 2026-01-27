@@ -9,7 +9,7 @@ function Load-PostInstallComponents {
     $loaded = @()
 
     if (-not (Test-Path $ComponentsDirectory)) {
-        Write-Timestamped "Components directory not found: $ComponentsDirectory"
+        Write-Timestamped "ERROR: Components directory not found: $ComponentsDirectory"
         return $loaded
     }
 
@@ -17,32 +17,45 @@ function Load-PostInstallComponents {
 
     $files = Get-ChildItem -Path $ComponentsDirectory -Filter *.ps1 | Sort-Object Name
 
+    if ($files.Count -eq 0) {
+        Write-Timestamped "WARNING: No component files (*.ps1) found in: $ComponentsDirectory"
+        return $loaded
+    }
+
     foreach ($file in $files) {
         Write-Timestamped "Loading component file: $($file.Name)"
 
         try {
+            # Dot-source the component file
             . $file.FullName
-
-            if (-not $Component) {
-                Write-Timestamped "ERROR: Component file '$($file.Name)' did not define a `$Component variable. Skipping."
-                continue
-            }
-
-            if (-not ($Component.StartCondition -is [scriptblock] -and
-                      $Component.Action         -is [scriptblock] -and
-                      $Component.StopCondition  -is [scriptblock])) {
-
-                Write-Timestamped "ERROR: Component '$($file.Name)' is missing required scriptblocks. Skipping."
-                continue
-            }
-
-            $loaded += $Component
-            Write-Timestamped "Component '$($file.Name)' loaded successfully."
         }
         catch {
-            Write-Timestamped "ERROR: Failed to load component '$($file.Name)': $_"
+            Write-Timestamped "ERROR: Exception while dot-sourcing '$($file.Name)': $_"
+            continue
         }
 
+        # Validate that the file defined $Component
+        if (-not $Component) {
+            Write-Timestamped "ERROR: Component file '$($file.Name)' did not define a `$Component variable. Skipping."
+            continue
+        }
+
+        # Validate required scriptblocks
+        $missing = @()
+        if (-not ($Component.StartCondition -is [scriptblock])) { $missing += "StartCondition" }
+        if (-not ($Component.Action         -is [scriptblock])) { $missing += "Action" }
+        if (-not ($Component.StopCondition  -is [scriptblock])) { $missing += "StopCondition" }
+
+        if ($missing.Count -gt 0) {
+            Write-Timestamped "ERROR: Component '$($file.Name)' missing required scriptblocks: $($missing -join ', '). Skipping."
+            continue
+        }
+
+        # Component is valid
+        $loaded += $Component
+        Write-Timestamped "Component '$($file.Name)' loaded successfully."
+
+        # Clean up for next iteration
         Remove-Variable Component -ErrorAction SilentlyContinue
     }
 

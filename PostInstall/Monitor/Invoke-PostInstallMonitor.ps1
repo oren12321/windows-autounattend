@@ -45,14 +45,11 @@ function Get-CurrentLogonId {
         ForEach-Object { $_.LogonId }
 }
 
-
 function Invoke-PostInstallMonitor {
     param(
-        $Component  # Can be a single component OR an array of components
+        $Components  # Array of components
     )
 
-    Write-Timestamped "=== PostInstallMonitor started ==="
-    
     # -----------------------------------------------------------------
     # Build context (public API for components)
     # -----------------------------------------------------------------
@@ -71,6 +68,7 @@ function Invoke-PostInstallMonitor {
 
         Now             = Get-Date
     }
+
     $PersistenceMap = @{
         "UserName"     = "String"
         "UserProfile"  = "String"
@@ -86,16 +84,10 @@ function Invoke-PostInstallMonitor {
     # Component handling
     # -----------------------------------------------------------------
 
-    # Execute each component in order
-    foreach ($comp in $components) {
+    foreach ($comp in $Components) {
 
-        # Per-component registry root
         $context.ComponentRegistry = "HKCU:\Software\PostInstall\Components\$($comp.Name)"
         $context.Now = Get-Date
-
-        ###
-        ### ADDED (Step 4): Per-component versioning
-        ###
 
         # Read per-user SetupCycle (default 0)
         $setupCycle = 0
@@ -120,7 +112,6 @@ function Invoke-PostInstallMonitor {
 
         Write-Timestamped "Component '$($comp.Name)': SetupCycle=$setupCycle, TargetCycle=$targetCycle"
 
-        # Version mismatch determines whether component *should* run
         $shouldRun = ($setupCycle -lt $targetCycle)
 
         # 1. Evaluate StartCondition + version check
@@ -137,27 +128,35 @@ function Invoke-PostInstallMonitor {
                 Write-Timestamped "StopCondition met for component."
             }
 
-            ###
-            ### ADDED (Step 4): Update per-component SetupCycle + LastRun
-            ###
-            if (-not (Test-Path $context.ComponentRegistry)) {
-                New-Item -Path $context.ComponentRegistry -Force | Out-Null
-            }
+            # Update per-component SetupCycle + LastRun
+            try {
+                if (-not (Test-Path $context.ComponentRegistry)) {
+                    Write-Timestamped "Creating registry key: $($context.ComponentRegistry)"
+                    New-Item -Path $context.ComponentRegistry -Force | Out-Null
+                }
 
-            if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -ErrorAction SilentlyContinue)) {
-                New-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -Value $targetCycle -PropertyType DWord -Force | Out-Null
-            } else {
-                Set-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -Value $targetCycle -Force
-            }
-            
-            if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -ErrorAction SilentlyContinue)) {
-                New-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -Value $targetCycle -PropertyType DWord -Force | Out-Null
-            }
+                Write-Timestamped "Updating SetupCycle to $targetCycle"
+                if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -ErrorAction SilentlyContinue)) {
+                    New-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -Value $targetCycle -PropertyType DWord -Force | Out-Null
+                } else {
+                    Set-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -Value $targetCycle -Force
+                }
 
-            if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name LastRun -ErrorAction SilentlyContinue)) {
-                New-ItemProperty -Path $context.ComponentRegistry -Name LastRun -Value (Get-Date).Ticks -PropertyType QWord -Force | Out-Null
-            } else {
-                Set-ItemProperty -Path $context.ComponentRegistry -Name LastRun -Value (Get-Date).Ticks -Force
+                Write-Timestamped "Ensuring TargetCycle=$targetCycle"
+                if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -ErrorAction SilentlyContinue)) {
+                    New-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -Value $targetCycle -PropertyType DWord -Force | Out-Null
+                }
+
+                $ticks = (Get-Date).Ticks
+                Write-Timestamped "Updating LastRun=$ticks"
+                if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name LastRun -ErrorAction SilentlyContinue)) {
+                    New-ItemProperty -Path $context.ComponentRegistry -Name LastRun -Value $ticks -PropertyType QWord -Force | Out-Null
+                } else {
+                    Set-ItemProperty -Path $context.ComponentRegistry -Name LastRun -Value $ticks -Force
+                }
+            }
+            catch {
+                Write-Timestamped "ERROR: Failed to update registry for component '$($comp.Name)': $_"
             }
 
         }
@@ -168,30 +167,36 @@ function Invoke-PostInstallMonitor {
         # Save context to component registry
         $regPath = $context.ComponentRegistry
 
-        if (-not (Test-Path $regPath)) {
-            New-Item -Path $regPath -Force | Out-Null
-        }
+        try {
+            if (-not (Test-Path $regPath)) {
+                Write-Timestamped "Creating registry key: $regPath"
+                New-Item -Path $regPath -Force | Out-Null
+            }
 
-        foreach ($entry in $PersistenceMap.GetEnumerator()) {
-            $name = $entry.Key
-            $type = $entry.Value
+            foreach ($entry in $PersistenceMap.GetEnumerator()) {
+                $name = $entry.Key
+                $type = $entry.Value
 
-            if ($context.PSObject.Properties[$name]) {
-                $value = $context.$name
+                if ($context.PSObject.Properties[$name]) {
+                    $value = $context.$name
 
-                if ($type -eq "QWord" -and $value -is [DateTime]) {
-                    $value = $value.Ticks
-                }
+                    if ($type -eq "QWord" -and $value -is [DateTime]) {
+                        $value = $value.Ticks
+                    }
 
-                if (-not (Get-ItemProperty -Path $regPath -Name $name -ErrorAction SilentlyContinue)) {
-                    New-ItemProperty -Path $regPath -Name $name -Value $value -PropertyType $type -Force | Out-Null
-                }
-                else {
-                    Set-ItemProperty -Path $regPath -Name $name -Value $value -Force
+                    if (-not (Get-ItemProperty -Path $regPath -Name $name -ErrorAction SilentlyContinue)) {
+                        Write-Timestamped "Writing registry value: $name = $value"
+                        New-ItemProperty -Path $regPath -Name $name -Value $value -PropertyType $type -Force | Out-Null
+                    }
+                    else {
+                        Write-Timestamped "Updating registry value: $name = $value"
+                        Set-ItemProperty -Path $regPath -Name $name -Value $value -Force
+                    }
                 }
             }
         }
+        catch {
+            Write-Timestamped "ERROR: Failed to persist context for component '$($comp.Name)': $_"
+        }
     }
-
-    Write-Timestamped "=== PostInstallMonitor finished ==="
 }
