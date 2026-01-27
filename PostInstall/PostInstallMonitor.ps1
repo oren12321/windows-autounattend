@@ -1,3 +1,7 @@
+param(
+    [string] $ComponentsDirectory = (Join-Path $PSScriptRoot "Components")
+)
+
 . (Join-Path $PSScriptRoot '..\Utils\Output.ps1')
 . (Join-Path $PSScriptRoot 'Utils\PostInstallComponent.ps1')
 
@@ -197,91 +201,72 @@ function Invoke-PostInstallMonitor {
     Write-Timestamped "=== PostInstallMonitor finished ==="
 }
 
-# Auto-run only when executed directly, not when dot-sourced
-if ($MyInvocation.InvocationName -ne '.') {
+function Load-PostInstallComponents {
+    param(
+        [Parameter(Mandatory)]
+        [string] $ComponentsDirectory
+    )
 
-    Write-Timestamped "=== Component loader started ==="
+    $loaded = @()
 
-    $componentsDir = Join-Path $PSScriptRoot "Components"
-    $singleComponentPath = Join-Path $PSScriptRoot "Component.ps1"
+    if (-not (Test-Path $ComponentsDirectory)) {
+        Write-Timestamped "Components directory not found: $ComponentsDirectory"
+        return $loaded
+    }
 
-    $loadedComponents = @()
+    Write-Timestamped "Loading components from folder: $ComponentsDirectory"
 
-    try {
-        if (Test-Path $componentsDir) {
-            Write-Timestamped "Loading components from folder: $componentsDir"
+    $files = Get-ChildItem -Path $ComponentsDirectory -Filter *.ps1 | Sort-Object Name
 
-            $files = Get-ChildItem -Path $componentsDir -Filter *.ps1 | Sort-Object Name
+    foreach ($file in $files) {
+        Write-Timestamped "Loading component file: $($file.Name)"
 
-            foreach ($file in $files) {
-                Write-Timestamped "Loading component file: $($file.Name)"
+        try {
+            . $file.FullName
 
-                try {
-                    . $file.FullName
-
-                    if (-not $Component) {
-                        Write-Timestamped "ERROR: Component file '$($file.Name)' did not define a `$Component variable. Skipping."
-                        continue
-                    }
-
-                    if (-not ($Component.StartCondition -is [scriptblock] -and
-                              $Component.Action         -is [scriptblock] -and
-                              $Component.StopCondition  -is [scriptblock])) {
-
-                        Write-Timestamped "ERROR: Component '$($file.Name)' is missing required scriptblocks. Skipping."
-                        continue
-                    }
-
-                    $loadedComponents += $Component
-                    Write-Timestamped "Component '$($file.Name)' loaded successfully."
-                }
-                catch {
-                    Write-Timestamped "ERROR: Failed to load component '$($file.Name)': $_"
-                }
-
-                Remove-Variable Component -ErrorAction SilentlyContinue
+            if (-not $Component) {
+                Write-Timestamped "ERROR: Component file '$($file.Name)' did not define a `$Component variable. Skipping."
+                continue
             }
-        }
-        elseif (Test-Path $singleComponentPath) {
-            Write-Timestamped "Loading single component file: $singleComponentPath"
 
-            try {
-                . $singleComponentPath
+            if (-not ($Component.StartCondition -is [scriptblock] -and
+                      $Component.Action         -is [scriptblock] -and
+                      $Component.StopCondition  -is [scriptblock])) {
 
-                if (-not $Component) {
-                    Write-Timestamped "ERROR: Component.ps1 did not define a `$Component variable."
-                }
-                elseif (-not ($Component.StartCondition -is [scriptblock] -and
-                              $Component.Action         -is [scriptblock] -and
-                              $Component.StopCondition  -is [scriptblock])) {
-
-                    Write-Timestamped "ERROR: Component.ps1 is missing required scriptblocks."
-                }
-                else {
-                    $loadedComponents += $Component
-                    Write-Timestamped "Component.ps1 loaded successfully."
-                }
+                Write-Timestamped "ERROR: Component '$($file.Name)' is missing required scriptblocks. Skipping."
+                continue
             }
-            catch {
-                Write-Timestamped "ERROR: Failed to load Component.ps1: $_"
-            }
+
+            $loaded += $Component
+            Write-Timestamped "Component '$($file.Name)' loaded successfully."
         }
-        else {
-            Write-Timestamped "No component files found. Using default component."
+        catch {
+            Write-Timestamped "ERROR: Failed to load component '$($file.Name)': $_"
         }
-    }
-    catch {
-        Write-Timestamped "ERROR: Unexpected failure during component loading: $_"
+
+        Remove-Variable Component -ErrorAction SilentlyContinue
     }
 
-    if ($loadedComponents.Count -eq 0) {
-        Write-Timestamped "No components loaded. Nothing to do."
-        return
-    }
-    else {
-        Write-Timestamped "Executing monitor with $($loadedComponents.Count) component(s)."
-        Invoke-PostInstallMonitor -Component $loadedComponents
-    }
-
-    Write-Timestamped "=== Component loader finished ==="
+    return $loaded
 }
+
+
+
+Write-Timestamped "=== Component loader started ==="
+
+# Load the loader function and monitor function
+. (Join-Path $PSScriptRoot "Monitor\ComponentLoader.ps1")
+. (Join-Path $PSScriptRoot "Monitor\Invoke-PostInstallMonitor.ps1")
+
+# Load components
+$loadedComponents = Load-PostInstallComponents -ComponentsDirectory $ComponentsDirectory
+
+if ($loadedComponents.Count -eq 0) {
+    Write-Timestamped "No components loaded. Nothing to do."
+    return
+}
+
+Write-Timestamped "Executing monitor with $($loadedComponents.Count) component(s)."
+Invoke-PostInstallMonitor -Component $loadedComponents
+
+Write-Timestamped "=== Component loader finished ==="
