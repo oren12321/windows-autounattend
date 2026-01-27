@@ -33,13 +33,13 @@ function Load-PostInstallComponents {
             Write-Timestamped "ERROR: Exception while dot-sourcing '$($file.Name)': $_"
             continue
         }
-
+        
         # Validate that the file defined $Component
         if (-not $Component) {
             Write-Timestamped "ERROR: Component file '$($file.Name)' did not define a `$Component variable. Skipping."
             continue
         }
-
+        
         # Validate required scriptblocks
         $missing = @()
         if (-not ($Component.StartCondition -is [scriptblock])) { $missing += "StartCondition" }
@@ -59,5 +59,5 @@ function Load-PostInstallComponents {
         Remove-Variable Component -ErrorAction SilentlyContinue
     }
 
-    return $loaded
+    return ,$loaded
 }
