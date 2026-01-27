@@ -1,6 +1,9 @@
 function New-PostInstallComponent {
     param(
         [Parameter(Mandatory)]
+        [scriptblock]$Reset,
+    
+        [Parameter(Mandatory)]
         [scriptblock]$StartCondition,
 
         [Parameter(Mandatory)]
@@ -20,6 +23,7 @@ function New-PostInstallComponent {
 
     [pscustomobject]@{
         Name           = $Name
+        Reset          = $Reset
         StartCondition = $StartCondition
         Action         = $Action
         StopCondition  = $StopCondition

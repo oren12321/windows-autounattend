@@ -37,7 +37,13 @@
 
 $Component = New-PostInstallComponent `
     -Name "DemoComponent" `
-    -TargetCycle 1 `
+    -Reset {
+        param($context)
+        
+        # Reset is for component initialization, and not for
+        # rewinding it such that StartCondition will be true.
+        $context.Log("DemoComponent: Reset called.")
+    } `
     -StartCondition {
         param($context)
 
