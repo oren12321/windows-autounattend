@@ -53,14 +53,6 @@ function Invoke-PostInstallMonitor {
     )
 
     Write-Timestamped "=== PostInstallMonitor started ==="
-
-    $HKCU = 'HKCU:\Software\MyCompany\PostInstall'
-    $HKLM = 'HKLM:\Software\MyCompany\PostInstall'
-
-    if (-not (Test-Path $HKCU)) {
-        Write-Timestamped "$HKCU key missing. Creating it."
-        New-Item -Path $HKCU -Force | Out-Null
-    }
     
     # -----------------------------------------------------------------
     # Build context (public API for components)
@@ -94,15 +86,6 @@ function Invoke-PostInstallMonitor {
     # -----------------------------------------------------------------
     # Component handling
     # -----------------------------------------------------------------
-
-    # Normalize to array
-    $components = @()
-    if ($Component -is [array]) {
-        $components = $Component
-    }
-    elseif ($Component) {
-        $components = @($Component)
-    }
 
     # Execute each component in order
     foreach ($comp in $components) {
