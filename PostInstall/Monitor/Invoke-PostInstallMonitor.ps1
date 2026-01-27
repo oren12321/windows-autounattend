@@ -1,9 +1,4 @@
-param(
-    [string] $ComponentsDirectory = (Join-Path $PSScriptRoot "Components")
-)
-
-. (Join-Path $PSScriptRoot '..\Utils\Output.ps1')
-. (Join-Path $PSScriptRoot 'Utils\PostInstallComponent.ps1')
+. (Join-Path $PSScriptRoot '..\Utils\Logging.ps1')
 
 function Get-CurrentWindowsIdentityName {
     [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
@@ -200,73 +195,3 @@ function Invoke-PostInstallMonitor {
 
     Write-Timestamped "=== PostInstallMonitor finished ==="
 }
-
-function Load-PostInstallComponents {
-    param(
-        [Parameter(Mandatory)]
-        [string] $ComponentsDirectory
-    )
-
-    $loaded = @()
-
-    if (-not (Test-Path $ComponentsDirectory)) {
-        Write-Timestamped "Components directory not found: $ComponentsDirectory"
-        return $loaded
-    }
-
-    Write-Timestamped "Loading components from folder: $ComponentsDirectory"
-
-    $files = Get-ChildItem -Path $ComponentsDirectory -Filter *.ps1 | Sort-Object Name
-
-    foreach ($file in $files) {
-        Write-Timestamped "Loading component file: $($file.Name)"
-
-        try {
-            . $file.FullName
-
-            if (-not $Component) {
-                Write-Timestamped "ERROR: Component file '$($file.Name)' did not define a `$Component variable. Skipping."
-                continue
-            }
-
-            if (-not ($Component.StartCondition -is [scriptblock] -and
-                      $Component.Action         -is [scriptblock] -and
-                      $Component.StopCondition  -is [scriptblock])) {
-
-                Write-Timestamped "ERROR: Component '$($file.Name)' is missing required scriptblocks. Skipping."
-                continue
-            }
-
-            $loaded += $Component
-            Write-Timestamped "Component '$($file.Name)' loaded successfully."
-        }
-        catch {
-            Write-Timestamped "ERROR: Failed to load component '$($file.Name)': $_"
-        }
-
-        Remove-Variable Component -ErrorAction SilentlyContinue
-    }
-
-    return $loaded
-}
-
-
-
-Write-Timestamped "=== Component loader started ==="
-
-# Load the loader function and monitor function
-. (Join-Path $PSScriptRoot "Monitor\ComponentLoader.ps1")
-. (Join-Path $PSScriptRoot "Monitor\Invoke-PostInstallMonitor.ps1")
-
-# Load components
-$loadedComponents = Load-PostInstallComponents -ComponentsDirectory $ComponentsDirectory
-
-if ($loadedComponents.Count -eq 0) {
-    Write-Timestamped "No components loaded. Nothing to do."
-    return
-}
-
-Write-Timestamped "Executing monitor with $($loadedComponents.Count) component(s)."
-Invoke-PostInstallMonitor -Component $loadedComponents
-
-Write-Timestamped "=== Component loader finished ==="

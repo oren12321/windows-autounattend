@@ -1,3 +1,5 @@
+. (Join-Path $PSScriptRoot '..\Monitor\New-PostInstallComponent.ps1')
+
 # DemoComponent.ps1
 # -------------------------------------------------------------------
 # This is a toy example showing how to create a PostInstall component.
