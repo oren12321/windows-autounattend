@@ -91,7 +91,7 @@ function Invoke-PostInstallMonitor {
     foreach ($comp in $components) {
 
         # Per-component registry root
-        $context.ComponentRegistry = "HKCU:\Software\MyCompany\PostInstall\Components\$($comp.Name)"
+        $context.ComponentRegistry = "HKCU:\Software\PostInstall\Components\$($comp.Name)"
         $context.Now = Get-Date
 
         ###
@@ -111,7 +111,7 @@ function Invoke-PostInstallMonitor {
         $targetCycle = $comp.TargetCycle
 
         # HKLM override
-        $lmPath = "HKLM:\Software\MyCompany\PostInstall\Components\$($comp.Name)"
+        $lmPath = "HKLM:\Software\PostInstall\Components\$($comp.Name)"
         if (Test-Path $lmPath) {
             $lm = Get-ItemProperty -Path $lmPath -ErrorAction SilentlyContinue
             if ($lm -and $lm.TargetCycle -and $lm.TargetCycle -gt $setupCycle) {
