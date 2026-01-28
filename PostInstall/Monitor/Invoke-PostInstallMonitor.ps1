@@ -79,7 +79,6 @@ function Invoke-PostInstallMonitor {
         "LogonId"      = "DWord"
         "BootTime"     = "QWord"
         "Now"          = "QWord"
-        "LastRun"      = "QWord"
     }
 
     # -----------------------------------------------------------------
