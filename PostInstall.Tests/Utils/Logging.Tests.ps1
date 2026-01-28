@@ -63,3 +63,11 @@ Describe "Write-Timestamped" {
         }
     }
 }
+
+Describe "Format-Line" {
+
+    It "General format" {
+        $result = Format-Line -Level "Info" -Source "File" -Component "Module" -Message "Some text ..."
+        $result | Should -Be "INFO  | File         | Module       | Some text ..."
+    }
+}
