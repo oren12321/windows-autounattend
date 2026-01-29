@@ -13,7 +13,16 @@ catch {
 
 Write-Timestamped (Format-Line -Level "Info" -Message "Component loader initializing.")
 
-# Load loader + monitor functions
+# Load creator + loader + monitor functions
+try {
+    . (Join-Path $PSScriptRoot "Monitor\Create-PostInstallRegistry.ps1")
+    Write-Timestamped (Format-Line -Level "Info" -Message "Loaded Create-PostInstallRegistry.ps1")
+}
+catch {
+    Write-Timestamped (Format-Line -Level "Error" -Message "Failed to load Create-PostInstallRegistry.ps1: $_")
+    return
+}
+
 try {
     . (Join-Path $PSScriptRoot "Monitor\Load-PostInstallComponents.ps1")
     Write-Timestamped (Format-Line -Level "Info" -Message "Loaded Load-PostInstallComponents.ps1")
@@ -35,6 +44,16 @@ catch {
 # Validate components directory
 if (-not (Test-Path $ComponentsDirectory)) {
     Write-Timestamped (Format-Line -Level "Error" -Message "Components directory not found: $ComponentsDirectory")
+    return
+}
+
+try {
+    
+    Create-PostInstallRegistry
+    Write-Timestamped (Format-Line -Level "Info" -Message "Registry creation completed.")
+}
+catch {
+    Write-Timestamped (Format-Line -Level "Error" -Message "Exception while creating registry: $_")
     return
 }
 

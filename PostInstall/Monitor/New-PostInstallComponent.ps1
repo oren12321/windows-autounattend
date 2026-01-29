@@ -29,5 +29,6 @@ function New-PostInstallComponent {
         Action         = $Action
         StopCondition  = $StopCondition
         Cleanup        = $Cleanup
+        RegistryPath   = "HKCU:\Software\PostInstall\Components\$Name"
     }
 }
