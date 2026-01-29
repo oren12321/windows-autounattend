@@ -60,7 +60,6 @@ throw 'Boom'
             @"
 `$Component = [pscustomobject]@{
     Name = 'Test'
-    Reset = { }
     StartCondition = { `$true }
     # Missing Action + StopCondition
 }
@@ -75,7 +74,6 @@ throw 'Boom'
             @"
 `$Component = [pscustomobject]@{
     Name = 'Valid'
-    Reset          = { }
     StartCondition = { `$true }
     Action         = { }
     StopCondition  = { `$true }
@@ -95,7 +93,6 @@ throw 'Boom'
             @"
 `$Component = [pscustomobject]@{
     Name = 'A'
-    Reset          = { }
     StartCondition = { `$true }
     Action         = { }
     StopCondition  = { `$true }
@@ -105,7 +102,6 @@ throw 'Boom'
             @"
 `$Component = [pscustomobject]@{
     Name = 'B'
-    Reset          = { }
     StartCondition = { `$true }
     Action         = { }
     StopCondition  = { `$true }
@@ -125,7 +121,6 @@ throw 'Boom'
             @"
 `$Component = [pscustomobject]@{
     Name = 'First'
-    Reset          = { }
     StartCondition = { `$true }
     Action         = { }
     StopCondition  = { `$true }

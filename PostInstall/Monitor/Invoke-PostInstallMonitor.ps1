@@ -165,14 +165,16 @@ function Invoke-PostInstallMonitor {
             continue
         }
         
-        # Run Reset
-        try {
-            Write-Timestamped (Format-Line -Level "Info" -Message "Executing '$($comp.Name)' Reset.")
-            & $comp.Reset $context
-            Write-Timestamped (Format-Line -Level "Info" -Message "'$($comp.Name)' Reset completed.")
-        }
-        catch {
-            Write-Timestamped (Format-Line -Level "Warning" -Message "Unhandled exception in Reset of '$($comp.Name)': $_")
+        # Run Reset if exist
+        if ($comp.Reset) {
+            try {
+                Write-Timestamped (Format-Line -Level "Info" -Message "Executing '$($comp.Name)' Reset.")
+                & $comp.Reset $context
+                Write-Timestamped (Format-Line -Level "Info" -Message "'$($comp.Name)' Reset completed.")
+            }
+            catch {
+                Write-Timestamped (Format-Line -Level "Warning" -Message "Unhandled exception in Reset of '$($comp.Name)': $_")
+            }
         }
 
         # Evaluate StartCondition
@@ -201,6 +203,18 @@ function Invoke-PostInstallMonitor {
             $isStartCondition = $false
         }
         if ($isStopCondition) {
+            # Run Cleanup if exist
+            if ($comp.Cleanup) {
+                try {
+                    Write-Timestamped (Format-Line -Level "Info" -Message "Executing '$($comp.Name)' Cleanup.")
+                    & $comp.Cleanup $context
+                    Write-Timestamped (Format-Line -Level "Info" -Message "'$($comp.Name)' Cleanup completed.")
+                }
+                catch {
+                    Write-Timestamped (Format-Line -Level "Warning" -Message "Unhandled exception in Cleanup of '$($comp.Name)': $_")
+                }
+            }
+            
             Write-Timestamped (Format-Line -Level "Info" -Message "Cycle completed for '$($comp.Name)' before Action run or in later monitor invocation")
             try {
                 Write-Timestamped (Format-Line -Level "Info" -Message "Ensuring SetupCycle=$targetCycle in $($context.ComponentRegistry)")
@@ -281,6 +295,18 @@ function Invoke-PostInstallMonitor {
             $isStartCondition = $false
         }
         if ($isStopCondition) {
+            # Run Cleanup if exist
+            if ($comp.Cleanup) {
+                try {
+                    Write-Timestamped (Format-Line -Level "Info" -Message "Executing '$($comp.Name)' Cleanup.")
+                    & $comp.Cleanup $context
+                    Write-Timestamped (Format-Line -Level "Info" -Message "'$($comp.Name)' Cleanup completed.")
+                }
+                catch {
+                    Write-Timestamped (Format-Line -Level "Warning" -Message "Unhandled exception in Cleanup of '$($comp.Name)': $_")
+                }
+            }
+            
             Write-Timestamped (Format-Line -Level "Info" -Message "Cycle completed for '$($comp.Name)' before Action run or in later monitor invocation")
             try {
                 Write-Timestamped (Format-Line -Level "Info" -Message "Ensuring SetupCycle=$targetCycle in $($context.ComponentRegistry)")

@@ -1,9 +1,6 @@
 function New-PostInstallComponent {
     param(
         [Parameter(Mandatory)]
-        [scriptblock]$Reset,
-    
-        [Parameter(Mandatory)]
         [scriptblock]$StartCondition,
 
         [Parameter(Mandatory)]
@@ -11,6 +8,10 @@ function New-PostInstallComponent {
 
         [Parameter(Mandatory)]
         [scriptblock]$StopCondition,
+        
+        [scriptblock]$Reset = $null,
+        
+        [scriptblock]$Cleanup = $null,
 
         # Optional: component name (used for registry scoping, logging, ordering, etc.)
         [string]$Name = $null
@@ -27,5 +28,6 @@ function New-PostInstallComponent {
         StartCondition = $StartCondition
         Action         = $Action
         StopCondition  = $StopCondition
+        Cleanup        = $Cleanup
     }
 }

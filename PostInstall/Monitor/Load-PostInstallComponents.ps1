@@ -42,7 +42,6 @@ function Load-PostInstallComponents {
         
         # Validate required scriptblocks
         $missing = @()
-        if (-not ($Component.Reset          -is [scriptblock])) { $missing += "Reset" }
         if (-not ($Component.StartCondition -is [scriptblock])) { $missing += "StartCondition" }
         if (-not ($Component.Action         -is [scriptblock])) { $missing += "Action" }
         if (-not ($Component.StopCondition  -is [scriptblock])) { $missing += "StopCondition" }

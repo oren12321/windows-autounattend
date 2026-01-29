@@ -91,4 +91,11 @@ $Component = New-PostInstallComponent `
         # Return $true to indicate the component is satisfied.
         $context.Log("DemoComponent: StopCondition called.")
         $true
+    } `
+    -Cleanup {
+        param($context)
+        
+        # Cleanup is being used to remove or release
+        # resources that has been used by this component.
+        $context.Log("DemoComponent: Cleanup called.")
     }
