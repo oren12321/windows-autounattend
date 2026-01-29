@@ -13,13 +13,22 @@ catch {
 
 Write-Timestamped (Format-Line -Level "Info" -Message "Component loader initializing.")
 
-# Load creator + loader + monitor functions
+# Load creator + scanner + loader + monitor functions
 try {
     . (Join-Path $PSScriptRoot "Monitor\Create-PostInstallRegistry.ps1")
     Write-Timestamped (Format-Line -Level "Info" -Message "Loaded Create-PostInstallRegistry.ps1")
 }
 catch {
     Write-Timestamped (Format-Line -Level "Error" -Message "Failed to load Create-PostInstallRegistry.ps1: $_")
+    return
+}
+
+try {
+    . (Join-Path $PSScriptRoot "Monitor\Remove-OrphanPostInstallComponents.ps1")
+    Write-Timestamped (Format-Line -Level "Info" -Message "Loaded Remove-OrphanPostInstallComponents.ps1")
+}
+catch {
+    Write-Timestamped (Format-Line -Level "Error" -Message "Failed to load Remove-OrphanPostInstallComponents.ps1: $_")
     return
 }
 
@@ -54,6 +63,16 @@ try {
 }
 catch {
     Write-Timestamped (Format-Line -Level "Error" -Message "Exception while creating registry: $_")
+    return
+}
+
+try {
+    
+    Remove-OrphanPostInstallComponents
+    Write-Timestamped (Format-Line -Level "Info" -Message "Orphan components removal completed.")
+}
+catch {
+    Write-Timestamped (Format-Line -Level "Error" -Message "Exception while removing orphan components: $_")
     return
 }
 
