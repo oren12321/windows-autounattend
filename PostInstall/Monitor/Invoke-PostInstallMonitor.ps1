@@ -87,60 +87,55 @@ function Invoke-PostInstallMonitor {
 
     foreach ($comp in $Components) {
 
-        Write-Timestamped "Starting evaluation of component '$($comp.Name)'"
+        Write-Timestamped (Format-Line -Level "Info" -Message "Starting evaluation of '$($comp.Name)'")
 
         $context.ComponentRegistry = "HKCU:\Software\PostInstall\Components\$($comp.Name)"
         $context.Now = Get-Date
 
+        Write-Timestamped (Format-Line -Level "Info" -Message "Current context of '$($comp.Name)': $context")
+
         # Assumption: given component via loader is valid - so let's create its registry if not exist
-        try {
-            if (-not (Test-Path $context.ComponentRegistry)) {
-                Write-Timestamped "Creating registry key: $($context.ComponentRegistry)"
+        if (-not (Test-Path $context.ComponentRegistry)) {
+            Write-Timestamped (Format-Line -Level "Info" -Message "Creating $($context.ComponentRegistry)")
+            try {
                 New-Item -Path $context.ComponentRegistry -Force | Out-Null
             }
-        }
-        catch {
-            Write-Timestamped "ERROR: Failed to create registry key for component '$($comp.Name)': $_"
-        }
-
-        # Load LastRun to context
-        if (Test-Path $context.ComponentRegistry) {
-            $cu = Get-ItemProperty -Path $context.ComponentRegistry -ErrorAction SilentlyContinue
-            if ($cu -and $cu.LastRun) {
-                $context.LastRun = [DateTime]::FromFileTimeUtc($cu.LastRun)
+            catch {
+                Write-Timestamped (Format-Line -Level "Error" -Message "Failed to create $($context.ComponentRegistry): $_")
+                Write-Timestamped (Format-Line -Level "Info" -Message "Skipping '$($comp.Name)' evaluation")
+                continue
             }
         }
+        
+        # Load LastRun to context
+        $cu = Get-ItemProperty -Path $context.ComponentRegistry -ErrorAction SilentlyContinue
+        if ($cu -and $cu.LastRun) {
+            Write-Timestamped (Format-Line -Level "Info" -Message "Loading LastRun to '$($comp.Name)' context")
+            $context.LastRun = [DateTime]::FromFileTimeUtc($cu.LastRun)
+        }
+
+        $cu = Get-ItemProperty -Path $context.ComponentRegistry -ErrorAction SilentlyContinue
 
         # Read per-user SetupCycle (default 0)
         $setupCycle = 0
-        if (Test-Path $context.ComponentRegistry) {
-            $cu = Get-ItemProperty -Path $context.ComponentRegistry -ErrorAction SilentlyContinue
-            if ($cu -and $cu.SetupCycle) {
-                $setupCycle = $cu.SetupCycle
-            }
+        if ($cu -and $cu.SetupCycle) {
+            $setupCycle = $cu.SetupCycle
         }
 
-        # Determine user's TargetCycle
+        # Read per-user TargetCycle (default 0)
         $targetCycle = 0
-        if (Test-Path $context.ComponentRegistry) {
-            $cu = Get-ItemProperty -Path $context.ComponentRegistry -ErrorAction SilentlyContinue
-            if ($cu) {
-                if ($cu.TargetCycle) {
-                    $targetCycle = $cu.TargetCycle
-                }
-                else {
-                    try {
-                        Write-Timestamped "Ensuring TargetCycle=$targetCycle - first initialization"
-                        if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -ErrorAction SilentlyContinue)) {
-                            New-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -Value $targetCycle -PropertyType DWord -Force | Out-Null
-                        } else {
-                            Set-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -Value $targetCycle -Force
-                        }
-                    }
-                    catch {
-                        Write-Timestamped "ERROR: Failed to ensure first initialization of target cycle for component '$($comp.Name)': $_"
-                    }
-                }
+        if ($cu -and $cu.TargetCycle) {
+            $targetCycle = $cu.TargetCycle
+        }
+        else {
+            Write-Timestamped (Format-Line -Level "Info" -Message "Creating TargetCycle=$targetCycle in $($context.ComponentRegistry)")
+            try {
+                New-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -Value $targetCycle -PropertyType DWord -Force | Out-Null
+            }
+            catch {
+                Write-Timestamped (Format-Line -Level "Error" -Message "Failed to create TargetCycle=$targetCycle in $($context.ComponentRegistry): $_")
+                Write-Timestamped (Format-Line -Level "Info" -Message "Skipping '$($comp.Name)' evaluation")
+                continue
             }
         }
 
@@ -152,70 +147,78 @@ function Invoke-PostInstallMonitor {
                 $targetCycle = $lm.TargetCycle
                 
                 try {
-                    Write-Timestamped "Ensuring TargetCycle=$targetCycle - HKLM override"
-                    if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -ErrorAction SilentlyContinue)) {
-                        New-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -Value $targetCycle -PropertyType DWord -Force | Out-Null
-                    } else {
-                        Set-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -Value $targetCycle -Force
-                    }
+                    Write-Timestamped (Format-Line -Level "Info" -Message "Overriding HKLM TargetCycle=$targetCycle in $($context.ComponentRegistry)")
+                    Set-ItemProperty -Path $context.ComponentRegistry -Name TargetCycle -Value $targetCycle -Force
                 }
                 catch {
-                    Write-Timestamped "ERROR: Failed to ensure overrided target cycle for component '$($comp.Name)': $_"
+                    Write-Timestamped (Format-Line -Level "Warning" -Message "Failed to override HKLM TargetCycle=$targetCycle in $($context.ComponentRegistry): $_")
                 }
             }
         }
 
-        Write-Timestamped "Component '$($comp.Name)': SetupCycle=$setupCycle, TargetCycle=$targetCycle"
+        Write-Timestamped (Format-Line -Level "Info" -Message "Current '$($comp.Name)' versions: SetupCycle=$setupCycle, TargetCycle=$targetCycle")
 
-        # 1. Check version
+        # Check version
         $outOfDateVersion = ($setupCycle -lt $targetCycle)
         if (-not $outOfDateVersion) {
-            Write-Timestamped "Skipping component '$($comp.Name)'. Already up do date."
+            Write-Timestamped (Format-Line -Level "Info" -Message "Skipping '$($comp.Name)' evaluation. Already up do date.")
             continue
         }
         
+        # Run Reset
         try {
-            Write-Timestamped "Executing component reset."
+            Write-Timestamped (Format-Line -Level "Info" -Message "Executing '$($comp.Name)' Reset.")
             & $comp.Reset $context
-            Write-Timestamped "Component reset completed."
+            Write-Timestamped (Format-Line -Level "Info" -Message "'$($comp.Name)' Reset completed.")
         }
         catch {
-            Write-Timestamped "WARNING Unhandled exception in Reset of component '$($comp.Name)': $_"
+            Write-Timestamped (Format-Line -Level "Warning" -Message "Unhandled exception in Reset of '$($comp.Name)': $_")
         }
 
-        # 2. Evaluate StartCondition
+        # Evaluate StartCondition
         try {
+            Write-Timestamped (Format-Line -Level "Info" -Message "Evaluating '$($comp.Name)' StartCondition.")
             $isStartCondition = (& $comp.StartCondition $context)
+            Write-Timestamped (Format-Line -Level "Info" -Message "'$($comp.Name)' StartCondition evaluation completed.")
         }
         catch {
-            Write-Timestamped "ERROR: Unhandled exception in StartCondition of component '$($comp.Name)': $_"
+            Write-Timestamped (Format-Line -Level "Error" -Message "Defaulting '$($comp.Name)' StartCondition to false. Unhandled exception: $_")
             $isStartCondition = $false
         }
         if (-not $isStartCondition) {
-            Write-Timestamped "Skipping component '$($comp.Name)'. StartCondition not met"
+            Write-Timestamped (Format-Line -Level "Info" -Message "Skipping '$($comp.Name)'. StartCondition not met")
             continue
         }
         
-        # 3. Evaluate StopCondition
+        # Evaluate StopCondition
         try {
+            Write-Timestamped (Format-Line -Level "Info" -Message "Evaluating '$($comp.Name)' pre-Action StopCondition.")
             $isStopCondition = (& $comp.StopCondition $context)
+            Write-Timestamped (Format-Line -Level "Info" -Message "'$($comp.Name)' pre-Action StopCondition evaluation completed.")
         }
         catch {
-            Write-Timestamped "ERROR: Unhandled exception in StopCondition of component '$($comp.Name)': $_"
-            $isStopCondition = $false
+            Write-Timestamped (Format-Line -Level "Error" -Message "Defaulting '$($comp.Name)' StopCondition to false. Unhandled exception: $_")
+            $isStartCondition = $false
         }
         if ($isStopCondition) {
-            Write-Timestamped "Cycle completed for component '$($comp.Name)' in later monitor invocation"
+            Write-Timestamped (Format-Line -Level "Info" -Message "Cycle completed for '$($comp.Name)' before Action run or in later monitor invocation")
             try {
-                Write-Timestamped "Updating SetupCycle to $targetCycle"
+                Write-Timestamped (Format-Line -Level "Info" -Message "Ensuring SetupCycle=$targetCycle in $($context.ComponentRegistry)")
                 if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -ErrorAction SilentlyContinue)) {
                     New-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -Value $targetCycle -PropertyType DWord -Force | Out-Null
                 } else {
                     Set-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -Value $targetCycle -Force
                 }
+            }
+            catch {
+                Write-Timestamped (Format-Line -Level "Error" -Message "Failed to ensure SetupCycle=$targetCycle in $($context.ComponentRegistry): $_")
+                Write-Timestamped (Format-Line -Level "Info" -Message "Skipping '$($comp.Name)' evaluation")
+                continue
+            }
 
+            try {
                 $ticks = (Get-Date).Ticks
-                Write-Timestamped "Updating LastRun=$ticks"
+                Write-Timestamped (Format-Line -Level "Info" -Message "Ensuring LastRun=$ticks in $($context.ComponentRegistry)")
                 if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name LastRun -ErrorAction SilentlyContinue)) {
                     New-ItemProperty -Path $context.ComponentRegistry -Name LastRun -Value $ticks -PropertyType QWord -Force | Out-Null
                 } else {
@@ -223,25 +226,26 @@ function Invoke-PostInstallMonitor {
                 }
             }
             catch {
-                Write-Timestamped "ERROR: Failed to update registry versions for component '$($comp.Name)': $_"
+                Write-Timestamped (Format-Line -Level "Warning" -Message "Failed to ensure LastRun=$ticks in $($context.ComponentRegistry): $_")
             }
             
-            Write-Timestamped "Skipping component '$($comp.Name)'. StopCondition is met"
+            Write-Timestamped (Format-Line -Level "Info" -Message "Skipping '$($comp.Name)'. StopCondition is met")
             continue
         }
         
-        # 4. Run Action
+        # Run Action
         try {
-            Write-Timestamped "Executing component action."
+            Write-Timestamped (Format-Line -Level "Info" -Message "Executing '$($comp.Name)' Action.")
             & $comp.Action $context
-            Write-Timestamped "Component action completed."
+            Write-Timestamped (Format-Line -Level "Info" -Message "'$($comp.Name)' Action completed.")
         }
         catch {
-            Write-Timestamped "WARNING Unhandled exception in Action of component '$($comp.Name)': $_"
+            Write-Timestamped (Format-Line -Level "Warning" -Message "Unhandled exception in Action of '$($comp.Name)': $_")
         }
         
-        # 5. Save context to component registry
+        # Save context to component registry
         try {
+            Write-Timestamped (Format-Line -Level "Info" -Message "Persisting context in $($context.ComponentRegistry)")
             foreach ($entry in $PersistenceMap.GetEnumerator()) {
                 $name = $entry.Key
                 $type = $entry.Value
@@ -254,40 +258,47 @@ function Invoke-PostInstallMonitor {
                     }
 
                     if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name $name -ErrorAction SilentlyContinue)) {
-                        Write-Timestamped "Writing registry value: $name = $value"
                         New-ItemProperty -Path $context.ComponentRegistry -Name $name -Value $value -PropertyType $type -Force | Out-Null
                     }
                     else {
-                        Write-Timestamped "Updating registry value: $name = $value"
                         Set-ItemProperty -Path $context.ComponentRegistry -Name $name -Value $value -Force
                     }
                 }
             }
         }
         catch {
-            Write-Timestamped "ERROR: Failed to persist context for component '$($comp.Name)': $_"
+            Write-Timestamped (Format-Line -Level "Warning" -Message "Failed to persist context in $($context.ComponentRegistry): $_")
         }
         
-        # 6. Update per-component SetupCycle + LastRun
+        # Re-evaluate stop condition
         try {
+            Write-Timestamped (Format-Line -Level "Info" -Message "Evaluating '$($comp.Name)' post-Action StopCondition.")
             $isStopCondition = (& $comp.StopCondition $context)
+            Write-Timestamped (Format-Line -Level "Info" -Message "'$($comp.Name)' post-Action StopCondition evaluation completed.")
         }
         catch {
-            Write-Timestamped "ERROR: Unhandled exception in StopCondition re-evaluation of component '$($comp.Name)': $_"
-            $isStopCondition = $false
+            Write-Timestamped (Format-Line -Level "Error" -Message "Defaulting '$($comp.Name)' StopCondition to false. Unhandled exception: $_")
+            $isStartCondition = $false
         }
         if ($isStopCondition) {
-            Write-Timestamped "Cycle completed for component '$($comp.Name)'"
+            Write-Timestamped (Format-Line -Level "Info" -Message "Cycle completed for '$($comp.Name)' before Action run or in later monitor invocation")
             try {
-                Write-Timestamped "Updating SetupCycle to $targetCycle"
+                Write-Timestamped (Format-Line -Level "Info" -Message "Ensuring SetupCycle=$targetCycle in $($context.ComponentRegistry)")
                 if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -ErrorAction SilentlyContinue)) {
                     New-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -Value $targetCycle -PropertyType DWord -Force | Out-Null
                 } else {
                     Set-ItemProperty -Path $context.ComponentRegistry -Name SetupCycle -Value $targetCycle -Force
                 }
+            }
+            catch {
+                Write-Timestamped (Format-Line -Level "Error" -Message "Failed to ensure SetupCycle=$targetCycle in $($context.ComponentRegistry): $_")
+                Write-Timestamped (Format-Line -Level "Info" -Message "Skipping '$($comp.Name)' evaluation")
+                continue
+            }
 
+            try {
                 $ticks = (Get-Date).Ticks
-                Write-Timestamped "Updating LastRun=$ticks"
+                Write-Timestamped (Format-Line -Level "Info" -Message "Ensuring LastRun=$ticks in $($context.ComponentRegistry)")
                 if (-not (Get-ItemProperty -Path $context.ComponentRegistry -Name LastRun -ErrorAction SilentlyContinue)) {
                     New-ItemProperty -Path $context.ComponentRegistry -Name LastRun -Value $ticks -PropertyType QWord -Force | Out-Null
                 } else {
@@ -295,8 +306,11 @@ function Invoke-PostInstallMonitor {
                 }
             }
             catch {
-                Write-Timestamped "ERROR: Failed to update registry versions for component '$($comp.Name)': $_"
+                Write-Timestamped (Format-Line -Level "Warning" -Message "Failed to ensure LastRun=$ticks in $($context.ComponentRegistry): $_")
             }
-        } 
+            
+            Write-Timestamped (Format-Line -Level "Info" -Message "Skipping '$($comp.Name)'. StopCondition is met")
+            continue
+        }
     }
 }
