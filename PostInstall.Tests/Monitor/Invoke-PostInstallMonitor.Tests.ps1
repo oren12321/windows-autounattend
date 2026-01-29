@@ -135,7 +135,6 @@ Describe "Invoke-PostInstallMonitor" {
 
         # Registry mocks
         Mock Get-ItemProperty { }
-        Mock New-Item { }
         Mock New-ItemProperty { }
         Mock Set-ItemProperty { }
     }
@@ -151,6 +150,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ $false }
             Action={ }
             StopCondition={ $false }
+            RegistryPath="HKCU:\Software\PostInstall\Components\InitA"
         }
         
         Invoke-PostInstallMonitor -Components @($comp)
@@ -172,6 +172,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ throw "Should not run" }
             Action={ throw "Should not run" }
             StopCondition={ throw "Should not run" }
+            RegistryPath="HKCU:\Software\PostInstall\Components\SkipA"
         }
 
         Invoke-PostInstallMonitor -Components @($comp)
@@ -198,6 +199,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ $script:order += 'Start'; $true }
             StopCondition={ $script:order += 'Stop'; $script:stopState }
             Action={ $script:order += 'Action'; $script:stopState = $true }
+            RegistryPath="HKCU:\Software\PostInstall\Components\OrderA"
         }
 
         Invoke-PostInstallMonitor -Components @($comp)
@@ -223,6 +225,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ $true }
             Action={ $script:ran = $true }
             StopCondition={ $true }
+            RegistryPath="HKCU:\Software\PostInstall\Components\StopEarly"
         }
 
         Invoke-PostInstallMonitor -Components @($comp)
@@ -248,6 +251,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ $true }
             StopCondition={ $false }
             Action={ $script:ran = $true }
+            RegistryPath="HKCU:\Software\PostInstall\Components\RunA"
         }
 
         Invoke-PostInstallMonitor -Components @($comp)
@@ -273,6 +277,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ $true }
             StopCondition={ $script:stopState }
             Action={ $script:stopState = $true }
+            RegistryPath="HKCU:\Software\PostInstall\Components\PostStop"
         }
 
         Invoke-PostInstallMonitor -Components @($comp)
@@ -294,6 +299,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ $true }
             StopCondition={ $false }
             Action={ }
+            RegistryPath="HKCU:\Software\PostInstall\Components\CtxA"
         }
 
         Invoke-PostInstallMonitor -Components @($comp)
@@ -317,6 +323,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ param($ctx) $script:received = $ctx.LastRun; $false }
             Action={ }
             StopCondition={ $false }
+            RegistryPath="HKCU:\Software\PostInstall\Components\LastRunA"
         }
 
         Invoke-PostInstallMonitor -Components @($comp)
@@ -340,6 +347,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ $true }
             StopCondition={ $true }
             Action={ }
+            RegistryPath="HKCU:\Software\PostInstall\Components\LastRunWrite"
         }
 
         Invoke-PostInstallMonitor -Components @($comp)
@@ -361,6 +369,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ $true }
             StopCondition={ $true }
             Action={ }
+            RegistryPath="HKCU:\Software\PostInstall\Components\OverrideA"
         }
 
         Invoke-PostInstallMonitor -Components @($comp)
@@ -382,6 +391,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ $false }
             StopCondition={ $false }
             Action={ }
+            RegistryPath="HKCU:\Software\PostInstall\Components\ErrReset"
         }
 
         { Invoke-PostInstallMonitor -Components @($comp) } | Should -Not -Throw
@@ -403,6 +413,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ throw "Boom" }
             StopCondition={ $false }
             Action={ }
+            RegistryPath="HKCU:\Software\PostInstall\Components\ErrStart"
         }
 
         Invoke-PostInstallMonitor -Components @($comp)
@@ -426,6 +437,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ $true }
             Action={ throw "ActionFail" }
             StopCondition={ $script:stopCalled = $true }
+            RegistryPath="HKCU:\Software\PostInstall\Components\ErrAction"
         }
 
         Invoke-PostInstallMonitor -Components @($comp)
@@ -445,6 +457,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ $true }
             Action={ }
             StopCondition={ throw "StopFail" }
+            RegistryPath="HKCU:\Software\PostInstall\Components\ErrStop"
         }
 
         Invoke-PostInstallMonitor -Components @($comp)
@@ -469,6 +482,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ $true }
             Action={ $script:ranA = $true }
             StopCondition={ $false }
+            RegistryPath="HKCU:\Software\PostInstall\Components\A"
         }
 
         $compB = [pscustomobject]@{
@@ -477,29 +491,13 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ $true }
             Action={ $script:ranB = $true }
             StopCondition={ $false }
+            RegistryPath="HKCU:\Software\PostInstall\Components\B"
         }
 
         Invoke-PostInstallMonitor -Components @($compA, $compB)
 
         $ranA | Should -BeTrue
         $ranB | Should -BeTrue
-    }
-
-    # ------------------------------------------------------------
-    It "Creates registry path when missing" {
-        Mock Test-Path { $false } -ParameterFilter { $Path -like 'HKCU:*' }
-
-        $comp = [pscustomobject]@{
-            Name='RegCreate'
-            Reset={ }
-            StartCondition={ $false }
-            Action={ }
-            StopCondition={ $false }
-        }
-
-        Invoke-PostInstallMonitor -Components @($comp)
-
-        Assert-MockCalled New-Item -Times 1
     }
 
     # ------------------------------------------------------------
@@ -516,6 +514,7 @@ Describe "Invoke-PostInstallMonitor" {
             StartCondition={ param($ctx) $script:received = $ctx; $false }
             Action={ }
             StopCondition={ $false }
+            RegistryPath="HKCU:\Software\PostInstall\Components\CtxPass"
         }
 
         Invoke-PostInstallMonitor -Components @($comp)

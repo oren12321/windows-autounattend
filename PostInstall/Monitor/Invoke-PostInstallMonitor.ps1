@@ -89,23 +89,10 @@ function Invoke-PostInstallMonitor {
 
         Write-Timestamped (Format-Line -Level "Info" -Message "Starting evaluation of '$($comp.Name)'")
 
-        $context.ComponentRegistry = "HKCU:\Software\PostInstall\Components\$($comp.Name)"
+        $context.ComponentRegistry = $comp.RegistryPath
         $context.Now = Get-Date
 
         Write-Timestamped (Format-Line -Level "Info" -Message "Current context of '$($comp.Name)': $context")
-
-        # Assumption: given component via loader is valid - so let's create its registry if not exist
-        if (-not (Test-Path $context.ComponentRegistry)) {
-            Write-Timestamped (Format-Line -Level "Info" -Message "Creating $($context.ComponentRegistry)")
-            try {
-                New-Item -Path $context.ComponentRegistry -Force | Out-Null
-            }
-            catch {
-                Write-Timestamped (Format-Line -Level "Error" -Message "Failed to create $($context.ComponentRegistry): $_")
-                Write-Timestamped (Format-Line -Level "Info" -Message "Skipping '$($comp.Name)' evaluation")
-                continue
-            }
-        }
         
         # Load LastRun to context
         $cu = Get-ItemProperty -Path $context.ComponentRegistry -ErrorAction SilentlyContinue
