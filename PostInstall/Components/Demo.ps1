@@ -1,4 +1,13 @@
-. (Join-Path $PSScriptRoot '..\Monitor\New-PostInstallComponent.ps1')
+$PostInstallDirectory = (
+    Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" -ErrorAction SilentlyContinue
+).PostInstallDirectory
+
+if ([string]::IsNullOrWhiteSpace($PostInstallDirectory)) {
+    Write-Output "FATAL: PostInstallDirectory evironment variable does NOT exist"
+    return
+}
+
+. "$PostInstallDirectory\Monitor\New-PostInstallComponent.ps1"
 
 # DemoComponent.ps1
 # -------------------------------------------------------------------
@@ -42,30 +51,30 @@ $Component = New-PostInstallComponent `
         
         # Reset is for component initialization, and not for
         # rewinding it such that StartCondition will be true.
-        $context.Log("DemoComponent: Reset called.")
+        $context.Log.Invoke("DemoComponent: Reset called.")
     } `
     -StartCondition {
         param($context)
 
         # StartCondition is called before the component runs.
         # Return $true to allow execution, $false to skip.
-        $context.Log("DemoComponent: StartCondition called.")
+        $context.Log.Invoke("DemoComponent: StartCondition called.")
         $true
     } `
     -Action {
         param($context)
 
-        $context.Log("DemoComponent: Action started.")
+        $context.Log.Invoke("DemoComponent: Action started.")
 
         # Demonstrate reading context fields
-        $context.Log("Context.UserName        = $($context.UserName)")
-        $context.Log("Context.UserProfile     = $($context.UserProfile)")
-        $context.Log("Context.LocalAppData    = $($context.LocalAppData)")
-        $context.Log("Context.ProgramData     = $($context.ProgramData)")
-        $context.Log("Context.LogonId         = $($context.LogonId)")
-        $context.Log("Context.BootTime        = $($context.BootTime)")
-        $context.Log("Context.Now             = $($context.Now)")
-        $context.Log("Context.ComponentRegistry = $($context.ComponentRegistry)")
+        $context.Log.Invoke("Context.UserName        = $($context.UserName)")
+        $context.Log.Invoke("Context.UserProfile     = $($context.UserProfile)")
+        $context.Log.Invoke("Context.LocalAppData    = $($context.LocalAppData)")
+        $context.Log.Invoke("Context.ProgramData     = $($context.ProgramData)")
+        $context.Log.Invoke("Context.LogonId         = $($context.LogonId)")
+        $context.Log.Invoke("Context.BootTime        = $($context.BootTime)")
+        $context.Log.Invoke("Context.Now             = $($context.Now)")
+        $context.Log.Invoke("Context.ComponentRegistry = $($context.ComponentRegistry)")
 
         # IMPORTANT:
         # Do NOT modify any of the context fields.
@@ -80,16 +89,16 @@ $Component = New-PostInstallComponent `
 
         # Components may write their own values under their registry root.
         New-ItemProperty -Path $reg -Name "DemoValue" -Value "Hello from DemoComponent" -PropertyType String -Force | Out-Null
-        $context.Log("DemoComponent: Wrote DemoValue to registry.")
+        $context.Log.Invoke("DemoComponent: Wrote DemoValue to registry.")
 
-        $context.Log("DemoComponent: Action finished.")
+        $context.Log.Invoke("DemoComponent: Action finished.")
     } `
     -StopCondition {
         param($context)
 
         # StopCondition is called after Action.
         # Return $true to indicate the component is satisfied.
-        $context.Log("DemoComponent: StopCondition called.")
+        $context.Log.Invoke("DemoComponent: StopCondition called.")
         $true
     } `
     -Cleanup {
@@ -97,5 +106,5 @@ $Component = New-PostInstallComponent `
         
         # Cleanup is being used to remove or release
         # resources that has been used by this component.
-        $context.Log("DemoComponent: Cleanup called.")
+        $context.Log.Invoke("DemoComponent: Cleanup called.")
     }

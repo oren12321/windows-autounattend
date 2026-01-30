@@ -50,9 +50,11 @@ catch {
     return
 }
 
+$expandedComponentsDirectory = [Environment]::ExpandEnvironmentVariables($ComponentsDirectory)
+
 # Validate components directory
-if (-not (Test-Path $ComponentsDirectory)) {
-    Write-Timestamped (Format-Line -Level "Error" -Message "Components directory not found: $ComponentsDirectory")
+if (-not (Test-Path $expandedComponentsDirectory)) {
+    Write-Timestamped (Format-Line -Level "Error" -Message "Components directory not found: $expandedComponentsDirectory")
     return
 }
 
@@ -77,11 +79,11 @@ catch {
 }
 
 # Load components
-Write-Timestamped (Format-Line -Level "Info" -Message "Loading components from: $ComponentsDirectory")
+Write-Timestamped (Format-Line -Level "Info" -Message "Loading components from: $expandedComponentsDirectory")
 $loadedComponents = @()
 
 try {
-    $loadedComponents = Load-PostInstallComponents -ComponentsDirectory $ComponentsDirectory
+    $loadedComponents = Load-PostInstallComponents -ComponentsDirectory $expandedComponentsDirectory
 }
 catch {
     Write-Timestamped (Format-Line -Level "Error" -Message "Exception while loading components: $_")

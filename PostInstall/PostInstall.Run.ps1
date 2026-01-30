@@ -1,0 +1,1 @@
+& "{InstallDirectory}\PostInstall\PostInstall.Main.ps1" -ComponentsDirectory "{ComponentsDirectory}" *>> "{InstallDirectory}\PostInstall\PostInstall.log"

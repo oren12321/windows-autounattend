@@ -10,7 +10,7 @@ function Create-PostInstallRegistry {
             New-Item -Path $componentsPath -Force | Out-Null
         }
         catch {
-            Write-Timestamped (Format-Line -Level "Error" -Message "Failed to create $componentsPath: $_")
+            Write-Timestamped (Format-Line -Level "Error" -Message "Failed to create ${componentsPath}: $_")
             return
         }
     }
@@ -23,7 +23,7 @@ function Create-PostInstallRegistry {
             New-Item -Path $indexPath -Force | Out-Null
         }
         catch {
-            Write-Timestamped (Format-Line -Level "Error" -Message "Failed to create $indexPath: $_")
+            Write-Timestamped (Format-Line -Level "Error" -Message "Failed to create ${indexPath}: $_")
             return
         }
     }
