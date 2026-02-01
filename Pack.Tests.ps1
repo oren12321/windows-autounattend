@@ -10,17 +10,17 @@ Describe "Complex Project Packer Tests" {
         # ProjC -> [ProjD]
         foreach ($p in 'A','B','C','D') { New-Item -Path "$MockRepo\Proj$p" -ItemType Directory | Out-Null }
         
-        '@{ RequiredModules=@("../ProjB", "../ProjC") }' | Out-File "$MockRepo\ProjA\ProjA.psd1"
-        '@{ RequiredModules=@("../ProjD") }'              | Out-File "$MockRepo\ProjB\ProjB.psd1"
-        '@{ RequiredModules=@("../ProjD") }'              | Out-File "$MockRepo\ProjC\ProjC.psd1"
-        '@{ }'                                            | Out-File "$MockRepo\ProjD\ProjD.psd1"
+        '@{ ModuleVersion = "1.0.0"; RequiredModules=@("../ProjB", "../ProjC") }' | Out-File "$MockRepo\ProjA\ProjA.psd1"
+        '@{ ModuleVersion = "1.0.0"; RequiredModules=@("../ProjD") }'              | Out-File "$MockRepo\ProjB\ProjB.psd1"
+        '@{ ModuleVersion = "1.0.0"; RequiredModules=@("../ProjD") }'              | Out-File "$MockRepo\ProjC\ProjC.psd1"
+        '@{ ModuleVersion = "1.0.0" }'                                            | Out-File "$MockRepo\ProjD\ProjD.psd1"
 
         # --- SETUP: Circular Dependency ---
         # ProjLoop1 -> ProjLoop2 -> ProjLoop1
         New-Item -Path "$MockRepo\ProjLoop1" -ItemType Directory | Out-Null
         New-Item -Path "$MockRepo\ProjLoop2" -ItemType Directory | Out-Null
-        '@{ RequiredModules=@("../ProjLoop2") }' | Out-File "$MockRepo\ProjLoop1\ProjLoop1.psd1"
-        '@{ RequiredModules=@("../ProjLoop1") }' | Out-File "$MockRepo\ProjLoop2\ProjLoop2.psd1"
+        '@{ ModuleVersion = "1.0.0"; RequiredModules=@("../ProjLoop2") }' | Out-File "$MockRepo\ProjLoop1\ProjLoop1.psd1"
+        '@{ ModuleVersion = "1.0.0"; RequiredModules=@("../ProjLoop1") }' | Out-File "$MockRepo\ProjLoop2\ProjLoop2.psd1"
     }
 
     It "Should correctly bundle multiple dependencies in one list" {
@@ -72,5 +72,100 @@ Describe "Packer Version Logging Tests" {
 
     AfterAll {
         Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Describe "Packer Policy Tests" {
+    BeforeAll {
+        $TestRoot = New-Item -Path "$env:TEMP\PackerPolicyTests" -ItemType Directory -Force
+        $MockRepo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
+    }
+
+    It "Should throw an error if ModuleVersion is missing" {
+        $NoVer = New-Item -Path "$MockRepo\NoVer" -ItemType Directory -Force
+        '@{ RequiredModules = @() }' | Out-File "$NoVer\NoVer.psd1" # Missing Version
+
+        { & "$PSScriptRoot\Pack.ps1" -ProjectPath $NoVer } | Should -Throw -ExpectedMessage "*VERSION REQUIRED*"
+    }
+
+    It "Should list all unique dependencies when -ListAvailable is used" {
+        # Setup tree: A -> B -> C
+        foreach($p in 'A','B','C') { 
+            $folder = New-Item -Path "$MockRepo\Proj$p" -ItemType Directory -Force
+            $ver = "1.0.$p"
+            $req = if($p -eq 'A'){"@('../ProjB')"} elseif($p -eq 'B'){"@('../ProjC')"} else{"@()"}
+            "@{ ModuleVersion='$ver'; RequiredModules=$req }" | Out-File "$folder\Proj$p.psd1"
+        }
+
+        $output = & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjA" -ListAvailable
+        $output | Should -Contain "ProjA                v1.0.A"
+        $output | Should -Contain "ProjB                v1.0.B"
+        $output | Should -Contain "ProjC                v1.0.C"
+    }
+
+    AfterAll { Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
+Describe "Packer Inventory (-ListAvailable) Tests" {
+    BeforeAll {
+        # Setup temporary workspace
+        $TestRoot = New-Item -Path "$env:TEMP\PackerInventoryTests" -ItemType Directory -Force
+        $MockRepo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
+        $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
+
+        # Create a 3-level deep dependency tree:
+        # App (v1.0.0) -> LibA (v2.1.0) -> LibB (v3.0.5)
+        $App  = New-Item -Path "$MockRepo\App" -ItemType Directory -Force
+        $LibA = New-Item -Path "$MockRepo\LibA" -ItemType Directory -Force
+        $LibB = New-Item -Path "$MockRepo\LibB" -ItemType Directory -Force
+
+        # Manifests
+        '@{ ModuleVersion="1.0.0"; RequiredModules=@("../LibA") }' | Out-File "$App\App.psd1"
+        '@{ ModuleVersion="2.1.0"; RequiredModules=@("../LibB") }' | Out-File "$LibA\LibA.psd1"
+        '@{ ModuleVersion="3.0.5"; RequiredModules=@() }'           | Out-File "$LibB\LibB.psd1"
+        
+        # Dummy script files
+        'Write-Host "App"'  | Out-File "$App\App.ps1"
+        'Write-Host "LibA"' | Out-File "$LibA\LibA.ps1"
+    }
+
+    Context "Dependency Discovery" {
+        It "Should list all unique modules and their versions in the console output" {
+            # Execute with ListAvailable switch
+            $Output = & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir -ListAvailable
+
+            # Verify the discovery header and each module version
+            $Output -join "`n" | Should -Match "--- Dependency Inventory ---"
+            $Output -join "`n" | Should -Match "App\s+v1\.0\.0"
+            $Output -join "`n" | Should -Match "LibA\s+v2\.1\.0"
+            $Output -join "`n" | Should -Match "LibB\s+v3\.0\.5"
+        }
+
+        It "Should NOT create any folders or copy files during a ListAvailable run" {
+            # Ensure the Build directory remains empty
+            $BuildFiles = Get-ChildItem -Path $BuildDir
+            $BuildFiles.Count | Should -Be 0
+            
+            $AppPath = Join-Path $BuildDir "App"
+            Test-Path $AppPath | Should -Be $false
+        }
+    }
+
+    Context "Error Handling" {
+        It "Should still enforce version requirements even in ListAvailable mode" {
+            $Broken = New-Item -Path "$MockRepo\Broken" -ItemType Directory -Force
+            '@{ RequiredModules=@() }' | Out-File "$Broken\Broken.psd1" # Missing ModuleVersion
+
+            { 
+                & "$PSScriptRoot\Pack.ps1" -ProjectPath $Broken -ListAvailable 
+            } | Should -Throw -ExpectedMessage "*VERSION REQUIRED*"
+        }
+    }
+
+    AfterAll {
+        # Cleanup
+        if (Test-Path $TestRoot) { 
+            Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue 
+        }
     }
 }

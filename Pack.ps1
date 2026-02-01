@@ -1,57 +1,87 @@
 param(
     [Parameter(Mandatory)] [string]$ProjectPath,
     [string]$Destination = "$PSScriptRoot\Build",
-    [int]$Limit = 260
+    [int]$Limit = 260,
+    [switch]$ListAvailable
 )
 
 $script:ProcessingStack = New-Object System.Collections.Generic.Stack[string]
+$script:DiscoveredModules = @{} # Track unique modules for -ListAvailable
 
 function Invoke-RecursivePack {
-    param([string]$Src, [string]$Dest)
-
-    $normalizedSrc = (Resolve-Path $Src).Path
+    param([string]$Src, [string]$Dest, [switch]$AuditOnly)
     
+    $normalizedSrc = (Resolve-Path $Src).Path
+    $folderName = Split-Path $normalizedSrc -Leaf
+    
+    # 1. Circularity Check
     if ($script:ProcessingStack.Contains($normalizedSrc)) {
         $chain = ($script:ProcessingStack.ToArray() | ForEach-Object { Split-Path $_ -Leaf }) -join " -> "
-        throw "CIRCULAR DEPENDENCY DETECTED: $chain -> $(Split-Path $normalizedSrc -Leaf)"
+        throw "CIRCULAR DEPENDENCY DETECTED: $chain -> $folderName"
     }
     $script:ProcessingStack.Push($normalizedSrc)
 
     try {
-        if ($Dest.Length -ge $Limit) { throw "Path too long: $Dest" }
-
-        if (Test-Path $Dest) { Remove-Item $Dest -Recurse -Force }
-        New-Item -ItemType Directory -Path $Dest -Force | Out-Null
-
-        # Resolve Manifest early to get Version for logging
-        $srcPsd1 = Get-ChildItem -Path $Src -Filter "*.psd1" | Select-Object -First 1
-        $version = "unknown"
-        if ($srcPsd1) {
-            $manifestData = Import-PowerShellDataFile -Path $srcPsd1.FullName
-            if ($manifestData.ModuleVersion) { $version = $manifestData.ModuleVersion }
+        # 2. Manifest Validation
+        $srcPsd1 = Get-ChildItem -Path $normalizedSrc -Filter "*.psd1" | Select-Object -First 1
+        if (-not $srcPsd1) { throw "MISSING MANIFEST: Project '$folderName' must have a .psd1 file." }
+        
+        $manifestData = Import-PowerShellDataFile -Path $srcPsd1.FullName
+        if (-not $manifestData.ModuleVersion) { 
+            throw "VERSION REQUIRED: .psd1 for '$folderName' must define a 'ModuleVersion'." 
         }
 
-        Write-Output "[FETCH] $(Split-Path $Src -Leaf) (v$version)"
+        # 3. Track for ListAvailable
+        if (-not $script:DiscoveredModules.ContainsKey($folderName)) {
+            $script:DiscoveredModules[$folderName] = $manifestData.ModuleVersion
+        }
 
-        Copy-Item -Path "$Src\*" -Destination $Dest -Recurse -Exclude "Build", "Shared", ".git"
-
-        if ($manifestData -and $manifestData.RequiredModules) {
-            $sharedDir = New-Item -ItemType Directory -Path (Join-Path $Dest "Shared") -Force
+        if (-not $AuditOnly) {
+            if ($Dest.Length -ge $Limit) { throw "Path too long: $Dest" }
+            Write-Output "[FETCH] $folderName (v$($manifestData.ModuleVersion))"
             
+            if (Test-Path $Dest) { Remove-Item $Dest -Recurse -Force }
+            New-Item -ItemType Directory -Path $Dest -Force | Out-Null
+            Copy-Item -Path "$Src\*" -Destination $Dest -Recurse -Exclude "Build", "Shared", ".git"
+        }
+
+        # 4. Recurse
+        if ($manifestData.RequiredModules) {
             foreach ($relPath in $manifestData.RequiredModules) {
                 $depSrc = Resolve-Path (Join-Path $Src $relPath) -ErrorAction Stop
-                $depDest = Join-Path $sharedDir (Split-Path $depSrc -Leaf)
-                Invoke-RecursivePack -Src $depSrc.Path -Dest $depDest
+                if (-not $AuditOnly) {
+                    $depDest = Join-Path $Dest "Shared" | Join-Path -ChildPath (Split-Path $depSrc -Leaf)
+                }
+                
+                $invokeParams = @{
+                    Src  = $depSrc.Path
+                    Dest = $depDest
+                }
+
+                if ($AuditOnly) {
+                    $invokeParams.AuditOnly = $true
+                }
+
+                Invoke-RecursivePack @invokeParams
+                
+                #Invoke-RecursivePack -Src $depSrc.Path -Dest $depDest -AuditOnly $AuditOnly
             }
         }
     }
-    finally {
-        $null = $script:ProcessingStack.Pop()
-    }
+    finally { $null = $script:ProcessingStack.Pop() }
 }
 
-$ProjectName = Split-Path $ProjectPath -Leaf
-$FinalDest = Join-Path $Destination $ProjectName
-Write-Output "--- Starting Build: $ProjectName ---"
-Invoke-RecursivePack -Src $ProjectPath -Dest $FinalDest
-Write-Output "--- Build Complete ---"
+# Execution Logic
+if ($ListAvailable) {
+    Invoke-RecursivePack -Src $ProjectPath -Dest "" -AuditOnly
+    Write-Output "--- Dependency Inventory ---"
+    $script:DiscoveredModules.GetEnumerator() |
+        Sort-Object Name |
+        ForEach-Object {
+            Write-Output "$($_.Key.PadRight(20)) v$($_.Value)"
+        }
+} else {
+    Write-Output "--- Starting Build: $(Split-Path $ProjectPath -Leaf) ---"
+    Invoke-RecursivePack -Src $ProjectPath -Dest (Join-Path $Destination (Split-Path $ProjectPath -Leaf))
+    Write-Output "--- Build Complete ---"
+}
