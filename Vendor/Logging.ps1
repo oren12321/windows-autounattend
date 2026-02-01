@@ -73,3 +73,57 @@ function Add-RotatingLog {
         }
     }
 }
+
+function Get-FormattedLog {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path,
+
+        [string]$Level,
+
+        [string]$Filter, # Universal Wildcard (matches anywhere in the line)
+
+        [switch]$Tail,
+
+        [int]$Last = 0
+    )
+
+    $gcParams = @{ Path = $Path }
+    
+    if ($Tail) { 
+        $gcParams.Wait = $true 
+        if ($Last -gt 0) { 
+            $gcParams.Tail = $Last 
+        } else {
+            $firstLine = $true
+            $gcParams.Tail = 1
+        }
+    }
+
+    Get-Content @gcParams | ForEach-Object {
+        if ($firstLine) { 
+            $firstLine = $false
+            return 
+        }
+
+        # 1. Universal Filter: Check raw line first for performance
+        if ($Filter -and $_ -notlike $Filter) { return }
+
+        $parts = $_ -split '\|'
+        if ($parts.Count -ge 5) {
+            $obj = [PSCustomObject]@{
+                Timestamp = $parts[0].Trim()
+                Level     = $parts[1].Trim()
+                Function  = $parts[2].Trim()
+                Source    = $parts[3].Trim()
+                Message   = ($parts[4..($parts.Count - 1)] -join '|').Trim()
+            }
+
+            # 2. Specific Level Filter (if provided)
+            if (-not $Level -or ($obj.Level -ieq $Level)) {
+                $obj
+            }
+        }
+    }
+}
+
