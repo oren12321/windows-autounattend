@@ -121,7 +121,7 @@ Describe "Full Generator Pipeline Integration Test" {
 
         # --- XML sections embedded ---
         $xml = Get-Content $result.AutounattendPath -Raw
-        Write-Host "$xml"
+
         $xml | Should -Match "RunSynchronous"
         $xml | Should -Match "FirstLogonCommands"
         $xml | Should -Match "Active Setup"
