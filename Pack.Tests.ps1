@@ -42,6 +42,28 @@ Describe "Complex Project Packer Tests" {
             & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjLoop1" -Destination $BuildDir 
         } | Should -Throw -ExpectedMessage "*CIRCULAR DEPENDENCY DETECTED*"
     }
+    
+    It "Should generate a manifest only for the root project" {
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjA" -Destination $BuildDir
+
+        $RootManifest = "$BuildDir\ProjA\ProjA.psd1"
+        $DepManifestB = "$BuildDir\ProjA\Shared\ProjB\ProjB.psd1"
+        $DepManifestC = "$BuildDir\ProjA\Shared\ProjC\ProjC.psd1"
+        $DepManifestD1 = "$BuildDir\ProjA\Shared\ProjB\Shared\ProjD\ProjD.psd1"
+        $DepManifestD2 = "$BuildDir\ProjA\Shared\ProjC\Shared\ProjD\ProjD.psd1"
+
+        Test-Path $RootManifest | Should -Be $true
+        Test-Path $DepManifestB | Should -Be $false
+        Test-Path $DepManifestC | Should -Be $false
+        Test-Path $DepManifestD1 | Should -Be $false
+        Test-Path $DepManifestD2 | Should -Be $false
+    }
+    
+    It "Should name the manifest after the project" {
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjA" -Destination $BuildDir
+
+        Test-Path "$BuildDir\ProjA\ProjA.psd1" | Should -Be $true
+    }
 
     AfterAll {
         Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
@@ -79,6 +101,7 @@ Describe "Packer Policy Tests" {
     BeforeAll {
         $TestRoot = New-Item -Path "$env:TEMP\PackerPolicyTests" -ItemType Directory -Force
         $MockRepo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
+        $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
     }
 
     It "Should throw an error if ModuleVersion is missing" {
@@ -101,6 +124,31 @@ Describe "Packer Policy Tests" {
         $output | Should -Contain "ProjA                v1.0.A"
         $output | Should -Contain "ProjB                v1.0.B"
         $output | Should -Contain "ProjC                v1.0.C"
+    }
+    
+    It "Should include all custom metadata except ModuleVersion and RequiredModules" {
+        $Proj = New-Item -Path "$MockRepo\MetaTest" -ItemType Directory -Force
+'@{
+    ModuleVersion   = "1.0.0"
+    RequiredModules = @()
+    DeploymentPass  = "Specialize"
+    Order           = 5
+    ActiveSetup     = $true
+    Notes           = "Custom metadata"
+}' | Out-File "$Proj\MetaTest.psd1"
+
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath $Proj -Destination $BuildDir
+
+        $ManifestPath = "$BuildDir\MetaTest\MetaTest.psd1"
+        $Manifest = Import-PowerShellDataFile $ManifestPath
+
+        $Manifest.Keys | Should -Contain "DeploymentPass"
+        $Manifest.Keys | Should -Contain "Order"
+        $Manifest.Keys | Should -Contain "ActiveSetup"
+        $Manifest.Keys | Should -Contain "Notes"
+
+        $Manifest.Keys | Should -Not -Contain "ModuleVersion"
+        $Manifest.Keys | Should -Not -Contain "RequiredModules"
     }
 
     AfterAll { Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue }
@@ -160,6 +208,13 @@ Describe "Packer Inventory (-ListAvailable) Tests" {
                 & "$PSScriptRoot\Pack.ps1" -ProjectPath $Broken -ListAvailable 
             } | Should -Throw -ExpectedMessage "*VERSION REQUIRED*"
         }
+    }
+    
+    It "Should NOT generate a manifest during -ListAvailable" {
+        $Output = & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir -ListAvailable
+
+        $ManifestPath = "$BuildDir\App\App.psd1"
+        Test-Path $ManifestPath | Should -Be $false
     }
 
     AfterAll {
