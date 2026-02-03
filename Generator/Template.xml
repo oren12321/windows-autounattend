@@ -1,68 +1,141 @@
 <?xml version="1.0" encoding="utf-8"?>
-<unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
-	<settings pass="offlineServicing"></settings>
-	<settings pass="windowsPE">
-		<component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-			<ImageInstall>
-				<OSImage>
-					<Compact>false</Compact>
-				</OSImage>
-			</ImageInstall>
-			<UserData>
-				<ProductKey>
-					<Key>00000-00000-00000-00000-00000</Key>
-					<WillShowUI>Always</WillShowUI>
-				</ProductKey>
-				<AcceptEula>true</AcceptEula>
-			</UserData>
-			<UseConfigurationSet>false</UseConfigurationSet>
-			<RunSynchronous>
-				<RunSynchronousCommand wcm:action="add">
-					<Order>1</Order>
-					<Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassTPMCheck /t REG_DWORD /d 1 /f</Path>
-				</RunSynchronousCommand>
-				<RunSynchronousCommand wcm:action="add">
-					<Order>2</Order>
-					<Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassSecureBootCheck /t REG_DWORD /d 1 /f</Path>
-				</RunSynchronousCommand>
-				<RunSynchronousCommand wcm:action="add">
-					<Order>3</Order>
-					<Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassRAMCheck /t REG_DWORD /d 1 /f</Path>
-				</RunSynchronousCommand>
-			</RunSynchronous>
-		</component>
-	</settings>
-	<settings pass="generalize"></settings>
-	<settings pass="specialize">
-		<component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-			<RunSynchronous>
-				<RunSynchronousCommand wcm:action="add">
-					<Order>1</Order>
-					<Path>powershell.exe -WindowStyle "Normal" -NoProfile -Command "$xml = [xml]::new(); $xml.Load('C:\Windows\Panther\unattend.xml'); $sb = [scriptblock]::Create( $xml.unattend.Extensions.ExtractScript ); Invoke-Command -ScriptBlock $sb -ArgumentList $xml;"</Path>
-				</RunSynchronousCommand>
+<!--
+  Base template for the generator.
+  The generator replaces:
+    {{SPECIALIZE}}
+    {{FIRSTLOGON}}
+    {{ACTIVESETUP}}
+    {{EMBEDDEDZIP}}
+-->
+
+<unattend xmlns="urn:schemas-microsoft-com:unattend"
+          xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+
+    <!-- Pass: offlineServicing
+         Reserved for injecting drivers or packages into the image.
+         Left empty intentionally. -->
+    <settings pass="offlineServicing"></settings>
+
+    <!-- Pass: windowsPE
+         Runs before the OS image is applied.
+         Good place for TPM/SB/RAM bypass and product key UI behavior. -->
+    <settings pass="windowsPE">
+        <component name="Microsoft-Windows-Setup"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS">
+
+            <ImageInstall>
+                <OSImage>
+                    <Compact>false</Compact>
+                </OSImage>
+            </ImageInstall>
+
+            <UserData>
+                <ProductKey>
+                    <!-- Placeholder key; user can override -->
+                    <Key>00000-00000-00000-00000-00000</Key>
+                    <WillShowUI>Always</WillShowUI>
+                </ProductKey>
+                <AcceptEula>true</AcceptEula>
+            </UserData>
+
+            <UseConfigurationSet>false</UseConfigurationSet>
+
+            <!-- TPM/SecureBoot/RAM bypass -->
+            <RunSynchronous>
+                <RunSynchronousCommand wcm:action="add">
+                    <Order>1</Order>
+                    <Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassTPMCheck /t REG_DWORD /d 1 /f</Path>
+                </RunSynchronousCommand>
+                <RunSynchronousCommand wcm:action="add">
+                    <Order>2</Order>
+                    <Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassSecureBootCheck /t REG_DWORD /d 1 /f</Path>
+                </RunSynchronousCommand>
+                <RunSynchronousCommand wcm:action="add">
+                    <Order>3</Order>
+                    <Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassRAMCheck /t REG_DWORD /d 1 /f</Path>
+                </RunSynchronousCommand>
+            </RunSynchronous>
+
+        </component>
+    </settings>
+
+    <!-- Pass: generalize
+         Runs during sysprep generalization.
+         Not used by this generator. -->
+    <settings pass="generalize"></settings>
+
+    <!-- Pass: specialize
+         Machine-level configuration.
+         This is where the embedded ZIP is extracted. -->
+    <settings pass="specialize">
+        <component name="Microsoft-Windows-Deployment"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS">
+
+            <RunSynchronous>
+
+                <!-- Extract embedded ZIP + files -->
+                <RunSynchronousCommand wcm:action="add">
+                    <Order>1</Order>
+                    <Path>
+                        powershell.exe -WindowStyle "Normal" -NoProfile -Command "
+                            $xml = [xml]::new();
+                            $xml.Load('C:\Windows\Panther\unattend.xml');
+                            $sb = [scriptblock]::Create( $xml.unattend.Extensions.ExtractScript );
+                            Invoke-Command -ScriptBlock $sb -ArgumentList $xml;
+                        "
+                    </Path>
+                </RunSynchronousCommand>
+
+                <!-- Generator inserts specialize-phase commands here -->
                 {{SPECIALIZE}}
-			</RunSynchronous>
-		</component>
-        
-	</settings>
-	<settings pass="auditSystem"></settings>
-	<settings pass="auditUser"></settings>
-	<settings pass="oobeSystem">
-		<component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-			<OOBE>
-				<ProtectYourPC>3</ProtectYourPC>
-				<HideEULAPage>true</HideEULAPage>
-				<HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
-				<HideOnlineAccountScreens>true</HideOnlineAccountScreens>
-			</OOBE>
+
+            </RunSynchronous>
+
+        </component>
+    </settings>
+
+    <!-- auditSystem / auditUser not used -->
+    <settings pass="auditSystem"></settings>
+    <settings pass="auditUser"></settings>
+
+    <!-- Pass: oobeSystem
+         User creation, first logon, Active Setup registration. -->
+    <settings pass="oobeSystem">
+        <component name="Microsoft-Windows-Shell-Setup"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS">
+
+            <OOBE>
+                <ProtectYourPC>3</ProtectYourPC>
+                <HideEULAPage>true</HideEULAPage>
+                <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+                <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+            </OOBE>
+
+            <!-- Generator inserts FirstLogonCommands here -->
             {{FIRSTLOGON}}
+
+            <!-- Generator inserts Active Setup registry entries here -->
             {{ACTIVESETUP}}
-		</component>
-	</settings>
-	<Extensions>
-		<ExtractScript>
+
+        </component>
+    </settings>
+
+    <!-- Custom extension block used by the generator -->
+    <Extensions>
+
+        <!-- PowerShell script that extracts embedded files -->
+        <ExtractScript>
 param(
-        [xml] $Document
+    [xml] $Document
 )
 
 foreach ($file in $Document.unattend.Extensions.File) {
@@ -82,7 +155,7 @@ foreach ($file in $Document.unattend.Extensions.File) {
         continue
     }
 
-    # Text-based extraction
+    # Text-based extraction with encoding selection
     $encoding = switch ($ext) {
         '.ps1' { [System.Text.Encoding]::UTF8 }
         '.xml' { [System.Text.Encoding]::UTF8 }
@@ -95,7 +168,11 @@ foreach ($file in $Document.unattend.Extensions.File) {
     $bytes = $encoding.GetPreamble() + $encoding.GetBytes($file.InnerText.Trim())
     [System.IO.File]::WriteAllBytes($path, $bytes)
 }
-		</ExtractScript>
+        </ExtractScript>
+
+        <!-- Generator inserts embedded ZIP + file entries here -->
         {{EMBEDDEDZIP}}
+
     </Extensions>
+
 </unattend>
