@@ -16,6 +16,4 @@
             Command = "powershell.exe -File .\UserInit.ps1"
         }
     )
-
-    Notes = "Optional metadata for humans"
 }
