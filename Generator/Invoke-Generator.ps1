@@ -103,7 +103,7 @@ function Invoke-Generator {
     #
     # 6. Generate scripts
     #
-    $scripts = Generate-Scripts -Groups $groups -OutputFolder $OutputFolder
+    $scripts = Generate-Scripts -Groups $groups -OutputFolder $BuildRoot
 
     #
     # 7. Compress build

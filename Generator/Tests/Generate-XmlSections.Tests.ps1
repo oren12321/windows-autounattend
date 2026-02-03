@@ -48,7 +48,7 @@ Describe "Generate-XmlSections" {
                                     -FirstLogonScriptPath "C:\FL.ps1" `
                                     -ActiveSetupScriptPath "C:\AS.ps1"
 
-        $xml.ActiveSetupXml | Should -Match "ProjA_10"
+        $xml.ActiveSetupXml | Should -Match "Autounattend"
         $xml.ActiveSetupXml | Should -Match "C:\\AS.ps1"
     }
 }

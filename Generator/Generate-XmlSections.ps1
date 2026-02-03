@@ -52,7 +52,7 @@ function Generate-XmlSections {
     $specializeXml = @"
 <RunSynchronous>
   <RunSynchronousCommand wcm:action="add">
-    <Order>1</Order>
+    <Order>2</Order>
     <Path>powershell.exe -ExecutionPolicy Bypass -File "$BootstrapScriptPath"</Path>
   </RunSynchronousCommand>
 </RunSynchronous>
@@ -74,22 +74,15 @@ function Generate-XmlSections {
     #
     # 3. Active Setup registry entries
     #
-    $activeSetupXml = "<Registry>`r`n"
-
-    $i = 1
-    foreach ($cmd in $Groups.ActiveSetup) {
-        $key = "HKLM\Software\Microsoft\Active Setup\Installed Components\$($cmd.Project)_$($cmd.Order)"
-
-        $activeSetupXml += @"
+    $key = "HKLM\Software\Microsoft\Active Setup\Installed Components\Autounattend"
+    $activeSetupXml = @"
+<Registry>
   <AddReg>
     <Key>$key</Key>
     <Value Name="StubPath" Type="REG_SZ">powershell.exe -ExecutionPolicy Bypass -File "$ActiveSetupScriptPath"</Value>
   </AddReg>
+</Registry>
 "@
-        $i++
-    }
-
-    $activeSetupXml += "</Registry>"
 
     return @{
         SpecializeXml  = $specializeXml
