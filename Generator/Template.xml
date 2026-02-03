@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+	<settings pass="offlineServicing"></settings>
+	<settings pass="windowsPE">
+		<component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+			<ImageInstall>
+				<OSImage>
+					<Compact>false</Compact>
+				</OSImage>
+			</ImageInstall>
+			<UserData>
+				<ProductKey>
+					<Key>00000-00000-00000-00000-00000</Key>
+					<WillShowUI>Always</WillShowUI>
+				</ProductKey>
+				<AcceptEula>true</AcceptEula>
+			</UserData>
+			<UseConfigurationSet>false</UseConfigurationSet>
+			<RunSynchronous>
+				<RunSynchronousCommand wcm:action="add">
+					<Order>1</Order>
+					<Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassTPMCheck /t REG_DWORD /d 1 /f</Path>
+				</RunSynchronousCommand>
+				<RunSynchronousCommand wcm:action="add">
+					<Order>2</Order>
+					<Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassSecureBootCheck /t REG_DWORD /d 1 /f</Path>
+				</RunSynchronousCommand>
+				<RunSynchronousCommand wcm:action="add">
+					<Order>3</Order>
+					<Path>reg.exe add "HKLM\SYSTEM\Setup\LabConfig" /v BypassRAMCheck /t REG_DWORD /d 1 /f</Path>
+				</RunSynchronousCommand>
+			</RunSynchronous>
+		</component>
+	</settings>
+	<settings pass="generalize"></settings>
+	<settings pass="specialize">
+		<component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+			<RunSynchronous>
+				<RunSynchronousCommand wcm:action="add">
+					<Order>1</Order>
+					<Path>powershell.exe -WindowStyle "Normal" -NoProfile -Command "$xml = [xml]::new(); $xml.Load('C:\Windows\Panther\unattend.xml'); $sb = [scriptblock]::Create( $xml.unattend.Extensions.ExtractScript ); Invoke-Command -ScriptBlock $sb -ArgumentList $xml;"</Path>
+				</RunSynchronousCommand>
+                {{SPECIALIZE}}
+			</RunSynchronous>
+		</component>
+        
+	</settings>
+	<settings pass="auditSystem"></settings>
+	<settings pass="auditUser"></settings>
+	<settings pass="oobeSystem">
+		<component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+			<OOBE>
+				<ProtectYourPC>3</ProtectYourPC>
+				<HideEULAPage>true</HideEULAPage>
+				<HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+				<HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+			</OOBE>
+            {{FIRSTLOGON}}
+            {{ACTIVESETUP}}
+		</component>
+	</settings>
+	<Extensions>
+		<ExtractScript>
+param(
+        [xml] $Document
+)
+
+foreach ($file in $Document.unattend.Extensions.File) {
+    $path = [System.Environment]::ExpandEnvironmentVariables($file.GetAttribute('path'))
+    $ext  = [System.IO.Path]::GetExtension($path).ToLower()
+
+    # Ensure parent directory exists
+    $parent = Split-Path $path -Parent
+    if ($parent) {
+        mkdir -Path $parent -ErrorAction SilentlyContinue | Out-Null
+    }
+
+    if ($ext -in '.zip', '.exe', '.dll', '.msi') {
+        # Binary-safe extraction
+        $bytes = [Convert]::FromBase64String($file.InnerText.Trim())
+        [System.IO.File]::WriteAllBytes($path, $bytes)
+        continue
+    }
+
+    # Text-based extraction
+    $encoding = switch ($ext) {
+        '.ps1' { [System.Text.Encoding]::UTF8 }
+        '.xml' { [System.Text.Encoding]::UTF8 }
+        '.reg' { [System.Text.UnicodeEncoding]::new($false, $true) }
+        '.vbs' { [System.Text.UnicodeEncoding]::new($false, $true) }
+        '.js'  { [System.Text.UnicodeEncoding]::new($false, $true) }
+        default { [System.Text.Encoding]::Default }
+    }
+
+    $bytes = $encoding.GetPreamble() + $encoding.GetBytes($file.InnerText.Trim())
+    [System.IO.File]::WriteAllBytes($path, $bytes)
+}
+		</ExtractScript>
+        {{EMBEDDEDZIP}}
+    </Extensions>
+</unattend>
