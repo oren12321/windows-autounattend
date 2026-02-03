@@ -1,5 +1,10 @@
 function Write-Timestamped {
     param([string]$Message)
+
+    if (-not $Message) {
+        return
+    }
+
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     Write-Information "$timestamp | $Message"
 }
@@ -10,9 +15,61 @@ function Format-Line {
         [string]$Message
     )
 
+    # Normalize level
+    $normalizedLevel = $Level.ToUpper()
+
     # Caller info
     $inv = Get-PSCallStack | Select-Object -Skip 1 -First 1
+    $scriptName = $null
 
+    if ($inv.ScriptName) {
+        $scriptName = (Split-Path $inv.ScriptName -Leaf).Split('.')[0]
+    }
+
+    # Build per-file filter variable name
+    $fileFilterVar = if ($scriptName) { "${scriptName}_LevelFilter" } else { $null }
+
+    # 1. Try per-file filter (search all scopes)
+    $filter = $null
+    if ($fileFilterVar) {
+        try {
+            $filter = (Get-Variable -Name $fileFilterVar -ErrorAction Stop).Value
+        } catch { }
+    }
+
+    # 2. If not found, try global LevelFilter
+    if ($null -eq $filter) {
+        try {
+            $filter = (Get-Variable -Name LevelFilter -ErrorAction Stop).Value
+        } catch { }
+    }
+
+    # 3. Normalize filter into:
+    #    $null → no filter (print everything)
+    #    @()   → empty filter (print nothing)
+    #    @(...) → list of allowed levels
+    if ($null -eq $filter) {
+        $effectiveFilter = $null
+    }
+    elseif ($filter -is [System.Collections.IList]) {
+        # Already a list/array (including empty)
+        $effectiveFilter = @($filter)
+    }
+    else {
+        # Single value → wrap it
+        $effectiveFilter = @($filter)
+    }
+
+    # 4. Empty array → block all logs
+    if ($effectiveFilter -is [System.Collections.IList] -and $effectiveFilter.Count -eq 0) {
+        return $null
+    }
+
+    # 5. If we have a filter and this level is not allowed → skip
+    if ($effectiveFilter -is [System.Collections.IList] -and $effectiveFilter -notcontains $normalizedLevel) {
+        return $null
+    }
+    
     # Function name
     $func = if ($inv.FunctionName -and $inv.FunctionName -ne '<ScriptBlock>') {
         $inv.FunctionName
@@ -20,7 +77,7 @@ function Format-Line {
         '<prompt>'
     }
 
-    # File name + line number
+    # File + line info
     if ($inv.ScriptName) {
         $file = Split-Path $inv.ScriptName -Leaf
         $line = $inv.ScriptLineNumber
@@ -30,7 +87,7 @@ function Format-Line {
     }
 
     # Padding
-    $levelPad = $Level.ToUpper().PadRight(5)
+    $levelPad = $normalizedLevel.PadRight(5)
     $funcPad  = $func.PadRight(20)
     $filePad  = $fileInfo.PadRight(25)
 
