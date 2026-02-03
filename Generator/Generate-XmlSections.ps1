@@ -1,3 +1,5 @@
+. "$PSScriptRoot\..\Vendor\Logging.ps1"
+
 <#
 .SYNOPSIS
     Generates XML fragments for autounattend.xml.
@@ -46,9 +48,12 @@ function Generate-XmlSections {
         [string] $ActiveSetupScriptPath
     )
 
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Generating XML sections for unattend template")
+
     #
     # 1. Specialize → RunSynchronous
     #
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Building Specialize XML section using bootstrap script '$BootstrapScriptPath'")
     $specializeXml = @"
 <RunSynchronous>
   <RunSynchronousCommand wcm:action="add">
@@ -61,6 +66,7 @@ function Generate-XmlSections {
     #
     # 2. FirstLogonCommands
     #
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Building FirstLogon XML section using script '$FirstLogonScriptPath'")
     $firstLogonXml = @"
 <FirstLogonCommands>
   <SynchronousCommand wcm:action="add">
@@ -74,6 +80,7 @@ function Generate-XmlSections {
     #
     # 3. Active Setup registry entries
     #
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Building Active Setup XML section using script '$ActiveSetupScriptPath'")
     $key = "HKLM\Software\Microsoft\Active Setup\Installed Components\Autounattend"
     $activeSetupXml = @"
 <Registry>
@@ -83,6 +90,8 @@ function Generate-XmlSections {
   </AddReg>
 </Registry>
 "@
+
+    Write-Timestamped (Format-Line -Level "INFO" -Message "XML section generation complete")
 
     return @{
         SpecializeXml  = $specializeXml

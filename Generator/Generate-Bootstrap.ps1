@@ -1,3 +1,5 @@
+. "$PSScriptRoot\..\Vendor\Logging.ps1"
+
 <#
 .SYNOPSIS
     Generates the Specialize-phase bootstrap script.
@@ -47,12 +49,18 @@ function Generate-Bootstrap {
         [string] $SpecializeScriptPath
     )
 
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Generating bootstrap script in '$OutputFolder'")
+
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Ensuring output folder exists")
     if (-not (Test-Path $OutputFolder)) {
         New-Item -ItemType Directory -Path $OutputFolder | Out-Null
+        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Created output folder '$OutputFolder'")
     }
 
     $bootstrapPath = Join-Path $OutputFolder "Bootstrap.ps1"
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Bootstrap script path resolved to '$bootstrapPath'")
 
+    Write-Timestamped (Format-Line -Level "TRACE" -Message "Preparing bootstrap script content")
     $content = @"
 # Auto-generated bootstrap script
 New-Item -ItemType Directory -Path "$WorkspacePath" -Force | Out-Null
@@ -60,7 +68,10 @@ Expand-Archive -Path "$ZipPath" -DestinationPath "$WorkspacePath" -Force
 & "$SpecializeScriptPath"
 "@
 
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Writing bootstrap script to '$bootstrapPath'")
     $content | Set-Content -Path $bootstrapPath -Encoding UTF8
+
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Bootstrap script generated successfully")
 
     return $bootstrapPath
 }

@@ -1,3 +1,5 @@
+. "$PSScriptRoot\..\Vendor\Logging.ps1"
+
 <#
 .SYNOPSIS
     Scans a packed Build folder and discovers all valid project directories.
@@ -44,28 +46,45 @@ function Discover-Projects {
         [string] $BuildRoot
     )
 
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Discovering projects in build root '$BuildRoot'")
+
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Checking if build root exists")
     if (-not (Test-Path $BuildRoot)) {
         throw "Build root '$BuildRoot' does not exist."
     }
 
     $projects = @()
 
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Scanning subdirectories under '$BuildRoot'")
     Get-ChildItem -Path $BuildRoot -Directory | ForEach-Object {
         $folder = $_
+        Write-Timestamped (Format-Line -Level "TRACE" -Message "Inspecting folder '$($folder.Name)'")
 
         # Skip Shared folder
-        if ($folder.Name -eq "Shared") { return }
+        if ($folder.Name -eq "Shared") {
+            Write-Timestamped (Format-Line -Level "TRACE" -Message "Skipping folder 'Shared'")
+            return
+        }
 
         # Find manifest files
         $manifests = Get-ChildItem -Path $folder.FullName -Filter "*.psd1"
+        Write-Timestamped (Format-Line -Level "TRACE" -Message "Found $($manifests.Count) manifest file(s) in '$($folder.Name)'")
 
         # Must contain exactly one manifest
-        if ($manifests.Count -ne 1) { return }
+        if ($manifests.Count -ne 1) {
+            Write-Timestamped (Format-Line -Level "TRACE" -Message "Folder '$($folder.Name)' does not contain exactly one manifest. Skipping")
+            return
+        }
 
         $manifest = $manifests[0]
 
         # Manifest name must match folder name
-        if ($manifest.BaseName -ne $folder.Name) { return }
+        if ($manifest.BaseName -ne $folder.Name) {
+            Write-Timestamped (Format-Line -Level "TRACE" -Message "Manifest '$($manifest.Name)' does not match folder name '$($folder.Name)'. Skipping")
+            return
+        }
+
+        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Valid project discovered: '$($folder.Name)'")
 
         $projects += @{
             Name         = $folder.Name
@@ -78,5 +97,6 @@ function Discover-Projects {
         throw "No valid projects found in '$BuildRoot'."
     }
 
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Project discovery complete. Total projects found: $($projects.Count)")
     return $projects
 }

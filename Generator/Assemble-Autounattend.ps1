@@ -1,3 +1,5 @@
+. "$PSScriptRoot\..\Vendor\Logging.ps1"
+
 <#
 .SYNOPSIS
     Assembles the final autounattend.xml file.
@@ -53,18 +55,32 @@ function Assemble-Autounattend {
         [string] $EmbeddedZipXml
     )
 
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Assembling autounattend.xml using template '$TemplatePath'")
+
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Checking if template file exists")
     if (-not (Test-Path $TemplatePath)) {
         throw "Template file '$TemplatePath' does not exist."
     }
 
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Loading template content")
     $xml = Get-Content -Path $TemplatePath -Raw
 
-    $xml = $xml.Replace("{{SPECIALIZE}}",  $XmlSections.SpecializeXml)
-    $xml = $xml.Replace("{{FIRSTLOGON}}",  $XmlSections.FirstLogonXml)
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Injecting Specialize XML section")
+    $xml = $xml.Replace("{{SPECIALIZE}}", $XmlSections.SpecializeXml)
+
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Injecting FirstLogon XML section")
+    $xml = $xml.Replace("{{FIRSTLOGON}}", $XmlSections.FirstLogonXml)
+
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Injecting ActiveSetup XML section")
     $xml = $xml.Replace("{{ACTIVESETUP}}", $XmlSections.ActiveSetupXml)
+
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Embedding ZIP payload XML")
     $xml = $xml.Replace("{{EMBEDDEDZIP}}", $EmbeddedZipXml)
 
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Writing final autounattend.xml to '$OutputPath'")
     $xml | Set-Content -Path $OutputPath -Encoding UTF8
+
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Autounattend assembly complete")
 
     return $xml
 }

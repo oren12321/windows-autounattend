@@ -1,3 +1,5 @@
+. "$PSScriptRoot\..\Vendor\Logging.ps1"
+
 . "$PSScriptRoot\Discover-Projects.ps1"
 . "$PSScriptRoot\Load-Manifest.ps1"
 . "$PSScriptRoot\Validate-Manifest.ps1"
@@ -67,59 +69,76 @@ function Invoke-Generator {
         [string] $WorkspacePath
     )
 
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Starting autounattend generation pipeline")
+
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Ensuring output folder exists")
     if (-not (Test-Path $OutputFolder)) {
         New-Item -ItemType Directory -Path $OutputFolder | Out-Null
+        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Created output folder '$OutputFolder'")
     }
 
     #
     # 1. Discover projects
     #
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Stage 1: Discovering projects")
     $projects = Discover-Projects -BuildRoot $BuildRoot
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Discovered $($projects.Count) project(s)")
 
     #
     # 2. Load manifests
     #
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Stage 2: Loading project manifests")
     foreach ($proj in $projects) {
+        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Loading manifest for project '$($proj.Name)'")
         $proj.Manifest = Load-Manifest -ManifestPath $proj.ManifestPath
     }
 
     #
     # 3. Validate manifests
     #
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Stage 3: Validating manifests")
     foreach ($proj in $projects) {
+        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Validating manifest for project '$($proj.Name)'")
         Validate-Manifest -Manifest $proj.Manifest -ProjectName $proj.Name
     }
 
     #
     # 4. Normalize commands
     #
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Stage 4: Normalizing commands")
     $normalized = Normalize-Commands -Projects $projects
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Normalized $($normalized.Count) command(s)")
 
     #
     # 5. Group commands
     #
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Stage 5: Grouping commands by pass")
     $groups = Group-Commands -NormalizedCommands $normalized
 
     #
     # 6. Generate scripts
     #
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Stage 6: Generating scripts")
     $scripts = Generate-Scripts -Groups $groups -OutputFolder $BuildRoot
 
     #
     # 7. Compress build
     #
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Stage 7: Compressing build workspace")
     $zipPath = Join-Path $OutputFolder "Build.zip"
     Compress-Build -BuildRoot $BuildRoot -OutputZipPath $zipPath
 
     #
     # 8. Embed ZIP
     #
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Stage 8: Embedding ZIP into XML")
     $embeddedZipXml = Embed-Zip -ZipPath $zipPath `
                                 -DestinationPath "C:\Windows\Setup\Scripts\Build.zip"
 
     #
     # 9. Generate XML sections
     #
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Stage 9: Generating XML sections")
     $xmlSections = Generate-XmlSections `
         -Groups $groups `
         -BootstrapScriptPath "C:\Windows\Setup\Scripts\Bootstrap.ps1" `
@@ -129,6 +148,7 @@ function Invoke-Generator {
     #
     # 10. Assemble autounattend.xml
     #
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Stage 10: Assembling autounattend.xml")
     $autounattendPath = Join-Path $OutputFolder "autounattend.xml"
 
     Assemble-Autounattend `
@@ -137,9 +157,8 @@ function Invoke-Generator {
         -XmlSections $xmlSections `
         -EmbeddedZipXml $embeddedZipXml | Out-Null
 
-    #
-    # Return everything
-    #
+    Write-Timestamped (Format-Line -Level "INFO" -Message "Pipeline completed successfully")
+
     return @{
         Projects         = $projects
         Normalized       = $normalized
