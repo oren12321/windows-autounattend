@@ -8,8 +8,7 @@
     WORKSPACE
 -->
 
-<unattend xmlns="urn:schemas-microsoft-com:unattend"
-          xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+<unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
 
     <!-- Pass: offlineServicing
          Reserved for injecting drivers or packages into the image.
@@ -20,11 +19,7 @@
          Runs before the OS image is applied.
          Good place for TPM/SB/RAM bypass and product key UI behavior. -->
     <settings pass="windowsPE">
-        <component name="Microsoft-Windows-Setup"
-                   processorArchitecture="amd64"
-                   publicKeyToken="31bf3856ad364e35"
-                   language="neutral"
-                   versionScope="nonSxS">
+        <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
 
             <ImageInstall>
                 <OSImage>
@@ -71,28 +66,20 @@
          Machine-level configuration.
          This is where the embedded ZIP is extracted. -->
     <settings pass="specialize">
-        <component name="Microsoft-Windows-Deployment"
-                   processorArchitecture="amd64"
-                   publicKeyToken="31bf3856ad364e35"
-                   language="neutral"
-                   versionScope="nonSxS">
+        <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
 
             <RunSynchronous>
 
                 <!-- Extract embedded ZIP + files -->
                 <RunSynchronousCommand wcm:action="add">
                     <Order>1</Order>
-                    <Path>
-                        powershell.exe -WindowStyle "Normal" -NoProfile -Command "$xml = [xml]::new(); $xml.Load('C:\Windows\Panther\unattend.xml'); $sb = [scriptblock]::Create( $xml.unattend.Extensions.ExtractScript ); Invoke-Command -ScriptBlock $sb -ArgumentList $xml;"
-                    </Path>
+                    <Path>powershell.exe -WindowStyle "Normal" -NoProfile -Command "$xml = [xml]::new(); $xml.Load('C:\Windows\Panther\unattend.xml'); $sb = [scriptblock]::Create( $xml.unattend.Extensions.ExtractScript ); Invoke-Command -ScriptBlock $sb -ArgumentList $xml;"</Path>
                 </RunSynchronousCommand>
 
                 <!-- Bootstrap the embedded ZIP + create WORKSPACE -->
                 <RunSynchronousCommand wcm:action="add">
                     <Order>2</Order>
-                    <Path>
-                        powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\Bootstrap.ps1"
-                    </Path>
+                    <Path>powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\Bootstrap.ps1"</Path>
                 </RunSynchronousCommand>
 
                 <!-- Generator inserts specialize-phase commands here -->
@@ -101,9 +88,7 @@
                 <!-- Configure Active Setup -->
                 <RunSynchronousCommand wcm:action="add">
                     <Order>4</Order>
-                    <Path>
-                        powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\ActiveSetup.Config.ps1"
-                    </Path>
+                    <Path>powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\ActiveSetup.Config.ps1"</Path>
                 </RunSynchronousCommand>
 
             </RunSynchronous>
@@ -118,11 +103,7 @@
     <!-- Pass: oobeSystem
          User creation, first logon, Active Setup registration. -->
     <settings pass="oobeSystem">
-        <component name="Microsoft-Windows-Shell-Setup"
-                   processorArchitecture="amd64"
-                   publicKeyToken="31bf3856ad364e35"
-                   language="neutral"
-                   versionScope="nonSxS">
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
 
             <OOBE>
                 <ProtectYourPC>3</ProtectYourPC>
