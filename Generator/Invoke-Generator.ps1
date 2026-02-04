@@ -142,8 +142,7 @@ function Invoke-Generator {
     $xmlSections = Generate-XmlSections `
         -WorkspacePath $WorkspacePath `
         -SpecializeScriptPath "$WorkspacePath\Specialize.ps1" `
-        -FirstLogonScriptPath "$WorkspacePath\FirstLogon.ps1" `
-        -ActiveSetupScriptPath "$WorkspacePath\ActiveSetup.ps1"
+        -FirstLogonScriptPath "$WorkspacePath\FirstLogon.ps1"
 
     #
     # 10. Assemble autounattend.xml

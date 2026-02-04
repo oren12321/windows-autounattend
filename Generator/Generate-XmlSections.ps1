@@ -42,10 +42,7 @@ function Generate-XmlSections {
         [string] $SpecializeScriptPath,
 
         [Parameter(Mandatory)]
-        [string] $FirstLogonScriptPath,
-
-        [Parameter(Mandatory)]
-        [string] $ActiveSetupScriptPath
+        [string] $FirstLogonScriptPath
     )
 
     Write-Timestamped (Format-Line -Level "INFO" -Message "Generating XML sections for unattend template")
@@ -75,38 +72,11 @@ function Generate-XmlSections {
 </FirstLogonCommands>
 "@
 
-    #
-    # 3. Active Setup registry entries
-    #
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Building Active Setup XML section using script '$ActiveSetupScriptPath'")
-    $key = "HKLM\Software\Microsoft\Active Setup\Installed Components\Autounattend"
-    $activeSetupXml = @"
-<Registry>
-  <AddReg>
-    <Key>HKLM\Software\Microsoft\Active Setup\Installed Components\Autounattend</Key>
-    <Value Name="Version" Type="REG_SZ">1,0,0,0</Value>
-  </AddReg>
-  <AddReg>
-    <Key>$key</Key>
-    <Value Name="StubPath" Type="REG_SZ">powershell.exe -ExecutionPolicy Bypass -File "$ActiveSetupScriptPath"</Value>
-  </AddReg>
-  <AddReg>
-    <Key>HKLM\Software\Microsoft\Active Setup\Installed Components\Autounattend</Key>
-    <Value Name="Locale" Type="REG_SZ">*</Value>
-  </AddReg>
-  <AddReg>
-    <Key>HKLM\Software\Microsoft\Active Setup\Installed Components\Autounattend</Key>
-    <Value Name="IsInstalled" Type="REG_DWORD">1</Value>
-  </AddReg>
-</Registry>
-"@
-
     Write-Timestamped (Format-Line -Level "INFO" -Message "XML section generation complete")
 
     return @{
         WorkspacePath  = $WorkspacePath
         SpecializeXml  = $specializeXml
         FirstLogonXml  = $firstLogonXml
-        ActiveSetupXml = $activeSetupXml
     }
 }

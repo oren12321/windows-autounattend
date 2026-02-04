@@ -71,9 +71,6 @@ function Assemble-Autounattend {
     Write-Timestamped (Format-Line -Level "DEBUG" -Message "Injecting FirstLogon XML section")
     $xml = $xml.Replace("{{FIRSTLOGON}}", $XmlSections.FirstLogonXml)
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Injecting ActiveSetup XML section")
-    $xml = $xml.Replace("{{ACTIVESETUP}}", $XmlSections.ActiveSetupXml)
-
     Write-Timestamped (Format-Line -Level "DEBUG" -Message "Embedding ZIP payload XML")
     $xml = $xml.Replace("{{EMBEDDEDZIP}}", $EmbeddedZipXml)
     
@@ -81,7 +78,8 @@ function Assemble-Autounattend {
     $xml = $xml.Replace("{{WORKSPACE}}", $XmlSections.WorkspacePath)
 
     Write-Timestamped (Format-Line -Level "DEBUG" -Message "Writing final autounattend.xml to '$OutputPath'")
-    $xml | Set-Content -Path $OutputPath -Encoding UTF8
+    $Utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllLines($OutputPath, $xml, $Utf8NoBom)
 
     Write-Timestamped (Format-Line -Level "INFO" -Message "Autounattend assembly complete")
 
