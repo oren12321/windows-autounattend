@@ -2,10 +2,10 @@
 <!--
   Base template for the generator.
   The generator replaces:
-    {{SPECIALIZE}}
-    {{FIRSTLOGON}}
-    {{ACTIVESETUP}}
-    {{EMBEDDEDZIP}}
+    SPECIALIZE
+    FIRSTLOGON
+    ACTIVESETUP
+    EMBEDDEDZIP
 -->
 
 <unattend xmlns="urn:schemas-microsoft-com:unattend"
