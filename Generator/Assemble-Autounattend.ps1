@@ -76,6 +76,9 @@ function Assemble-Autounattend {
 
     Write-Timestamped (Format-Line -Level "DEBUG" -Message "Embedding ZIP payload XML")
     $xml = $xml.Replace("{{EMBEDDEDZIP}}", $EmbeddedZipXml)
+    
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Injecting workspace folder for bootstrap script")
+    $xml = $xml.Replace("{{WORKSPACE}}", $XmlSections.WorkspacePath)
 
     Write-Timestamped (Format-Line -Level "DEBUG" -Message "Writing final autounattend.xml to '$OutputPath'")
     $xml | Set-Content -Path $OutputPath -Encoding UTF8

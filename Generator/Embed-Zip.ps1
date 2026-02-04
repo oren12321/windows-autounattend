@@ -52,9 +52,8 @@ function Embed-Zip {
 
     Write-Timestamped (Format-Line -Level "DEBUG" -Message "Building XML wrapper for embedded ZIP targeting '$DestinationPath'")
     $xml = @"
-<File>
-  <Path>$DestinationPath</Path>
-  <Content><![CDATA[$base64]]></Content>
+<File path="$DestinationPath">
+<![CDATA[$base64]]>
 </File>
 "@
 

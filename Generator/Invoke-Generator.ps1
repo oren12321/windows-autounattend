@@ -140,10 +140,10 @@ function Invoke-Generator {
     #
     Write-Timestamped (Format-Line -Level "INFO" -Message "Stage 9: Generating XML sections")
     $xmlSections = Generate-XmlSections `
-        -Groups $groups `
-        -BootstrapScriptPath "C:\Windows\Setup\Scripts\Bootstrap.ps1" `
-        -FirstLogonScriptPath "C:\Windows\Setup\Scripts\FirstLogon.ps1" `
-        -ActiveSetupScriptPath "C:\Windows\Setup\Scripts\ActiveSetup.ps1"
+        -WorkspacePath $WorkspacePath `
+        -SpecializeScriptPath "$WorkspacePath\Specialize.ps1" `
+        -FirstLogonScriptPath "$WorkspacePath\FirstLogon.ps1" `
+        -ActiveSetupScriptPath "$WorkspacePath\ActiveSetup.ps1"
 
     #
     # 10. Assemble autounattend.xml

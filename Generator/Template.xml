@@ -6,6 +6,7 @@
     FIRSTLOGON
     ACTIVESETUP
     EMBEDDEDZIP
+    WORKSPACE
 -->
 
 <unattend xmlns="urn:schemas-microsoft-com:unattend"
@@ -83,12 +84,15 @@
                 <RunSynchronousCommand wcm:action="add">
                     <Order>1</Order>
                     <Path>
-                        powershell.exe -WindowStyle "Normal" -NoProfile -Command "
-                            $xml = [xml]::new();
-                            $xml.Load('C:\Windows\Panther\unattend.xml');
-                            $sb = [scriptblock]::Create( $xml.unattend.Extensions.ExtractScript );
-                            Invoke-Command -ScriptBlock $sb -ArgumentList $xml;
-                        "
+                        powershell.exe -WindowStyle "Normal" -NoProfile -Command "$xml = [xml]::new(); $xml.Load('C:\Windows\Panther\unattend.xml'); $sb = [scriptblock]::Create( $xml.unattend.Extensions.ExtractScript ); Invoke-Command -ScriptBlock $sb -ArgumentList $xml;"
+                    </Path>
+                </RunSynchronousCommand>
+
+                <!-- Bootstrap the embedded ZIP + create WORKSPACE -->
+                <RunSynchronousCommand wcm:action="add">
+                    <Order>2</Order>
+                    <Path>
+                        powershell.exe -ExecutionPolicy Bypass -File "C:\Windows\Setup\Scripts\Bootstrap.ps1"
                     </Path>
                 </RunSynchronousCommand>
 
@@ -96,6 +100,9 @@
                 {{SPECIALIZE}}
 
             </RunSynchronous>
+            
+            <!-- Generator inserts Active Setup registry entries here -->
+            {{ACTIVESETUP}}
 
         </component>
     </settings>
@@ -122,9 +129,6 @@
 
             <!-- Generator inserts FirstLogonCommands here -->
             {{FIRSTLOGON}}
-
-            <!-- Generator inserts Active Setup registry entries here -->
-            {{ACTIVESETUP}}
 
         </component>
     </settings>
@@ -169,7 +173,22 @@ foreach ($file in $Document.unattend.Extensions.File) {
     [System.IO.File]::WriteAllBytes($path, $bytes)
 }
         </ExtractScript>
+                
+        <!-- Generator inserts WORKSPACE folder here -->
+        <File path="C:\Windows\Setup\Scripts\Bootstrap.ps1">
+<![CDATA[
+& {
+$workspace = "{{WORKSPACE}}"
 
+if (-not (Test-Path $workspace)) {
+    New-Item -Path $workspace -ItemType Directory -Force
+}
+
+Expand-Archive -Path "C:\Windows\Setup\Scripts\Build.zip" -DestinationPath $workspace -Force
+} *>> "C:\Windows\Setup\Scripts\Bootstrap.log"
+]]>
+        </File>
+        
         <!-- Generator inserts embedded ZIP + file entries here -->
         {{EMBEDDEDZIP}}
 

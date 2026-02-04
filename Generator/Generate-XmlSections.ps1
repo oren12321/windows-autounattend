@@ -36,10 +36,10 @@
 function Generate-XmlSections {
     param(
         [Parameter(Mandatory)]
-        [hashtable] $Groups,
-
+        [string] $WorkspacePath,
+    
         [Parameter(Mandatory)]
-        [string] $BootstrapScriptPath,
+        [string] $SpecializeScriptPath,
 
         [Parameter(Mandatory)]
         [string] $FirstLogonScriptPath,
@@ -53,14 +53,12 @@ function Generate-XmlSections {
     #
     # 1. Specialize → RunSynchronous
     #
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Building Specialize XML section using bootstrap script '$BootstrapScriptPath'")
+    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Building Specialize XML section using specialize script '$SpecializeScriptPath'")
     $specializeXml = @"
-<RunSynchronous>
-  <RunSynchronousCommand wcm:action="add">
-    <Order>2</Order>
-    <Path>powershell.exe -ExecutionPolicy Bypass -File "$BootstrapScriptPath"</Path>
-  </RunSynchronousCommand>
-</RunSynchronous>
+<RunSynchronousCommand wcm:action="add">
+<Order>3</Order>
+<Path>powershell.exe -ExecutionPolicy Bypass -File "$SpecializeScriptPath"</Path>
+</RunSynchronousCommand>
 "@
 
     #
@@ -85,8 +83,20 @@ function Generate-XmlSections {
     $activeSetupXml = @"
 <Registry>
   <AddReg>
+    <Key>HKLM\Software\Microsoft\Active Setup\Installed Components\Autounattend</Key>
+    <Value Name="Version" Type="REG_SZ">1,0,0,0</Value>
+  </AddReg>
+  <AddReg>
     <Key>$key</Key>
     <Value Name="StubPath" Type="REG_SZ">powershell.exe -ExecutionPolicy Bypass -File "$ActiveSetupScriptPath"</Value>
+  </AddReg>
+  <AddReg>
+    <Key>HKLM\Software\Microsoft\Active Setup\Installed Components\Autounattend</Key>
+    <Value Name="Locale" Type="REG_SZ">*</Value>
+  </AddReg>
+  <AddReg>
+    <Key>HKLM\Software\Microsoft\Active Setup\Installed Components\Autounattend</Key>
+    <Value Name="IsInstalled" Type="REG_DWORD">1</Value>
   </AddReg>
 </Registry>
 "@
@@ -94,6 +104,7 @@ function Generate-XmlSections {
     Write-Timestamped (Format-Line -Level "INFO" -Message "XML section generation complete")
 
     return @{
+        WorkspacePath  = $WorkspacePath
         SpecializeXml  = $specializeXml
         FirstLogonXml  = $firstLogonXml
         ActiveSetupXml = $activeSetupXml

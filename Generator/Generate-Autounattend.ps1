@@ -1,5 +1,3 @@
-. "$PSScriptRoot\..\Vendor\Logging.ps1"
-
 param(
     [string]$BuildRoot = "C:\Build",
     [string]$TemplatePath = "$PSScriptRoot\Template.xml",
@@ -7,6 +5,7 @@ param(
     [string]$WorkspacePath = "C:\Windows\Setup\Scripts"
 )
 
+. "$PSScriptRoot\..\Vendor\Logging.ps1"
 . "$PSScriptRoot\Invoke-Generator.ps1"
 
 Write-Timestamped (Format-Line -Level "INFO" -Message "Starting generator entry point")
