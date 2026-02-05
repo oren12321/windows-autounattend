@@ -43,22 +43,6 @@ Describe "Complex Project Packer Tests" {
         } | Should -Throw -ExpectedMessage "*CIRCULAR DEPENDENCY DETECTED*"
     }
     
-    It "Should generate a manifest only for the root project" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjA" -Destination $BuildDir
-
-        $RootManifest = "$BuildDir\ProjA\ProjA.psd1"
-        $DepManifestB = "$BuildDir\ProjA\Shared\ProjB\ProjB.psd1"
-        $DepManifestC = "$BuildDir\ProjA\Shared\ProjC\ProjC.psd1"
-        $DepManifestD1 = "$BuildDir\ProjA\Shared\ProjB\Shared\ProjD\ProjD.psd1"
-        $DepManifestD2 = "$BuildDir\ProjA\Shared\ProjC\Shared\ProjD\ProjD.psd1"
-
-        Test-Path $RootManifest | Should -Be $true
-        Test-Path $DepManifestB | Should -Be $false
-        Test-Path $DepManifestC | Should -Be $false
-        Test-Path $DepManifestD1 | Should -Be $false
-        Test-Path $DepManifestD2 | Should -Be $false
-    }
-    
     It "Should name the manifest after the project" {
         & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjA" -Destination $BuildDir
 

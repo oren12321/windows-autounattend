@@ -9,7 +9,7 @@ $script:ProcessingStack = New-Object System.Collections.Generic.Stack[string]
 $script:DiscoveredModules = @{} # Track unique modules for -ListAvailable
 
 function Invoke-RecursivePack {
-    param([string]$Src, [string]$Dest, [switch]$AuditOnly, [switch]$IsRoot)
+    param([string]$Src, [string]$Dest, [switch]$AuditOnly)
     
     $normalizedSrc = (Resolve-Path $Src).Path
     $folderName = Split-Path $normalizedSrc -Leaf
@@ -42,11 +42,11 @@ function Invoke-RecursivePack {
             
             if (Test-Path $Dest) { Remove-Item $Dest -Recurse -Force }
             New-Item -ItemType Directory -Path $Dest -Force | Out-Null
-            Copy-Item -Path "$Src\*" -Destination $Dest -Recurse -Exclude "Build", "Shared", ".git", "$folderName.psd1"
+            Copy-Item -Path "$Src\*" -Destination $Dest -Recurse -Exclude "Build", "Shared", ".git"
         }
         
         # Generate deployment manifest only for the root project
-        if ($IsRoot -and -not $AuditOnly) {
+        if (-not $AuditOnly) {
             $manifestPath = Join-Path $Dest "$folderName.psd1"
 
             $raw = Get-Content $srcPsd1.FullName -Raw
@@ -76,7 +76,6 @@ function Invoke-RecursivePack {
                 if ($AuditOnly) {
                     $invokeParams.AuditOnly = $true
                 }
-                $invokeParams.IsRoot = $false
 
                 Invoke-RecursivePack @invokeParams
             }
@@ -96,6 +95,6 @@ if ($ListAvailable) {
         }
 } else {
     Write-Output "--- Starting Build: $(Split-Path $ProjectPath -Leaf) ---"
-    Invoke-RecursivePack -Src $ProjectPath -Dest (Join-Path $Destination (Split-Path $ProjectPath -Leaf)) -IsRoot
+    Invoke-RecursivePack -Src $ProjectPath -Dest (Join-Path $Destination (Split-Path $ProjectPath -Leaf))
     Write-Output "--- Build Complete ---"
 }
