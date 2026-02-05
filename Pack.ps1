@@ -44,21 +44,6 @@ function Invoke-RecursivePack {
             New-Item -ItemType Directory -Path $Dest -Force | Out-Null
             Copy-Item -Path "$Src\*" -Destination $Dest -Recurse -Exclude "Build", "Shared", ".git"
         }
-        
-        # Generate deployment manifest only for the root project
-        if (-not $AuditOnly) {
-            $manifestPath = Join-Path $Dest "$folderName.psd1"
-
-            $raw = Get-Content $srcPsd1.FullName -Raw
-
-            # Remove ModuleVersion and RequiredModules blocks
-            $raw = $raw -replace 'ModuleVersion[ \n\r\t]*=[ \n\r\t]*((".*")|(''.*\'')|(@"[ \n\r\t]*.*[ \n\r\t]*"@))', ''
-            $raw = $raw -replace 'RequiredModules[ \n\r\t]*=[ \n\r\t]*@\(([\n\r\t]|.)*\)', ''
-
-            $raw = $raw -replace '(?m)^\s*\r?\n', ''
-
-            Set-Content -Path $manifestPath -Value $raw -Encoding UTF8
-        }
 
         # 4. Recurse
         if ($manifestData.RequiredModules) {

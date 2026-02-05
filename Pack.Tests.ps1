@@ -109,31 +109,6 @@ Describe "Packer Policy Tests" {
         $output | Should -Contain "ProjB                v1.0.B"
         $output | Should -Contain "ProjC                v1.0.C"
     }
-    
-    It "Should include all custom metadata except ModuleVersion and RequiredModules" {
-        $Proj = New-Item -Path "$MockRepo\MetaTest" -ItemType Directory -Force
-'@{
-    ModuleVersion   = "1.0.0"
-    RequiredModules = @()
-    DeploymentPass  = "Specialize"
-    Order           = 5
-    ActiveSetup     = $true
-    Notes           = "Custom metadata"
-}' | Out-File "$Proj\MetaTest.psd1"
-
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath $Proj -Destination $BuildDir
-
-        $ManifestPath = "$BuildDir\MetaTest\MetaTest.psd1"
-        $Manifest = Import-PowerShellDataFile $ManifestPath
-
-        $Manifest.Keys | Should -Contain "DeploymentPass"
-        $Manifest.Keys | Should -Contain "Order"
-        $Manifest.Keys | Should -Contain "ActiveSetup"
-        $Manifest.Keys | Should -Contain "Notes"
-
-        $Manifest.Keys | Should -Not -Contain "ModuleVersion"
-        $Manifest.Keys | Should -Not -Contain "RequiredModules"
-    }
 
     AfterAll { Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue }
 }
