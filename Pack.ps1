@@ -104,14 +104,14 @@ function Invoke-RecursivePack {
 
 # --- Execution Logic (Clean and Run) ---
 if ($ListAvailable) {
-    Invoke-RecursivePack -Src $ProjectPath -Dest "" -AuditOnly
+    Invoke-RecursivePack -Src $ProjectPath -Dest "" -AuditOnly -IsRoot
     Write-Output "--- Dependency Inventory ---"
     $script:DiscoveredModules.GetEnumerator() | Sort-Object Name | ForEach-Object {
         Write-Output "$($_.Key.PadRight(20)) v$($_.Value)"
     }
 } else {
     Write-Output "[VALIDATE] Checking project tree..."
-    Invoke-RecursivePack -Src $ProjectPath -Dest "" -AuditOnly
+    Invoke-RecursivePack -Src $ProjectPath -Dest "" -AuditOnly -IsRoot
     
     if (Test-Path $Destination) {
         Write-Output "[CLEAN] Preparing destination..."
@@ -119,6 +119,6 @@ if ($ListAvailable) {
     }
 
     Write-Output "--- Starting Build: $(Split-Path $ProjectPath -Leaf) ---"
-    Invoke-RecursivePack -Src $ProjectPath -Dest (Join-Path $Destination (Split-Path $ProjectPath -Leaf))
+    Invoke-RecursivePack -Src $ProjectPath -Dest (Join-Path $Destination (Split-Path $ProjectPath -Leaf)) -IsRoot
     Write-Output "--- Build Complete ---"
 }
