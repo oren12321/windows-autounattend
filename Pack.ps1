@@ -6,7 +6,7 @@ param(
 )
 
 $script:ProcessingStack = New-Object System.Collections.Generic.Stack[string]
-$script:DiscoveredModules = @{} # Track unique modules for -ListAvailable
+$script:DiscoveredModules = @{}
 
 function Invoke-RecursivePack {
     param([string]$Src, [string]$Dest, [switch]$AuditOnly)
@@ -38,55 +38,58 @@ function Invoke-RecursivePack {
 
         if (-not $AuditOnly) {
             if ($Dest.Length -ge $Limit) { throw "PATH TOO LONG: Cannot pack to '$Dest' (Length: $($Dest.Length))" }
-            
             Write-Output "[FETCH] $folderName (v$($manifestData.Version))"
             
-            if (Test-Path $Dest) { Remove-Item $Dest -Recurse -Force }
-            New-Item -ItemType Directory -Path $Dest -Force | Out-Null
+            if (-not (Test-Path $Dest)) { New-Item -ItemType Directory -Path $Dest -Force | Out-Null }
             
+            # FIX: Explicitly ignore excluded directories and their contents
             Get-ChildItem -Path $Src -Recurse | Where-Object {
-                # This checks if the folder's path starts with the specific path you want to ignore
-                $_.FullName -notlike "$Src\Shared*" -and 
-                $_.FullName -notlike "$Src\Build*" -and 
-                $_.FullName -notlike "$Src\.git*"
-            } | Copy-Item -Destination { Join-Path $Dest $_.FullName.Substring($Src.Length) } -Force
+                $_.FullName -notmatch "\\(Shared|Build|\.git)($|\\)"
+            } | ForEach-Object {
+                $relPath = $_.FullName.Substring($Src.Length).TrimStart('\')
+                if ($relPath -ne "") {
+                    $targetPath = Join-Path $Dest $relPath
+                    if ($_.PSIsContainer) {
+                        New-Item -ItemType Directory -Path $targetPath -Force | Out-Null
+                    } else {
+                        Copy-Item -Path $_.FullName -Destination $targetPath -Force
+                    }
+                }
+            }
         }
 
         # 4. Recurse
         if ($manifestData.Dependencies) {
             foreach ($relPath in $manifestData.Dependencies) {
                 $depSrc = Resolve-Path (Join-Path $Src $relPath) -ErrorAction Stop
+                $depDest = $null
                 if (-not $AuditOnly) {
                     $depDest = Join-Path $Dest "Shared" | Join-Path -ChildPath (Split-Path $depSrc -Leaf)
                 }
                 
-                $invokeParams = @{
-                    Src  = $depSrc.Path
-                    Dest = $depDest
-                }
-
-                if ($AuditOnly) {
-                    $invokeParams.AuditOnly = $true
-                }
-
-                Invoke-RecursivePack @invokeParams
+                Invoke-RecursivePack -Src $depSrc.Path -Dest $depDest -AuditOnly:$AuditOnly
             }
         }
     }
     finally { $null = $script:ProcessingStack.Pop() }
 }
 
-# Execution Logic
+# --- Execution Logic ---
 if ($ListAvailable) {
     Invoke-RecursivePack -Src $ProjectPath -Dest "" -AuditOnly
     Write-Output "--- Dependency Inventory ---"
-    $script:DiscoveredModules.GetEnumerator() |
-        Sort-Object Name |
-        ForEach-Object {
-            Write-Output "$($_.Key.PadRight(20)) v$($_.Value)"
-        }
+    $script:DiscoveredModules.GetEnumerator() | Sort-Object Name | ForEach-Object {
+        Write-Output "$($_.Key.PadRight(20)) v$($_.Value)"
+    }
 } else {
+    # Initial Clean: Only wipe the build directory once at the start of a build
+    if (Test-Path $Destination) {
+        Write-Output "[CLEAN] Preparing destination..."
+        Remove-Item "$Destination\*" -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
     Write-Output "--- Starting Build: $(Split-Path $ProjectPath -Leaf) ---"
-    Invoke-RecursivePack -Src $ProjectPath -Dest (Join-Path $Destination (Split-Path $ProjectPath -Leaf))
+    $rootDest = Join-Path $Destination (Split-Path $ProjectPath -Leaf)
+    Invoke-RecursivePack -Src $ProjectPath -Dest $rootDest
     Write-Output "--- Build Complete ---"
 }

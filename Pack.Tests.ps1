@@ -210,3 +210,59 @@ Describe "Packer Inventory (-ListAvailable) Tests" {
         }
     }
 }
+
+Describe "Packer Cleanup and Filtering Tests" {
+    BeforeAll {
+        $TestRoot = New-Item -Path "$env:TEMP\PackerFilterTests" -ItemType Directory -Force
+        $MockRepo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
+        $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
+
+        # Create a standard project
+        $Project = New-Item -Path "$MockRepo\FilterProj" -ItemType Directory -Force
+        '@{ Version = "1.0.0" }' | Out-File "$Project\Manifest.psd1"
+        'Write-Host "Keep me"' | Out-File "$Project\Main.ps1"
+        
+        # Create folders that SHOULD BE IGNORED
+        New-Item -Path "$Project\.git" -ItemType Directory | Out-Null
+        'secret' | Out-File "$Project\.git\config"
+        
+        New-Item -Path "$Project\Build" -ItemType Directory | Out-Null
+        'old-build' | Out-File "$Project\Build\old.txt"
+        
+        New-Item -Path "$Project\Shared" -ItemType Directory | Out-Null
+        'dependency-artifact' | Out-File "$Project\Shared\old-dep.txt"
+    }
+
+    It "Should wipe the destination directory before starting a new build" {
+        # 1. Create a "Ghost File" in the build directory that isn't in the source
+        $GhostFile = Join-Path $BuildDir "FilterProj\ghost.txt"
+        New-Item -Path $GhostFile -ItemType File -Value "I should be deleted" -Force | Out-Null
+        
+        # 2. Run the packer
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath $Project -Destination $BuildDir
+        
+        # 3. Verify the ghost file is gone
+        Test-Path $GhostFile | Should -Be $false
+        Test-Path "$BuildDir\FilterProj\Main.ps1" | Should -Be $true
+    }
+
+    It "Should exclude .git, Build, and Shared folders from the final package" {
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath $Project -Destination $BuildDir
+        $DestRoot = "$BuildDir\FilterProj"
+
+        # Verify main files exist
+        Test-Path "$DestRoot\Main.ps1" | Should -Be $true
+        
+        # Verify ignored patterns do NOT exist
+        Test-Path "$DestRoot\.git" | Should -Be $false
+        Test-Path "$DestRoot\Build" | Should -Be $false
+        
+        # Note: The 'Shared' folder should only exist if created by the dependency logic,
+        # but the source's own 'Shared' folder (and its content) should be excluded.
+        Test-Path "$DestRoot\Shared\old-dep.txt" | Should -Be $false
+    }
+
+    AfterAll {
+        Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
