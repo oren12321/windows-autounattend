@@ -27,18 +27,18 @@ function Invoke-RecursivePack {
         if (-not $srcPsd1) { throw "MISSING MANIFEST: Project '$folderName' must have a .psd1 file." }
         
         $manifestData = Import-PowerShellDataFile -Path $srcPsd1.FullName
-        if (-not $manifestData.ModuleVersion) { 
-            throw "VERSION REQUIRED: .psd1 for '$folderName' must define a 'ModuleVersion'." 
+        if (-not $manifestData.Version) { 
+            throw "VERSION REQUIRED: .psd1 for '$folderName' must define a 'Version'." 
         }
 
         # 3. Track for ListAvailable
         if (-not $script:DiscoveredModules.ContainsKey($folderName)) {
-            $script:DiscoveredModules[$folderName] = $manifestData.ModuleVersion
+            $script:DiscoveredModules[$folderName] = $manifestData.Version
         }
 
         if (-not $AuditOnly) {
             if ($Dest.Length -ge $Limit) { throw "Path too long: $Dest" }
-            Write-Output "[FETCH] $folderName (v$($manifestData.ModuleVersion))"
+            Write-Output "[FETCH] $folderName (v$($manifestData.Version))"
             
             if (Test-Path $Dest) { Remove-Item $Dest -Recurse -Force }
             New-Item -ItemType Directory -Path $Dest -Force | Out-Null
@@ -46,8 +46,8 @@ function Invoke-RecursivePack {
         }
 
         # 4. Recurse
-        if ($manifestData.RequiredModules) {
-            foreach ($relPath in $manifestData.RequiredModules) {
+        if ($manifestData.Dependencies) {
+            foreach ($relPath in $manifestData.Dependencies) {
                 $depSrc = Resolve-Path (Join-Path $Src $relPath) -ErrorAction Stop
                 if (-not $AuditOnly) {
                     $depDest = Join-Path $Dest "Shared" | Join-Path -ChildPath (Split-Path $depSrc -Leaf)

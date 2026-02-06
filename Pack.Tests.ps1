@@ -10,17 +10,17 @@ Describe "Complex Project Packer Tests" {
         # ProjC -> [ProjD]
         foreach ($p in 'A','B','C','D') { New-Item -Path "$MockRepo\Proj$p" -ItemType Directory | Out-Null }
         
-        '@{ ModuleVersion = "1.0.0"; RequiredModules=@("../ProjB", "../ProjC") }' | Out-File "$MockRepo\ProjA\ProjA.psd1"
-        '@{ ModuleVersion = "1.0.0"; RequiredModules=@("../ProjD") }'              | Out-File "$MockRepo\ProjB\ProjB.psd1"
-        '@{ ModuleVersion = "1.0.0"; RequiredModules=@("../ProjD") }'              | Out-File "$MockRepo\ProjC\ProjC.psd1"
-        '@{ ModuleVersion = "1.0.0" }'                                            | Out-File "$MockRepo\ProjD\ProjD.psd1"
+        '@{ Version = "1.0.0"; Dependencies=@("../ProjB", "../ProjC") }' | Out-File "$MockRepo\ProjA\ProjA.psd1"
+        '@{ Version = "1.0.0"; Dependencies=@("../ProjD") }'              | Out-File "$MockRepo\ProjB\ProjB.psd1"
+        '@{ Version = "1.0.0"; Dependencies=@("../ProjD") }'              | Out-File "$MockRepo\ProjC\ProjC.psd1"
+        '@{ Version = "1.0.0" }'                                            | Out-File "$MockRepo\ProjD\ProjD.psd1"
 
         # --- SETUP: Circular Dependency ---
         # ProjLoop1 -> ProjLoop2 -> ProjLoop1
         New-Item -Path "$MockRepo\ProjLoop1" -ItemType Directory | Out-Null
         New-Item -Path "$MockRepo\ProjLoop2" -ItemType Directory | Out-Null
-        '@{ ModuleVersion = "1.0.0"; RequiredModules=@("../ProjLoop2") }' | Out-File "$MockRepo\ProjLoop1\ProjLoop1.psd1"
-        '@{ ModuleVersion = "1.0.0"; RequiredModules=@("../ProjLoop1") }' | Out-File "$MockRepo\ProjLoop2\ProjLoop2.psd1"
+        '@{ Version = "1.0.0"; Dependencies=@("../ProjLoop2") }' | Out-File "$MockRepo\ProjLoop1\ProjLoop1.psd1"
+        '@{ Version = "1.0.0"; Dependencies=@("../ProjLoop1") }' | Out-File "$MockRepo\ProjLoop2\ProjLoop2.psd1"
     }
 
     It "Should correctly bundle multiple dependencies in one list" {
@@ -62,11 +62,11 @@ Describe "Packer Version Logging Tests" {
 
         # Setup Dependency with specific version
         $DepA = New-Item -Path "$MockRepo\DepA" -ItemType Directory -Force
-        '@{ ModuleVersion = "2.5.4" }' | Out-File "$DepA\DepA.psd1"
+        '@{ Version = "2.5.4" }' | Out-File "$DepA\DepA.psd1"
 
         # Setup Main Project
         $Main = New-Item -Path "$MockRepo\MainApp" -ItemType Directory -Force
-        '@{ ModuleVersion = "1.0.0"; RequiredModules = @("../DepA") }' | Out-File "$Main\MainApp.psd1"
+        '@{ Version = "1.0.0"; Dependencies = @("../DepA") }' | Out-File "$Main\MainApp.psd1"
     }
 
     It "Should output the correct module versions during the fetch process" {
@@ -88,9 +88,9 @@ Describe "Packer Policy Tests" {
         $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
     }
 
-    It "Should throw an error if ModuleVersion is missing" {
+    It "Should throw an error if Version is missing" {
         $NoVer = New-Item -Path "$MockRepo\NoVer" -ItemType Directory -Force
-        '@{ RequiredModules = @() }' | Out-File "$NoVer\NoVer.psd1" # Missing Version
+        '@{ Dependencies = @() }' | Out-File "$NoVer\NoVer.psd1" # Missing Version
 
         { & "$PSScriptRoot\Pack.ps1" -ProjectPath $NoVer } | Should -Throw -ExpectedMessage "*VERSION REQUIRED*"
     }
@@ -101,7 +101,7 @@ Describe "Packer Policy Tests" {
             $folder = New-Item -Path "$MockRepo\Proj$p" -ItemType Directory -Force
             $ver = "1.0.$p"
             $req = if($p -eq 'A'){"@('../ProjB')"} elseif($p -eq 'B'){"@('../ProjC')"} else{"@()"}
-            "@{ ModuleVersion='$ver'; RequiredModules=$req }" | Out-File "$folder\Proj$p.psd1"
+            "@{ Version='$ver'; Dependencies=$req }" | Out-File "$folder\Proj$p.psd1"
         }
 
         $output = & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjA" -ListAvailable
@@ -114,10 +114,10 @@ Describe "Packer Policy Tests" {
         $Root = New-Item -Path "$MockRepo\RootPrj" -ItemType Directory -Force
         $Dep  = New-Item -Path "$MockRepo\DepPrj" -ItemType Directory -Force
         
-        # FIX: Add RequiredModules so the script actually recurses into DepPrj
-        $ManifestContent = '@{ ModuleVersion = "1.2.3"; RequiredModules = @("../DepPrj"); CustomKey = "Preserved" }'
+        # FIX: Add Dependencies so the script actually recurses into DepPrj
+        $ManifestContent = '@{ Version = "1.2.3"; Dependencies = @("../DepPrj"); CustomKey = "Preserved" }'
         $ManifestContent | Out-File "$Root\RootPrj.psd1"
-        '@{ ModuleVersion = "1.0.0" }' | Out-File "$Dep\DepPrj.psd1"
+        '@{ Version = "1.0.0" }' | Out-File "$Dep\DepPrj.psd1"
         
         & "$PSScriptRoot\Pack.ps1" -ProjectPath $Root -Destination $BuildDir
         
@@ -147,9 +147,9 @@ Describe "Packer Inventory (-ListAvailable) Tests" {
         $LibB = New-Item -Path "$MockRepo\LibB" -ItemType Directory -Force
 
         # Manifests
-        '@{ ModuleVersion="1.0.0"; RequiredModules=@("../LibA") }' | Out-File "$App\App.psd1"
-        '@{ ModuleVersion="2.1.0"; RequiredModules=@("../LibB") }' | Out-File "$LibA\LibA.psd1"
-        '@{ ModuleVersion="3.0.5"; RequiredModules=@() }'           | Out-File "$LibB\LibB.psd1"
+        '@{ Version="1.0.0"; Dependencies=@("../LibA") }' | Out-File "$App\App.psd1"
+        '@{ Version="2.1.0"; Dependencies=@("../LibB") }' | Out-File "$LibA\LibA.psd1"
+        '@{ Version="3.0.5"; Dependencies=@() }'           | Out-File "$LibB\LibB.psd1"
         
         # Dummy script files
         'Write-Host "App"'  | Out-File "$App\App.ps1"
@@ -181,7 +181,7 @@ Describe "Packer Inventory (-ListAvailable) Tests" {
     Context "Error Handling" {
         It "Should still enforce version requirements even in ListAvailable mode" {
             $Broken = New-Item -Path "$MockRepo\Broken" -ItemType Directory -Force
-            '@{ RequiredModules=@() }' | Out-File "$Broken\Broken.psd1" # Missing ModuleVersion
+            '@{ Dependencies=@() }' | Out-File "$Broken\Broken.psd1" # Missing Version
 
             { 
                 & "$PSScriptRoot\Pack.ps1" -ProjectPath $Broken -ListAvailable 

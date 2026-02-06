@@ -2,9 +2,9 @@
 # Put this file in project to make it pack-able.
 
 @{
-    ModuleVersion = "1.0.0"
+    Version = "1.0.0"
 
-    RequiredModules = @(
+    Dependencies = @(
         # List here projects that contain such .psd1 file.
         # No dependencies? Just leave this list empty.
     )
