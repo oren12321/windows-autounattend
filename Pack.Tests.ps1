@@ -483,3 +483,69 @@ Describe "Packer Stress Test - Supported Features Only" {
     }
 }
 
+Describe "Project Tree Integrity Tests" {
+    BeforeAll {
+        $TestRoot = New-Item -Path "$env:TEMP\TreeIntegrityTests" -ItemType Directory -Force
+        $MockRepo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
+        $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
+
+        # --- SETUP: A Complex Internal Structure ---
+        # MainApp
+        #  ├── docs/readme.txt
+        #  ├── src/Core/ (SubProject)
+        #  │    ├── scripts/init.ps1
+        #  │    └── src/Core/Storage/ (SubProject)
+        #  │         └── data/schema.sql
+        #  └── assets/logo.png
+
+        $AppRoot = New-Item -Path "$MockRepo\MainApp" -ItemType Directory -Force
+        
+        # Files at root
+        New-Item -Path "$AppRoot\docs" -ItemType Directory | Out-Null
+        'documentation' | Out-File "$AppRoot\docs\readme.txt"
+        
+        New-Item -Path "$AppRoot\assets" -ItemType Directory | Out-Null
+        'binary-data' | Out-File "$AppRoot\assets\logo.png"
+
+        # Core SubProject
+        $CoreDir = New-Item -Path "$AppRoot\src\Core" -ItemType Directory -Force
+        New-Item -Path "$CoreDir\scripts" -ItemType Directory | Out-Null
+        'init-script' | Out-File "$CoreDir\scripts\init.ps1"
+
+        # Storage Nested SubProject
+        $StorageDir = New-Item -Path "$CoreDir\src\Storage" -ItemType Directory -Force
+        New-Item -Path "$StorageDir\data" -ItemType Directory | Out-Null
+        'sql-schema' | Out-File "$StorageDir\data\schema.sql"
+
+        # --- MANIFESTS ---
+        '@{ Version="1.0"; SubProjects=@("src/Core") }' | Out-File "$AppRoot\Manifest.psd1"
+        '@{ Version="1.1"; SubProjects=@("src/Storage") }' | Out-File "$CoreDir\Manifest.psd1"
+        '@{ Version="1.2" }' | Out-File "$StorageDir\Manifest.psd1"
+    }
+
+    It "Should mirror the entire source tree structure exactly in the build folder" {
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+        $BuildRoot = "$BuildDir\MainApp"
+
+        # 1. Verify Root level files/folders (Non-manifest items)
+        Test-Path "$BuildRoot\docs\readme.txt" | Should -Be $true
+        Test-Path "$BuildRoot\assets\logo.png" | Should -Be $true
+
+        # 2. Verify Level 1 SubProject contents
+        Test-Path "$BuildRoot\src\Core\scripts\init.ps1" | Should -Be $true
+        
+        # 3. Verify Level 2 (Nested) SubProject contents
+        Test-Path "$BuildRoot\src\Core\src\Storage\data\schema.sql" | Should -Be $true
+    }
+
+    It "Should ensure file content was preserved during the copy" {
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+        
+        $SchemaPath = "$BuildDir\MainApp\src\Core\src\Storage\data\schema.sql"
+        Get-Content $SchemaPath | Should -Be "sql-schema"
+    }
+
+    AfterAll {
+        Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}

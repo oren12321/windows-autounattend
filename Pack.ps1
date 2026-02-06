@@ -38,15 +38,21 @@ function Invoke-RecursivePack {
 
         # 3. File Copy (Project Files)
         if (-not $AuditOnly) {
-            if ($Dest.Length -ge $Limit) { throw "PATH TOO LONG: Cannot pack to '$Dest' (Length: $($Dest.Length))" }
-            Write-Output "[FETCH] $folderName (v$($manifestData.Version))"
-            if (-not (Test-Path $Dest)) { New-Item -ItemType Directory -Path $Dest -Force | Out-Null }
+            if ($Dest.Length -ge $Limit) { throw "PATH TOO LONG: $Dest" }
             
-            # Copy only local project files (excludes Shared/Build/.git)
-            Get-ChildItem -Path $Src | Where-Object {
-                $_.Name -notmatch "^(Shared|Build|\.git)$"
-            } | ForEach-Object {
-                Copy-Item -Path $_.FullName -Destination $Dest -Recurse -Force
+            # ALWAYS ensure the directory exists so Shared/Paths.ps1 have a home
+            if (-not (Test-Path $Dest)) { New-Item -ItemType Directory -Path $Dest -Force | Out-Null }
+
+            # ONLY copy files if it's the root OR if the destination is empty
+            # This prevents the "Redundant Copy" while ensuring the files exist
+            $filesExist = Get-ChildItem -Path $Dest -Force | Select-Object -First 1
+            if ($IsRoot -or -not $filesExist) {
+                Write-Output "[FETCH] $folderName (v$($manifestData.Version))"
+                Get-ChildItem -Path $Src | Where-Object {
+                    $_.Name -notmatch "^(Shared|Build|\.git)$"
+                } | ForEach-Object {
+                    Copy-Item -Path $_.FullName -Destination $Dest -Recurse -Force
+                }
             }
         }
 
