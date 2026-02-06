@@ -294,3 +294,192 @@ Describe "Packer Cleanup and Filtering Tests" {
         Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
+
+Describe "Composite Project Orchestration Tests" {
+    BeforeAll {
+        $TestRoot = New-Item -Path "$env:TEMP\PackerCompositeTests" -ItemType Directory -Force
+        $MockRepo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
+        $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
+
+        # --- SETUP EXTERNAL LIBS ---
+        $LibNet = New-Item -Path "$MockRepo\External\NetworkLib" -ItemType Directory -Force
+        '@{ Version = "2.0.0" }' | Out-File "$LibNet\Manifest.psd1"
+
+        $LibLog = New-Item -Path "$MockRepo\External\LoggerLib" -ItemType Directory -Force
+        '@{ Version = "1.5.0" }' | Out-File "$LibLog\Manifest.psd1"
+
+        # --- SETUP COMPOSITE APP ---
+        $AppRoot = New-Item -Path "$MockRepo\MainApp" -ItemType Directory -Force
+        $CoreDir = New-Item -Path "$AppRoot\src\Core" -ItemType Directory -Force
+        $ApiDir  = New-Item -Path "$AppRoot\src\Api"  -ItemType Directory -Force
+
+        # Root Manifest: Orchestrates two internal sub-projects
+        '@{ 
+            Version = "1.0.0"; 
+            Manifests = @("src/Core/Manifest.psd1", "src/Api/Manifest.psd1") 
+        }' | Out-File "$AppRoot\Manifest.psd1"
+
+        # Core Manifest: Has its own external dependency (Logger)
+        '@{ 
+            Version = "1.1.0"; 
+            Dependencies = @("../../../External/LoggerLib") 
+        }' | Out-File "$CoreDir\Manifest.psd1"
+
+        # API Manifest: Has its own external dependency (Network)
+        '@{ 
+            Version = "1.2.0"; 
+            Dependencies = @("../../../External/NetworkLib") 
+        }' | Out-File "$ApiDir\Manifest.psd1"
+    }
+
+    It "Should correctly build the composite tree with localized Paths.ps1 files" {
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+        
+        $BuildRoot = "$BuildDir\MainApp"
+
+        # 1. Verify Structure Preservation
+        Test-Path "$BuildRoot\src\Core\Manifest.psd1" | Should -Be $true
+        Test-Path "$BuildRoot\src\Api\Manifest.psd1"  | Should -Be $true
+
+        # 2. Verify Localized Dependencies (Encapsulation)
+        # Core should have Logger in its own Shared folder
+        Test-Path "$BuildRoot\src\Core\Shared\LoggerLib" | Should -Be $true
+        Test-Path "$BuildRoot\src\Core\Paths.ps1"        | Should -Be $true
+
+        # Api should have Network in its own Shared folder
+        Test-Path "$BuildRoot\src\Api\Shared\NetworkLib" | Should -Be $true
+        Test-Path "$BuildRoot\src\Api\Paths.ps1"        | Should -Be $true
+
+        # 3. Verify Root does NOT have a Paths.ps1 (it had no direct dependencies)
+        Test-Path "$BuildRoot\Paths.ps1" | Should -Be $false
+    }
+
+    It "Should verify that Paths.ps1 content points to the correct local Shared folder" {
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+        
+        # Dot-source the Core Paths file
+        $CorePathsFile = "$BuildDir\MainApp\src\Core\Paths.ps1"
+        . $CorePathsFile
+
+        # The $Paths variable should contain LoggerLib
+        $Paths.ContainsKey("LoggerLib") | Should -Be $true
+        $Paths.LoggerLib | Should -Match "src\\Core\\Shared\\LoggerLib"
+    }
+
+    It "Should list all composite versions in -ListAvailable" {
+        $output = & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -ListAvailable
+        
+        $output | Should -Contain "MainApp              v1.0.0"
+        $output | Should -Contain "Core                 v1.1.0"
+        $output | Should -Contain "Api                  v1.2.0"
+        $output | Should -Contain "LoggerLib            v1.5.0"
+        $output | Should -Contain "NetworkLib           v2.0.0"
+    }
+
+    AfterAll {
+        Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Describe "Packer Stress Test - Supported Features Only" {
+    BeforeAll {
+        $TestRoot = New-Item -Path "$env:TEMP\SpiderwebTests" -ItemType Directory -Force
+        $MockRepo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
+        $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
+
+        # --- EXTERNAL REPO (Shared Libraries) ---
+        $ExtLibA = New-Item -Path "$MockRepo\External\LibA" -ItemType Directory -Force
+        '@{ Version = "1.0.0" }' | Out-File "$ExtLibA\Manifest.psd1"
+        
+        $ExtLibB = New-Item -Path "$MockRepo\External\LibB" -ItemType Directory -Force
+        '@{ Version = "2.2.0"; Dependencies = @("../../External/LibA") }' | Out-File "$ExtLibB\Manifest.psd1"
+
+        # --- COMPOSITE APP REPO ---
+        # Structure:
+        # MegaApp
+        #  ├── src/Core (Orchestrates Storage) -> Depends on LibA
+        #  │    └── src/Core/Storage (Leaf) -> Depends on LibB
+        #  └── src/Plugins (Leaf) -> Depends on LibA
+        
+        $AppRoot    = New-Item -Path "$MockRepo\MegaApp" -ItemType Directory -Force
+        $CoreDir    = New-Item -Path "$AppRoot\src\Core" -ItemType Directory -Force
+        $StorageDir = New-Item -Path "$CoreDir\src\Storage" -ItemType Directory -Force
+        $PluginDir  = New-Item -Path "$AppRoot\src\Plugins" -ItemType Directory -Force
+
+        # 1. MegaApp (Root)
+        '@{ Version="1.0"; Manifests=@("src/Core/Manifest.psd1", "src/Plugins/Manifest.psd1") }' | Out-File "$AppRoot\Manifest.psd1"
+
+        # 2. Core (Sub-project)
+        '@{ 
+            Version = "1.1"; 
+            Manifests = @("src/Storage/Manifest.psd1"); 
+            Dependencies = @("../../../External/LibA") 
+        }' | Out-File "$CoreDir\Manifest.psd1"
+
+        # 3. Storage (Deeply Nested Sub-project)
+        '@{ 
+            Version = "1.1.1"; 
+            Dependencies = @("../../../../../External/LibB") 
+        }' | Out-File "$StorageDir\Manifest.psd1"
+
+        # 4. Plugins (Side-branch)
+        '@{ 
+            Version = "1.0.0"; 
+            Dependencies = @("../../../External/LibA") 
+        }' | Out-File "$PluginDir\Manifest.psd1"
+    }
+
+    It "Should successfully validate the entire recursive tree" {
+        { & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir -ListAvailable } | Should -Not -Throw
+    }
+
+    It "Should isolate LibA in separate 'Shared' folders for both Core and Plugins" {
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+        $Base = "$BuildDir\MegaApp"
+
+        # Verify Core's LibA
+        Test-Path "$Base\src\Core\Shared\LibA\Manifest.psd1" | Should -Be $true
+        Test-Path "$Base\src\Core\Paths.ps1" | Should -Be $true
+
+        # Verify Plugins' LibA
+        Test-Path "$Base\src\Plugins\Shared\LibA\Manifest.psd1" | Should -Be $true
+        Test-Path "$Base\src\Plugins\Paths.ps1" | Should -Be $true
+    }
+
+    It "Should handle deep dependency chains (Storage -> LibB -> LibA)" {
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+        
+        $StorageShared = "$BuildDir\MegaApp\src\Core\src\Storage\Shared"
+        
+        # Verify LibB is in Storage's shared folder
+        Test-Path "$StorageShared\LibB\Manifest.psd1" | Should -Be $true
+        
+        # Verify LibB's own dependency (LibA) is nested inside LibB's shared folder
+        Test-Path "$StorageShared\LibB\Shared\LibA\Manifest.psd1" | Should -Be $true
+    }
+
+    It "Should ensure Paths.ps1 files only contain the immediate dependencies" {
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+        
+        # Load Core's Paths
+        . "$BuildDir\MegaApp\src\Core\Paths.ps1"
+        $Paths.ContainsKey("LibA") | Should -Be $true
+        $Paths.ContainsKey("LibB") | Should -Be $false # LibB belongs to Storage, not Core
+    }
+
+    It "Should inventory all 6 projects with correct versions" {
+        $output = & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -ListAvailable
+        
+        $output | Should -Contain "MegaApp              v1.0"
+        $output | Should -Contain "Core                 v1.1"
+        $output | Should -Contain "Storage              v1.1.1"
+        $output | Should -Contain "Plugins              v1.0.0"
+        $output | Should -Contain "LibB                 v2.2.0"
+        $output | Should -Contain "LibA                 v1.0.0"
+    }
+
+    AfterAll {
+        Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+

@@ -14,6 +14,7 @@ function Invoke-RecursivePack {
     $normalizedSrc = (Resolve-Path $Src).Path
     $folderName = Split-Path $normalizedSrc -Leaf
     
+    # 1. Circularity Check
     if ($script:ProcessingStack.Contains($normalizedSrc)) {
         $chain = ($script:ProcessingStack.ToArray() | ForEach-Object { Split-Path $_ -Leaf }) -join " -> "
         throw "CIRCULAR DEPENDENCY DETECTED: $chain -> $folderName"
@@ -21,6 +22,7 @@ function Invoke-RecursivePack {
     $script:ProcessingStack.Push($normalizedSrc)
 
     try {
+        # 2. Manifest Validation
         $srcPsd1 = Get-ChildItem -Path $normalizedSrc -Filter "Manifest.psd1" | Select-Object -First 1
         if (-not $srcPsd1) { throw "MISSING MANIFEST: Project '$folderName' must have a .psd1 file." }
         
@@ -30,53 +32,61 @@ function Invoke-RecursivePack {
         if (-not $script:DiscoveredModules.ContainsKey($folderName)) {
             $script:DiscoveredModules[$folderName] = $manifestData.Version
         }
-        
-        if ($manifestData.Dependencies) {
-            foreach ($relPath in $manifestData.Dependencies) {
-                $depSrcPath = [System.IO.Path]::GetFullPath((Join-Path $Src $relPath))
-                if (-not (Test-Path $depSrcPath)) { 
-                    throw "DEPENDENCY NOT FOUND: Project '$folderName' requires '$relPath', but it was not found at '$depSrcPath'" 
-                }
-            }
-        }
 
+        # 3. File Copy (Project Files)
         if (-not $AuditOnly) {
             if ($Dest.Length -ge $Limit) { throw "PATH TOO LONG: Cannot pack to '$Dest' (Length: $($Dest.Length))" }
             Write-Output "[FETCH] $folderName (v$($manifestData.Version))"
             if (-not (Test-Path $Dest)) { New-Item -ItemType Directory -Path $Dest -Force | Out-Null }
             
-            Get-ChildItem -Path $Src -Recurse | Where-Object {
-                $_.FullName -notmatch "\\(Shared|Build|\.git)($|\\)"
+            # Copy only local project files (excludes Shared/Build/.git)
+            Get-ChildItem -Path $Src | Where-Object {
+                $_.Name -notmatch "^(Shared|Build|\.git)$"
             } | ForEach-Object {
-                $relPath = $_.FullName.Substring($Src.Length).TrimStart('\')
-                if ($relPath -ne "") {
-                    $targetPath = Join-Path $Dest $relPath
-                    if ($_.PSIsContainer) { New-Item -ItemType Directory -Path $targetPath -Force | Out-Null }
-                    else { Copy-Item -Path $_.FullName -Destination $targetPath -Force }
-                }
+                Copy-Item -Path $_.FullName -Destination $Dest -Recurse -Force
             }
         }
 
+        # 4. Handle INTERNAL Manifests (Orchestration)
+        # These do NOT create a 'Shared' folder at this level.
+        if ($manifestData.Manifests) {
+            foreach ($subManiPath in $manifestData.Manifests) {
+                $subManiFullPath = [System.IO.Path]::GetFullPath((Join-Path $Src $subManiPath))
+                if (-not (Test-Path $subManiFullPath)) { throw "INTERNAL MANIFEST NOT FOUND: $subManiPath" }
+                
+                $subSrcDir = Split-Path $subManiFullPath -Parent
+                $relSubPath = Split-Path $subManiPath -Parent
+                $subDestDir = if (-not $AuditOnly) { Join-Path $Dest $relSubPath } else { "" }
+
+                Invoke-RecursivePack -Src $subSrcDir -Dest $subDestDir -AuditOnly:$AuditOnly
+            }
+        }
+
+        # 5. Handle EXTERNAL Dependencies (Vendor-Inlining)
+        # These DO create a 'Shared' folder and a 'Paths.ps1' at this level.
         if ($manifestData.Dependencies) {
             $mapEntries = @()
             foreach ($relPath in $manifestData.Dependencies) {
-                # Ensure we resolve the path relative to the current source
                 $depSrcPath = [System.IO.Path]::GetFullPath((Join-Path $Src $relPath))
-                if (-not (Test-Path $depSrcPath)) { throw "DEPENDENCY NOT FOUND: $relPath at $depSrcPath" }
+                if (-not (Test-Path $depSrcPath)) { throw "DEPENDENCY NOT FOUND: '$folderName' requires '$relPath' at '$depSrcPath'" }
                 
                 $depName = Split-Path $depSrcPath -Leaf
                 $depDest = $null
                 
                 if (-not $AuditOnly) {
                     $depDest = Join-Path $Dest "Shared" | Join-Path -ChildPath $depName
-                    # We store the entry for the Paths.ps1
                     $mapEntries += "$depName = `"`$PSScriptRoot\Shared\$depName`""
                 }
                 
-                Invoke-RecursivePack -Src $depSrcPath -Dest $depDest -AuditOnly:$AuditOnly
+                # Check if dependency is a project or a static asset
+                if (Test-Path (Join-Path $depSrcPath "Manifest.psd1")) {
+                    Invoke-RecursivePack -Src $depSrcPath -Dest $depDest -AuditOnly:$AuditOnly
+                } elseif (-not $AuditOnly) {
+                    if (-not (Test-Path (Split-Path $depDest))) { New-Item -ItemType Directory -Path (Split-Path $depDest) -Force | Out-Null }
+                    Copy-Item -Path $depSrcPath -Destination $depDest -Recurse -Force
+                }
             }
 
-            # Write the Paths.ps1 file if we are in build mode and have dependencies
             if (-not $AuditOnly -and $mapEntries.Count -gt 0) {
                 $mapContent = "`$Paths = @{`r`n    " + ($mapEntries -join ";`r`n    ") + "`r`n}"
                 $mapContent | Out-File (Join-Path $Dest "Paths.ps1") -Force -Encoding UTF8
@@ -86,7 +96,7 @@ function Invoke-RecursivePack {
     finally { $null = $script:ProcessingStack.Pop() }
 }
 
-# --- Execution Logic ---
+# --- Execution Logic (Clean and Run) ---
 if ($ListAvailable) {
     Invoke-RecursivePack -Src $ProjectPath -Dest "" -AuditOnly
     Write-Output "--- Dependency Inventory ---"
@@ -94,17 +104,15 @@ if ($ListAvailable) {
         Write-Output "$($_.Key.PadRight(20)) v$($_.Value)"
     }
 } else {
-    Write-Output "[VALIDATE] Checking dependency tree..."
+    Write-Output "[VALIDATE] Checking project tree..."
     Invoke-RecursivePack -Src $ProjectPath -Dest "" -AuditOnly
     
-    # Initial Clean: Only wipe the build directory once at the start of a build
     if (Test-Path $Destination) {
         Write-Output "[CLEAN] Preparing destination..."
         Remove-Item "$Destination\*" -Recurse -Force -ErrorAction SilentlyContinue
     }
 
     Write-Output "--- Starting Build: $(Split-Path $ProjectPath -Leaf) ---"
-    $rootDest = Join-Path $Destination (Split-Path $ProjectPath -Leaf)
-    Invoke-RecursivePack -Src $ProjectPath -Dest $rootDest
+    Invoke-RecursivePack -Src $ProjectPath -Dest (Join-Path $Destination (Split-Path $ProjectPath -Leaf))
     Write-Output "--- Build Complete ---"
 }
