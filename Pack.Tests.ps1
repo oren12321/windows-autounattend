@@ -722,7 +722,7 @@ Describe "Packer Collision Guard Tests" {
     It "Should throw a DEPENDENCY COLLISION error if names overlap" {
         { 
             & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir 
-        } | Should -Throw -ExpectedMessage "*DEPENDENCY COLLISION*"
+        } | Should -Throw -ExpectedMessage "*NAMING COLLISION*"
     }
 
     It "Should not leave a partial build if a collision is detected during validation" {
@@ -731,6 +731,38 @@ Describe "Packer Collision Guard Tests" {
         
         # Ensure the build folder doesn't exist yet
         Test-Path $GhostFolder | Should -Be $false
+    }
+
+    AfterAll { Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
+Describe "Packer Cross-Collision Tests" {
+    BeforeAll {
+        $TestRoot = New-Item -Path "$env:TEMP\CrossCollisionTests" -ItemType Directory -Force
+        $MockRepo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
+        $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
+
+        # External Lib named 'Core'
+        $ExtCore = New-Item -Path "$MockRepo\External\Core" -ItemType Directory -Force
+        '@{ Version="2.0" }' | Out-File "$ExtCore\Manifest.psd1"
+
+        # App with internal folder named 'Core'
+        $App = New-Item -Path "$MockRepo\App" -ItemType Directory -Force
+        $InternalCore = New-Item -Path "$App\Core" -ItemType Directory -Force
+        '@{ Version="1.0" }' | Out-File "$InternalCore\Manifest.psd1"
+
+        # Manifest that tries to use BOTH
+        '@{ 
+            Version = "1.0"; 
+            SubProjects = @("Core"); 
+            Dependencies = @("../External/Core") 
+        }' | Out-File "$App\Manifest.psd1"
+    }
+
+    It "Should throw an error if a SubProject and Dependency share the same name" {
+        { 
+            & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir 
+        } | Should -Throw -ExpectedMessage "*NAMING COLLISION*"
     }
 
     AfterAll { Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue }

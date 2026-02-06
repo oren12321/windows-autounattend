@@ -56,40 +56,39 @@ function Invoke-RecursivePack {
             }
         }
 
-        # 4. Handle INTERNAL SubProjects (Orchestration)
-        # These do NOT create a 'Shared' folder at this level.
+        # 4. Handle INTERNAL SubProjects
+        $localNames = @{} # Track all names used in this specific manifest
         if ($manifestData.SubProjects) {
-            foreach ($subManiPath in $manifestData.SubProjects) {
-                $subManiFullPath = [System.IO.Path]::GetFullPath((Join-Path $Src $subManiPath))
-                if (-not (Test-Path $subManiFullPath)) { throw "INTERNAL MANIFEST NOT FOUND: $subManiPath" }
-                
-                # SCOPE GUARD: Ensure internal sub-projects are inside the Root Project tree
-                if (-not $subManiFullPath.StartsWith($script:RootPath)) {
-                    throw "SECURITY VIOLATION: SubProject '$subManiFullPath' is outside the root project tree."
+            foreach ($subRelPath in $manifestData.SubProjects) {
+                $subSrcDir = [System.IO.Path]::GetFullPath((Join-Path $Src $subRelPath))
+                if (-not $subSrcDir.StartsWith($script:RootPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+                    throw "SECURITY VIOLATION: SubProject '$subRelPath' is outside the root tree."
                 }
-                
-                $subDestDir = if (-not $AuditOnly) { Join-Path $Dest $subManiPath } else { "" }
+                if (-not (Test-Path $subSrcDir)) { throw "SUBPROJECT NOT FOUND: $subRelPath" }
 
-                Invoke-RecursivePack -Src $subManiFullPath -Dest $subDestDir -AuditOnly:$AuditOnly
+                $subName = Split-Path $subSrcDir -Leaf
+                $localNames[$subName] = "SubProject"
+
+                $subDestDir = if (-not $AuditOnly) { Join-Path $Dest $subRelPath } else { "" }
+                Invoke-RecursivePack -Src $subSrcDir -Dest $subDestDir -AuditOnly:$AuditOnly -IsRoot:$false
             }
         }
 
-        # 5. Handle EXTERNAL Dependencies (Vendor-Inlining)
+        # 5. Handle EXTERNAL Dependencies
         if ($manifestData.Dependencies) {
             $mapEntries = @()
-            $usedNames = @{} # Local tracker to detect collisions in this manifest
-            
             foreach ($relPath in $manifestData.Dependencies) {
                 $depSrcPath = [System.IO.Path]::GetFullPath((Join-Path $Src $relPath))
-                if (-not (Test-Path $depSrcPath)) { throw "DEPENDENCY NOT FOUND: '$folderName' requires '$relPath' at '$depSrcPath'" }
+                if (-not (Test-Path $depSrcPath)) { throw "DEPENDENCY NOT FOUND: '$folderName' requires '$relPath'" }
                 
                 $depName = Split-Path $depSrcPath -Leaf
-                
-                # --- COLLISION DETECTION (Logic-based, not disk-based) ---
-                if ($usedNames.ContainsKey($depName)) {
-                    throw "DEPENDENCY COLLISION: Multiple dependencies are named '$depName' in project '$folderName'."
+
+                # --- IMPROVED COLLISION DETECTION ---
+                if ($localNames.ContainsKey($depName)) {
+                    $conflictType = $localNames[$depName]
+                    throw "NAMING COLLISION: '$depName' is defined as both a $conflictType and a Dependency in project '$folderName'."
                 }
-                $usedNames[$depName] = $true
+                $localNames[$depName] = "Dependency"
 
                 $depDest = if (-not $AuditOnly) { Join-Path $Dest "Shared" | Join-Path -ChildPath $depName } else { $null }
                 
@@ -104,12 +103,10 @@ function Invoke-RecursivePack {
                 if ($isProject) {
                     Invoke-RecursivePack -Src $depSrcPath -Dest $depDest -AuditOnly:$AuditOnly
                 } elseif (-not $AuditOnly) {
-                    # STATIC ASSET FLOW
                     if ($isLeaf) {
                         New-Item -ItemType Directory -Path $depDest -Force | Out-Null
                         Copy-Item -Path $depSrcPath -Destination $depDest -Force
                     } else {
-                        # Copy the folder itself into the Shared directory
                         Copy-Item -Path $depSrcPath -Destination (Split-Path $depDest -Parent) -Recurse -Force
                     }
                 }
@@ -120,6 +117,7 @@ function Invoke-RecursivePack {
                 $mapContent | Out-File (Join-Path $Dest "Paths.ps1") -Force -Encoding UTF8
             }
         }
+
     }
     finally { $null = $script:ProcessingStack.Pop() }
 }
