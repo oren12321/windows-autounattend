@@ -9,10 +9,13 @@ $script:ProcessingStack = New-Object System.Collections.Generic.Stack[string]
 $script:DiscoveredModules = @{}
 
 function Invoke-RecursivePack {
-    param([string]$Src, [string]$Dest, [switch]$AuditOnly)
+    param([string]$Src, [string]$Dest, [switch]$AuditOnly, [switch]$IsRoot)
     
     $normalizedSrc = (Resolve-Path $Src).Path
     $folderName = Split-Path $normalizedSrc -Leaf
+    
+    # Initialize Root Scope for security check
+    if ($IsRoot) { $script:RootPath = $normalizedSrc }
     
     # 1. Circularity Check
     if ($script:ProcessingStack.Contains($normalizedSrc)) {
@@ -55,6 +58,12 @@ function Invoke-RecursivePack {
                 if (-not (Test-Path $subManiFullPath)) { throw "INTERNAL MANIFEST NOT FOUND: $subManiPath" }
                 
                 $subSrcDir = Split-Path $subManiFullPath -Parent
+                
+                # SCOPE GUARD: Ensure internal sub-projects are inside the Root Project tree
+                if (-not $subSrcDir.StartsWith($script:RootPath)) {
+                    throw "SECURITY VIOLATION: SubProject '$subRelPath' is outside the root project tree."
+                }
+                
                 $relSubPath = Split-Path $subManiPath -Parent
                 $subDestDir = if (-not $AuditOnly) { Join-Path $Dest $relSubPath } else { "" }
 
