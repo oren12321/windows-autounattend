@@ -7,6 +7,7 @@ param(
 
 $script:ProcessingStack = New-Object System.Collections.Generic.Stack[string]
 $script:DiscoveredModules = @{}
+$script:RootPath = $null 
 
 function Invoke-RecursivePack {
     param([string]$Src, [string]$Dest, [switch]$AuditOnly, [switch]$IsRoot)
@@ -14,7 +15,6 @@ function Invoke-RecursivePack {
     $normalizedSrc = (Resolve-Path $Src).Path
     $folderName = Split-Path $normalizedSrc -Leaf
     
-    # Initialize Root Scope for security check
     if ($IsRoot) { $script:RootPath = $normalizedSrc }
     
     # 1. Circularity Check
@@ -39,15 +39,11 @@ function Invoke-RecursivePack {
         # 3. File Copy (Project Files)
         if (-not $AuditOnly) {
             if ($Dest.Length -ge $Limit) { throw "PATH TOO LONG: $Dest" }
-            
-            # ALWAYS ensure the directory exists so Shared/Paths.ps1 have a home
             if (-not (Test-Path $Dest)) { New-Item -ItemType Directory -Path $Dest -Force | Out-Null }
 
-            # ONLY copy files if it's the root OR if the destination is empty
-            # This prevents the "Redundant Copy" while ensuring the files exist
             $filesExist = Get-ChildItem -Path $Dest -Force | Select-Object -First 1
             if ($IsRoot -or -not $filesExist) {
-                Write-Output "[FETCH] $folderName (v$($manifestData.Version))"
+                Write-Output "[PROJECT] $folderName (v$($manifestData.Version))"
                 Get-ChildItem -Path $Src | Where-Object {
                     $_.Name -notmatch "^(Shared|Build|\.git)$"
                 } | ForEach-Object {
@@ -57,7 +53,7 @@ function Invoke-RecursivePack {
         }
 
         # 4. Handle INTERNAL SubProjects
-        $localNames = @{} # Track all names used in this specific manifest
+        $localNames = @{} 
         if ($manifestData.SubProjects) {
             foreach ($subRelPath in $manifestData.SubProjects) {
                 $subSrcDir = [System.IO.Path]::GetFullPath((Join-Path $Src $subRelPath))
@@ -70,6 +66,8 @@ function Invoke-RecursivePack {
                 $localNames[$subName] = "SubProject"
 
                 $subDestDir = if (-not $AuditOnly) { Join-Path $Dest $subRelPath } else { "" }
+                
+                if (-not $AuditOnly) { Write-Output "  -> Orchestrating: $subName" }
                 Invoke-RecursivePack -Src $subSrcDir -Dest $subDestDir -AuditOnly:$AuditOnly -IsRoot:$false
             }
         }
@@ -77,21 +75,18 @@ function Invoke-RecursivePack {
         # 5. Handle EXTERNAL Dependencies
         if ($manifestData.Dependencies) {
             $mapEntries = @()
-            # localNames (initialized in Step 4) tracks both SubProjects and Dependencies
             
             foreach ($depEntry in $manifestData.Dependencies) {
-                # 1. Resolve Name and Path
                 $isAlias = $depEntry -is [hashtable]
                 $relPath = if ($isAlias) { $depEntry.Path } else { $depEntry }
                 $depSrcPath = [System.IO.Path]::GetFullPath((Join-Path $Src $relPath))
                 
                 if (-not (Test-Path $depSrcPath)) { throw "DEPENDENCY NOT FOUND: '$folderName' requires '$relPath'" }
 
-                # 2. Identity Logic (Alias overrides Leaf Name)
                 $baseName = Split-Path $depSrcPath -Leaf
                 $depName = if ($isAlias -and $depEntry.Name) { $depEntry.Name } else { $baseName }
 
-                # --- COLLISION DETECTION (Case-Insensitive) ---
+                # Collision Detection (Sync'd with your tests)
                 if ($depName -ieq "Shared" -or $depName -ieq "Paths") {
                     throw "NAMING COLLISION: The name '$depName' is reserved for build artifacts in project '$folderName'."
                 }
@@ -101,7 +96,6 @@ function Invoke-RecursivePack {
                 }
                 $localNames[$depName] = "Dependency"
 
-                # 3. Pathing and Mapping
                 $depDest = if (-not $AuditOnly) { Join-Path $Dest "Shared" | Join-Path -ChildPath $depName } else { $null }
                 
                 $isLeaf = Test-Path $depSrcPath -PathType Leaf
@@ -110,21 +104,21 @@ function Invoke-RecursivePack {
                     $mapEntries += "'$depName' = `"$pathValue`"" 
                 }
                 
-                # 4. Processing Flow
                 $isProject = (-not $isLeaf) -and (Test-Path (Join-Path $depSrcPath "Manifest.psd1"))
                 
+                if (-not $AuditOnly) { 
+                    $logSuffix = if ($isAlias) { " (as $depName)" } else { "" }
+                    Write-Output "  [INLINE] $baseName$logSuffix" 
+                }
+
                 if ($isProject) {
                     Invoke-RecursivePack -Src $depSrcPath -Dest $depDest -AuditOnly:$AuditOnly
                 } elseif (-not $AuditOnly) {
-                    # Create the aliased folder in Shared
                     if (-not (Test-Path $depDest)) { New-Item -ItemType Directory -Path $depDest -Force | Out-Null }
                     
                     if ($isLeaf) {
-                        # Copy file into the aliased folder
                         Copy-Item -Path $depSrcPath -Destination $depDest -Force
                     } else {
-                        # Copy folder contents into the aliased folder
-                        # We use \* to copy contents into the already-created aliased directory
                         Copy-Item -Path (Join-Path $depSrcPath "*") -Destination $depDest -Recurse -Force
                     }
                 }
@@ -139,10 +133,9 @@ function Invoke-RecursivePack {
     finally { $null = $script:ProcessingStack.Pop() }
 }
 
-# --- Execution Logic (Clean and Run) ---
 if ($ListAvailable) {
     Invoke-RecursivePack -Src $ProjectPath -Dest "" -AuditOnly -IsRoot
-    Write-Output "--- Dependency Inventory ---"
+    Write-Output "`n--- Dependency Inventory ---"
     $script:DiscoveredModules.GetEnumerator() | Sort-Object Name | ForEach-Object {
         Write-Output "$($_.Key.PadRight(20)) v$($_.Value)"
     }
@@ -151,11 +144,12 @@ if ($ListAvailable) {
     Invoke-RecursivePack -Src $ProjectPath -Dest "" -AuditOnly -IsRoot
     
     if (Test-Path $Destination) {
-        Write-Output "[CLEAN] Preparing destination..."
+        Write-Output "[CLEAN] Preparing destination: $Destination"
         Remove-Item "$Destination\*" -Recurse -Force -ErrorAction SilentlyContinue
     }
 
-    Write-Output "--- Starting Build: $(Split-Path $ProjectPath -Leaf) ---"
-    Invoke-RecursivePack -Src $ProjectPath -Dest (Join-Path $Destination (Split-Path $ProjectPath -Leaf)) -IsRoot
+    Write-Output "`n--- Starting Stowage Build: $(Split-Path $ProjectPath -Leaf) ---"
+    $rootDest = Join-Path $Destination (Split-Path $ProjectPath -Leaf)
+    Invoke-RecursivePack -Src $ProjectPath -Dest $rootDest -IsRoot
     Write-Output "--- Build Complete ---"
 }

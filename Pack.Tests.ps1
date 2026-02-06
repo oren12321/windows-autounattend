@@ -79,8 +79,8 @@ Describe "Packer Version Logging Tests" {
     It "Should output the correct module versions during the fetch process" {
         $output = & "$PSScriptRoot\Pack.ps1" -ProjectPath $Main -Destination $BuildDir
         
-        $output | Should -Contain "[FETCH] MainApp (v1.0.0)"
-        $output | Should -Contain "[FETCH] DepA (v2.5.4)"
+        $output | Should -Contain "[PROJECT] MainApp (v1.0.0)"
+        $output | Should -Contain "[PROJECT] DepA (v2.5.4)"
     }
 
     AfterAll {
