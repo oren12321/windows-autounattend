@@ -129,6 +129,19 @@ Describe "Packer Policy Tests" {
         Test-Path "$BuildDir\RootPrj\Shared\DepPrj\DepPrj.psd1" | Should -Be $true
     }
 
+    It "Should throw error if path exceeds the character limit" {
+        $Root = New-Item -Path "$MockRepo\SomeProj" -ItemType Directory -Force
+        
+        # FIX: Add Dependencies so the script actually recurses into DepPrj
+        $ManifestContent = '@{ Version = "1.0.0"; Dependencies = @("../DepPrj"); CustomKey = "Preserved" }'
+        $ManifestContent | Out-File "$Root\SomeProj.psd1"
+        
+        $LongPath = "C:\" + ("a" * 255)
+        { 
+            # We mock the destination to a long string
+            & "$PSScriptRoot\Pack.ps1" -ProjectPath $Root -Dest $LongPath
+        } | Should -Throw -ExpectedMessage "*PATH TOO LONG*"
+    }
 
     AfterAll { Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue }
 }

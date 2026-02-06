@@ -37,6 +37,8 @@ function Invoke-RecursivePack {
         }
 
         if (-not $AuditOnly) {
+            if ($Dest.Length -ge $Limit) { throw "PATH TOO LONG: Cannot pack to '$Dest' (Length: $($Dest.Length))" }
+            
             if ($Dest.Length -ge $Limit) { throw "Path too long: $Dest" }
             Write-Output "[FETCH] $folderName (v$($manifestData.Version))"
             
