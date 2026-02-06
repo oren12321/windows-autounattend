@@ -50,24 +50,21 @@ function Invoke-RecursivePack {
             }
         }
 
-        # 4. Handle INTERNAL Manifests (Orchestration)
+        # 4. Handle INTERNAL SubProjects (Orchestration)
         # These do NOT create a 'Shared' folder at this level.
-        if ($manifestData.Manifests) {
-            foreach ($subManiPath in $manifestData.Manifests) {
+        if ($manifestData.SubProjects) {
+            foreach ($subManiPath in $manifestData.SubProjects) {
                 $subManiFullPath = [System.IO.Path]::GetFullPath((Join-Path $Src $subManiPath))
                 if (-not (Test-Path $subManiFullPath)) { throw "INTERNAL MANIFEST NOT FOUND: $subManiPath" }
                 
-                $subSrcDir = Split-Path $subManiFullPath -Parent
-                
                 # SCOPE GUARD: Ensure internal sub-projects are inside the Root Project tree
-                if (-not $subSrcDir.StartsWith($script:RootPath)) {
-                    throw "SECURITY VIOLATION: SubProject '$subRelPath' is outside the root project tree."
+                if (-not $subManiFullPath.StartsWith($script:RootPath)) {
+                    throw "SECURITY VIOLATION: SubProject '$subManiFullPath' is outside the root project tree."
                 }
                 
-                $relSubPath = Split-Path $subManiPath -Parent
-                $subDestDir = if (-not $AuditOnly) { Join-Path $Dest $relSubPath } else { "" }
+                $subDestDir = if (-not $AuditOnly) { Join-Path $Dest $subManiPath } else { "" }
 
-                Invoke-RecursivePack -Src $subSrcDir -Dest $subDestDir -AuditOnly:$AuditOnly
+                Invoke-RecursivePack -Src $subManiFullPath -Dest $subDestDir -AuditOnly:$AuditOnly
             }
         }
 

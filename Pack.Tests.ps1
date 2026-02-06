@@ -117,7 +117,7 @@ Describe "Packer Policy Tests" {
         $output | Should -Contain "ProjC                v1.0.C"
     }
     
-    It "Should preserve original manifests for both root and dependencies" {
+    It "Should preserve original SubProjects for both root and dependencies" {
         $Root = New-Item -Path "$MockRepo\RootPrj" -ItemType Directory -Force
         $Dep  = New-Item -Path "$MockRepo\DepPrj" -ItemType Directory -Force
         
@@ -181,7 +181,7 @@ Describe "Packer Inventory (-ListAvailable) Tests" {
         $LibA = New-Item -Path "$MockRepo\LibA" -ItemType Directory -Force
         $LibB = New-Item -Path "$MockRepo\LibB" -ItemType Directory -Force
 
-        # Manifests
+        # SubProjects
         '@{ Version="1.0.0"; Dependencies=@("../LibA") }' | Out-File "$App\Manifest.psd1"
         '@{ Version="2.1.0"; Dependencies=@("../LibB") }' | Out-File "$LibA\Manifest.psd1"
         '@{ Version="3.0.5"; Dependencies=@() }'           | Out-File "$LibB\Manifest.psd1"
@@ -316,7 +316,7 @@ Describe "Composite Project Orchestration Tests" {
         # Root Manifest: Orchestrates two internal sub-projects
         '@{ 
             Version = "1.0.0"; 
-            Manifests = @("src/Core/Manifest.psd1", "src/Api/Manifest.psd1") 
+            SubProjects = @("src/Core", "src/Api") 
         }' | Out-File "$AppRoot\Manifest.psd1"
 
         # Core Manifest: Has its own external dependency (Logger)
@@ -407,12 +407,12 @@ Describe "Packer Stress Test - Supported Features Only" {
         $PluginDir  = New-Item -Path "$AppRoot\src\Plugins" -ItemType Directory -Force
 
         # 1. MegaApp (Root)
-        '@{ Version="1.0"; Manifests=@("src/Core/Manifest.psd1", "src/Plugins/Manifest.psd1") }' | Out-File "$AppRoot\Manifest.psd1"
+        '@{ Version="1.0"; SubProjects=@("src/Core", "src/Plugins") }' | Out-File "$AppRoot\Manifest.psd1"
 
         # 2. Core (Sub-project)
         '@{ 
             Version = "1.1"; 
-            Manifests = @("src/Storage/Manifest.psd1"); 
+            SubProjects = @("src/Storage"); 
             Dependencies = @("../../../External/LibA") 
         }' | Out-File "$CoreDir\Manifest.psd1"
 
