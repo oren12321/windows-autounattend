@@ -767,3 +767,27 @@ Describe "Packer Cross-Collision Tests" {
 
     AfterAll { Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue }
 }
+
+Describe "Packer Reserved Name Tests" {
+    BeforeAll {
+        $TestRoot = New-Item -Path "$env:TEMP\ReservedNameTests" -ItemType Directory -Force
+        $MockRepo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
+        $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
+
+        # External Lib named 'Shared'
+        $ExtShared = New-Item -Path "$MockRepo\External\Shared" -ItemType Directory -Force
+        '@{ Version="1.0" }' | Out-File "$ExtShared\Manifest.psd1"
+
+        # App manifest trying to use the reserved name
+        $App = New-Item -Path "$MockRepo\App" -ItemType Directory -Force
+        '@{ Version="1.0"; Dependencies=@("../External/Shared") }' | Out-File "$App\Manifest.psd1"
+    }
+
+    It "Should throw an error if a dependency is named 'Shared' or 'Paths'" {
+        { 
+            & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir 
+        } | Should -Throw -ExpectedMessage "*NAMING COLLISION*"
+    }
+
+    AfterAll { Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue }
+}

@@ -84,6 +84,12 @@ function Invoke-RecursivePack {
                 $depName = Split-Path $depSrcPath -Leaf
 
                 # --- IMPROVED COLLISION DETECTION ---
+                # 1. Check against reserved build artifact names
+                if ($depName -eq "Shared" -or $depName -eq "Paths") {
+                    throw "NAMING COLLISION: The name '$depName' is reserved for build artifacts in project '$folderName'."
+                }
+
+                # 2. Check against internal names (SubProjects or other Dependencies)
                 if ($localNames.ContainsKey($depName)) {
                     $conflictType = $localNames[$depName]
                     throw "NAMING COLLISION: '$depName' is defined as both a $conflictType and a Dependency in project '$folderName'."
