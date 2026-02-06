@@ -42,6 +42,19 @@ Describe "Complex Project Packer Tests" {
             & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjLoop1" -Destination $BuildDir 
         } | Should -Throw -ExpectedMessage "*CIRCULAR DEPENDENCY DETECTED*"
     }
+    
+    It "Should generate a Paths.ps1 file mapping dependencies" {
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjA" -Destination $BuildDir
+        $PathFile = "$BuildDir\ProjA\Paths.ps1"
+        
+        Test-Path $PathFile | Should -Be $true
+        
+        # Load the generated file and check the variable
+        . $PathFile
+        $Paths.ProjB | Should -Match "Shared\\ProjB"
+        $Paths.ProjC | Should -Match "Shared\\ProjC"
+    }
+
 
     AfterAll {
         Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue

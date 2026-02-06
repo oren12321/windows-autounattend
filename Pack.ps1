@@ -14,7 +14,6 @@ function Invoke-RecursivePack {
     $normalizedSrc = (Resolve-Path $Src).Path
     $folderName = Split-Path $normalizedSrc -Leaf
     
-    # 1. Circularity Check
     if ($script:ProcessingStack.Contains($normalizedSrc)) {
         $chain = ($script:ProcessingStack.ToArray() | ForEach-Object { Split-Path $_ -Leaf }) -join " -> "
         throw "CIRCULAR DEPENDENCY DETECTED: $chain -> $folderName"
@@ -22,16 +21,12 @@ function Invoke-RecursivePack {
     $script:ProcessingStack.Push($normalizedSrc)
 
     try {
-        # 2. Manifest Validation
         $srcPsd1 = Get-ChildItem -Path $normalizedSrc -Filter "Manifest.psd1" | Select-Object -First 1
         if (-not $srcPsd1) { throw "MISSING MANIFEST: Project '$folderName' must have a .psd1 file." }
         
         $manifestData = Import-PowerShellDataFile -Path $srcPsd1.FullName
-        if (-not $manifestData.Version) { 
-            throw "VERSION REQUIRED: .psd1 for '$folderName' must define a 'Version'." 
-        }
+        if (-not $manifestData.Version) { throw "VERSION REQUIRED: .psd1 for '$folderName' must define a 'Version'." }
 
-        # 3. Track for ListAvailable
         if (-not $script:DiscoveredModules.ContainsKey($folderName)) {
             $script:DiscoveredModules[$folderName] = $manifestData.Version
         }
@@ -39,35 +34,43 @@ function Invoke-RecursivePack {
         if (-not $AuditOnly) {
             if ($Dest.Length -ge $Limit) { throw "PATH TOO LONG: Cannot pack to '$Dest' (Length: $($Dest.Length))" }
             Write-Output "[FETCH] $folderName (v$($manifestData.Version))"
-            
             if (-not (Test-Path $Dest)) { New-Item -ItemType Directory -Path $Dest -Force | Out-Null }
             
-            # FIX: Explicitly ignore excluded directories and their contents
             Get-ChildItem -Path $Src -Recurse | Where-Object {
                 $_.FullName -notmatch "\\(Shared|Build|\.git)($|\\)"
             } | ForEach-Object {
                 $relPath = $_.FullName.Substring($Src.Length).TrimStart('\')
                 if ($relPath -ne "") {
                     $targetPath = Join-Path $Dest $relPath
-                    if ($_.PSIsContainer) {
-                        New-Item -ItemType Directory -Path $targetPath -Force | Out-Null
-                    } else {
-                        Copy-Item -Path $_.FullName -Destination $targetPath -Force
-                    }
+                    if ($_.PSIsContainer) { New-Item -ItemType Directory -Path $targetPath -Force | Out-Null }
+                    else { Copy-Item -Path $_.FullName -Destination $targetPath -Force }
                 }
             }
         }
 
-        # 4. Recurse
         if ($manifestData.Dependencies) {
+            $mapEntries = @()
             foreach ($relPath in $manifestData.Dependencies) {
-                $depSrc = Resolve-Path (Join-Path $Src $relPath) -ErrorAction Stop
+                # Ensure we resolve the path relative to the current source
+                $depSrcPath = [System.IO.Path]::GetFullPath((Join-Path $Src $relPath))
+                if (-not (Test-Path $depSrcPath)) { throw "DEPENDENCY NOT FOUND: $relPath at $depSrcPath" }
+                
+                $depName = Split-Path $depSrcPath -Leaf
                 $depDest = $null
+                
                 if (-not $AuditOnly) {
-                    $depDest = Join-Path $Dest "Shared" | Join-Path -ChildPath (Split-Path $depSrc -Leaf)
+                    $depDest = Join-Path $Dest "Shared" | Join-Path -ChildPath $depName
+                    # We store the entry for the Paths.ps1
+                    $mapEntries += "$depName = `"`$PSScriptRoot\Shared\$depName`""
                 }
                 
-                Invoke-RecursivePack -Src $depSrc.Path -Dest $depDest -AuditOnly:$AuditOnly
+                Invoke-RecursivePack -Src $depSrcPath -Dest $depDest -AuditOnly:$AuditOnly
+            }
+
+            # Write the Paths.ps1 file if we are in build mode and have dependencies
+            if (-not $AuditOnly -and $mapEntries.Count -gt 0) {
+                $mapContent = "`$Paths = @{`r`n    " + ($mapEntries -join ";`r`n    ") + "`r`n}"
+                $mapContent | Out-File (Join-Path $Dest "Paths.ps1") -Force -Encoding UTF8
             }
         }
     }
