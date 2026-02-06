@@ -44,7 +44,13 @@ function Invoke-RecursivePack {
             
             if (Test-Path $Dest) { Remove-Item $Dest -Recurse -Force }
             New-Item -ItemType Directory -Path $Dest -Force | Out-Null
-            Copy-Item -Path "$Src\*" -Destination $Dest -Recurse -Exclude "Build", "Shared", ".git"
+            
+            Get-ChildItem -Path $Src -Recurse | Where-Object {
+                # This checks if the folder's path starts with the specific path you want to ignore
+                $_.FullName -notlike "$Src\Shared*" -and 
+                $_.FullName -notlike "$Src\Build*" -and 
+                $_.FullName -notlike "$Src\.git*"
+            } | Copy-Item -Destination { Join-Path $Dest $_.FullName.Substring($Src.Length) } -Force
         }
 
         # 4. Recurse
