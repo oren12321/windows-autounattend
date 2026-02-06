@@ -75,27 +75,43 @@ function Invoke-RecursivePack {
         }
 
         # 5. Handle EXTERNAL Dependencies (Vendor-Inlining)
-        # These DO create a 'Shared' folder and a 'Paths.ps1' at this level.
         if ($manifestData.Dependencies) {
             $mapEntries = @()
+            $usedNames = @{} # Local tracker to detect collisions in this manifest
+            
             foreach ($relPath in $manifestData.Dependencies) {
                 $depSrcPath = [System.IO.Path]::GetFullPath((Join-Path $Src $relPath))
                 if (-not (Test-Path $depSrcPath)) { throw "DEPENDENCY NOT FOUND: '$folderName' requires '$relPath' at '$depSrcPath'" }
                 
                 $depName = Split-Path $depSrcPath -Leaf
-                $depDest = $null
                 
-                if (-not $AuditOnly) {
-                    $depDest = Join-Path $Dest "Shared" | Join-Path -ChildPath $depName
-                    $mapEntries += "$depName = `"`$PSScriptRoot\Shared\$depName`""
+                # --- COLLISION DETECTION (Logic-based, not disk-based) ---
+                if ($usedNames.ContainsKey($depName)) {
+                    throw "DEPENDENCY COLLISION: Multiple dependencies are named '$depName' in project '$folderName'."
+                }
+                $usedNames[$depName] = $true
+
+                $depDest = if (-not $AuditOnly) { Join-Path $Dest "Shared" | Join-Path -ChildPath $depName } else { $null }
+                
+                $isLeaf = Test-Path $depSrcPath -PathType Leaf
+                if (-not $AuditOnly) { 
+                    $pathValue = if ($isLeaf) { "`$PSScriptRoot\Shared\$depName\$depName" } else { "`$PSScriptRoot\Shared\$depName" }
+                    $mapEntries += "'$depName' = `"$pathValue`"" 
                 }
                 
-                # Check if dependency is a project or a static asset
-                if (Test-Path (Join-Path $depSrcPath "Manifest.psd1")) {
+                $isProject = (-not $isLeaf) -and (Test-Path (Join-Path $depSrcPath "Manifest.psd1"))
+                
+                if ($isProject) {
                     Invoke-RecursivePack -Src $depSrcPath -Dest $depDest -AuditOnly:$AuditOnly
                 } elseif (-not $AuditOnly) {
-                    if (-not (Test-Path (Split-Path $depDest))) { New-Item -ItemType Directory -Path (Split-Path $depDest) -Force | Out-Null }
-                    Copy-Item -Path $depSrcPath -Destination $depDest -Recurse -Force
+                    # STATIC ASSET FLOW
+                    if ($isLeaf) {
+                        New-Item -ItemType Directory -Path $depDest -Force | Out-Null
+                        Copy-Item -Path $depSrcPath -Destination $depDest -Force
+                    } else {
+                        # Copy the folder itself into the Shared directory
+                        Copy-Item -Path $depSrcPath -Destination (Split-Path $depDest -Parent) -Recurse -Force
+                    }
                 }
             }
 

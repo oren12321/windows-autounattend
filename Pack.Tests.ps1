@@ -642,3 +642,96 @@ Describe "Packer Link Handling (Junctions) Tests" {
         Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
+
+Describe "Packer Mixed Dependency Tests" {
+    BeforeAll {
+        $TestRoot = New-Item -Path "$env:TEMP\MixedAssetTests" -ItemType Directory -Force
+        $MockRepo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
+        $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
+
+        # --- SETUP: Different Dependency Types ---
+        # 1. A Project (Has Manifest)
+        $ProjLib = New-Item -Path "$MockRepo\External\ProjLib" -ItemType Directory -Force
+        '@{ Version = "2.1.0" }' | Out-File "$ProjLib\Manifest.psd1"
+        'function Get-Data { "data" }' | Out-File "$ProjLib\Lib.ps1"
+
+        # 2. A Folder Asset (No Manifest)
+        $FolderAsset = New-Item -Path "$MockRepo\External\Icons" -ItemType Directory -Force
+        'image-data' | Out-File "$FolderAsset\logo.png"
+
+        # 3. A File Asset (Single File)
+        $FileAsset = New-Item -Path "$MockRepo\External\settings.json" -ItemType File -Force
+        '{"theme":"dark"}' | Out-File $FileAsset
+
+        # --- THE MAIN APP ---
+        $App = New-Item -Path "$MockRepo\MainApp" -ItemType Directory -Force
+        $ManifestContent = @"
+@{ 
+    Version = "1.0.0"; 
+    Dependencies = @(
+        "../External/ProjLib", 
+        "../External/Icons", 
+        "../External/settings.json"
+    ) 
+}
+"@
+        $ManifestContent | Out-File "$App\Manifest.psd1"
+    }
+
+    It "Should correctly package projects, folders, and files into Shared" {
+    & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir
+    $Shared = "$BuildDir\MainApp\Shared"
+
+    # Verify Folder Asset structure (The logo should be directly inside Icons folder)
+    Test-Path "$Shared\Icons\logo.png" | Should -Be $true
+    
+    # Verify File Asset structure (The json should be inside a folder named after it)
+    Test-Path "$Shared\settings.json\settings.json" | Should -Be $true
+}
+
+It "Should map Paths.ps1 correctly for all three types" {
+    . "$BuildDir\MainApp\Paths.ps1"
+
+    $Paths.ProjLib | Should -Match "Shared\\ProjLib$"
+    $Paths.Icons   | Should -Match "Shared\\Icons$"
+    $Paths.'settings.json' | Should -Match "Shared\\settings.json\\settings.json$"
+}
+
+
+    AfterAll { Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
+Describe "Packer Collision Guard Tests" {
+    BeforeAll {
+        $TestRoot = New-Item -Path "$env:TEMP\CollisionGuardTests" -ItemType Directory -Force
+        $MockRepo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
+        $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
+
+        # --- SETUP: Two items with the same leaf name 'Common' ---
+        $Folder1 = New-Item -Path "$MockRepo\GroupA\Common" -ItemType Directory -Force
+        'data-a' | Out-File "$Folder1\a.txt"
+
+        $Folder2 = New-Item -Path "$MockRepo\GroupB\Common" -ItemType Directory -Force
+        'data-b' | Out-File "$Folder2\b.txt"
+
+        # Project depending on both
+        $App = New-Item -Path "$MockRepo\CollisionApp" -ItemType Directory -Force
+        '@{ Version="1.0"; Dependencies=@("../GroupA/Common", "../GroupB/Common") }' | Out-File "$App\Manifest.psd1"
+    }
+
+    It "Should throw a DEPENDENCY COLLISION error if names overlap" {
+        { 
+            & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir 
+        } | Should -Throw -ExpectedMessage "*DEPENDENCY COLLISION*"
+    }
+
+    It "Should not leave a partial build if a collision is detected during validation" {
+        # Note: Our script runs a validation pass before cleaning/building
+        $GhostFolder = Join-Path $BuildDir "CollisionApp"
+        
+        # Ensure the build folder doesn't exist yet
+        Test-Path $GhostFolder | Should -Be $false
+    }
+
+    AfterAll { Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue }
+}
