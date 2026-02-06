@@ -30,6 +30,15 @@ function Invoke-RecursivePack {
         if (-not $script:DiscoveredModules.ContainsKey($folderName)) {
             $script:DiscoveredModules[$folderName] = $manifestData.Version
         }
+        
+        if ($manifestData.Dependencies) {
+            foreach ($relPath in $manifestData.Dependencies) {
+                $depSrcPath = [System.IO.Path]::GetFullPath((Join-Path $Src $relPath))
+                if (-not (Test-Path $depSrcPath)) { 
+                    throw "DEPENDENCY NOT FOUND: Project '$folderName' requires '$relPath', but it was not found at '$depSrcPath'" 
+                }
+            }
+        }
 
         if (-not $AuditOnly) {
             if ($Dest.Length -ge $Limit) { throw "PATH TOO LONG: Cannot pack to '$Dest' (Length: $($Dest.Length))" }
@@ -85,6 +94,9 @@ if ($ListAvailable) {
         Write-Output "$($_.Key.PadRight(20)) v$($_.Value)"
     }
 } else {
+    Write-Output "[VALIDATE] Checking dependency tree..."
+    Invoke-RecursivePack -Src $ProjectPath -Dest "" -AuditOnly
+    
     # Initial Clean: Only wipe the build directory once at the start of a build
     if (Test-Path $Destination) {
         Write-Output "[CLEAN] Preparing destination..."

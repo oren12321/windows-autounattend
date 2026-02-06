@@ -149,6 +149,21 @@ Describe "Packer Policy Tests" {
             & "$PSScriptRoot\Pack.ps1" -ProjectPath $Root -Dest $LongPath
         } | Should -Throw -ExpectedMessage "*PATH TOO LONG*"
     }
+    
+    It "Should throw an error and NOT clean the destination if a dependency is missing" {
+        $Root = New-Item -Path "$MockRepo\MissingDepProj" -ItemType Directory -Force
+        '@{ Version = "1.0.0"; Dependencies = @("../NonExistent") }' | Out-File "$Root\Manifest.psd1"
+        
+        # Create a file in Build to prove it wasn't cleaned
+        $Ghost = Join-Path $BuildDir "should-stay.txt"
+        "test" | Out-File $Ghost -Force
+
+        { & "$PSScriptRoot\Pack.ps1" -ProjectPath $Root -Destination $BuildDir } | Should -Throw -ExpectedMessage "*DEPENDENCY NOT FOUND*"
+        
+        # Verification
+        Test-Path $Ghost | Should -Be $true
+    }
+
 
     AfterAll { Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue }
 }
