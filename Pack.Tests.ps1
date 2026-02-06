@@ -109,6 +109,26 @@ Describe "Packer Policy Tests" {
         $output | Should -Contain "ProjB                v1.0.B"
         $output | Should -Contain "ProjC                v1.0.C"
     }
+    
+    It "Should preserve original manifests for both root and dependencies" {
+        $Root = New-Item -Path "$MockRepo\RootPrj" -ItemType Directory -Force
+        $Dep  = New-Item -Path "$MockRepo\DepPrj" -ItemType Directory -Force
+        
+        # FIX: Add RequiredModules so the script actually recurses into DepPrj
+        $ManifestContent = '@{ ModuleVersion = "1.2.3"; RequiredModules = @("../DepPrj"); CustomKey = "Preserved" }'
+        $ManifestContent | Out-File "$Root\RootPrj.psd1"
+        '@{ ModuleVersion = "1.0.0" }' | Out-File "$Dep\DepPrj.psd1"
+        
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath $Root -Destination $BuildDir
+        
+        # Verify Root
+        $RootOutput = Import-PowerShellDataFile "$BuildDir\RootPrj\RootPrj.psd1"
+        $RootOutput.CustomKey | Should -Be "Preserved"
+        
+        # Verify Dependency (This will now be true because the script followed the link)
+        Test-Path "$BuildDir\RootPrj\Shared\DepPrj\DepPrj.psd1" | Should -Be $true
+    }
+
 
     AfterAll { Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue }
 }
