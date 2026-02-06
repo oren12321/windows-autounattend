@@ -810,3 +810,129 @@ Describe "Packer Reserved Name Tests" {
 
     AfterAll { Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue }
 }
+
+Describe "Packer E2E - Complex Composite Architecture" {
+    BeforeAll {
+        $TestRoot = New-Item -Path "$env:TEMP\MegaPackerE2E" -ItemType Directory -Force
+        $Repo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
+        $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
+
+        # --- EXTERNAL ASSETS (The "Outside" World) ---
+        $ExtLib = New-Item -Path "$Repo\External\NetworkLib" -ItemType Directory -Force
+        '@{ Version = "2.5.0" }' | Out-File "$ExtLib\Manifest.psd1"
+
+        $RawConfig = New-Item -Path "$Repo\External\legacy_v1_config.json" -ItemType File -Force
+        '{"env":"prod"}' | Out-File $RawConfig
+
+        $IconDir = New-Item -Path "$Repo\External\Assets\Icons" -ItemType Directory -Force
+        'icon-data' | Out-File "$IconDir\app.ico"
+
+        # --- THE INTERNAL WEB (Fixed Paths) ---
+        $AppRoot    = New-Item -Path "$Repo\MegaApp" -ItemType Directory -Force
+        
+        # Level 1: src/Core and src/Ui
+        $CoreDir    = New-Item -Path "$AppRoot\src\Core" -ItemType Directory -Force
+        $UiDir      = New-Item -Path "$AppRoot\src\Ui" -ItemType Directory -Force
+        
+        # Level 2: Inside Core (Matching the manifests logic)
+        $StorageDir = New-Item -Path "$CoreDir\src\Storage" -ItemType Directory -Force
+        $LoggingDir = New-Item -Path "$CoreDir\src\Logging" -ItemType Directory -Force
+
+        # 1. Root Manifest
+        '@{ Version="1.0"; SubProjects=@("src/Core", "src/Ui") }' | Out-File "$AppRoot\Manifest.psd1"
+
+        # 2. Core Manifest
+        # Uses ../../../ to reach Repo/External
+        '@{ 
+            Version = "1.1"; 
+            SubProjects = @("src/Storage", "src/Logging"); 
+            Dependencies = @("../../../External/NetworkLib") 
+        }' | Out-File "$CoreDir\Manifest.psd1"
+
+        # 3. Storage Manifest
+        # Uses ../../../../.. to reach Repo/External (from src/Core/src/Storage)
+        '@{ 
+            Version = "1.1.1"; 
+            Dependencies = @(@{ Name="AppConfig"; Path="../../../../../External/legacy_v1_config.json" }) 
+        }' | Out-File "$StorageDir\Manifest.psd1"
+
+        # 4. Logging Manifest
+        # Uses ../../../../.. to reach Repo/External (from src/Core/src/Logging)
+        '@{ 
+            Version = "1.1.2"; 
+            Dependencies = @("../../../../../External/NetworkLib") 
+        }' | Out-File "$LoggingDir\Manifest.psd1"
+
+        # 5. Ui Manifest
+        # Uses ../../../ to reach Repo/External (from src/Ui)
+        '@{ 
+            Version = "1.2"; 
+            Dependencies = @("../../../External/Assets/Icons") 
+        }' | Out-File "$UiDir\Manifest.psd1"
+    }
+
+
+    Context "Validation & Inventory" {
+        It "Should pass a complete dry-run validation" {
+            { & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -ListAvailable } | Should -Not -Throw
+        }
+
+        It "Should correctly inventory every unique component and version" {
+            $output = & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -ListAvailable
+            $output | Should -Contain "MegaApp              v1.0"
+            $output | Should -Contain "Core                 v1.1"
+            $output | Should -Contain "Storage              v1.1.1"
+            $output | Should -Contain "Logging              v1.1.2"
+            $output | Should -Contain "Ui                   v1.2"
+            $output | Should -Contain "NetworkLib           v2.5.0"
+        }
+    }
+
+    Context "Build Integrity & Injection" {
+        It "Should build the entire tree with isolated dependencies and aliases" {
+            & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+            $Root = "$BuildDir\MegaApp"
+
+            # 1. Verify Deep Injection (Storage -> Aliased Config)
+            $StorageShared = "$Root\src\Core\src\Storage\Shared"
+            Test-Path "$StorageShared\AppConfig\legacy_v1_config.json" | Should -Be $true
+            
+            # 2. Verify Redundant Isolation (Core and Logging both have their own NetworkLib)
+            Test-Path "$Root\src\Core\Shared\NetworkLib" | Should -Be $true
+            Test-Path "$Root\src\Core\src\Logging\Shared\NetworkLib" | Should -Be $true
+
+            # 3. Verify Folder Asset in side-branch (Ui)
+            Test-Path "$Root\src\Ui\Shared\Icons\app.ico" | Should -Be $true
+        }
+
+        It "Should verify Paths.ps1 content for aliased and standard assets" {
+            # Check Aliased File in Storage
+            . "$BuildDir\MegaApp\src\Core\src\Storage\Paths.ps1"
+            $Paths.AppConfig | Should -Match "Shared\\AppConfig\\legacy_v1_config.json$"
+
+            # Check Folder Asset in Ui
+            . "$BuildDir\MegaApp\src\Ui\Paths.ps1"
+            $Paths.Icons | Should -Match "Shared\\Icons$"
+        }
+    }
+
+    Context "Stability & Guardrails" {
+        It "Should not allow an external dependency to overwrite a SubProject folder" {
+            $BrokenApp = New-Item -Path "$Repo\BrokenApp" -ItemType Directory -Force
+            New-Item -Path "$BrokenApp\src\Conflict" -ItemType Directory -Force
+            '@{ Version="1.0" }' | Out-File "$BrokenApp\src\Conflict\Manifest.psd1"
+            
+            # Try to depend on an external lib named 'Conflict'
+            $ExtConflict = New-Item -Path "$Repo\External\Conflict" -ItemType Directory -Force
+            '@{ Version="9.9" }' | Out-File "$ExtConflict\Manifest.psd1"
+
+            '@{ Version="1.0"; SubProjects=@("src/Conflict"); Dependencies=@("../External/Conflict") }' | Out-File "$BrokenApp\Manifest.psd1"
+
+            { & "$PSScriptRoot\Pack.ps1" -ProjectPath $BrokenApp -Destination $BuildDir } | Should -Throw -ExpectedMessage "*NAMING COLLISION*"
+        }
+    }
+
+    AfterAll {
+        Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}

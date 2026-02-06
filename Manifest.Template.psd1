@@ -1,11 +1,16 @@
-# This is a .psd1 template for the packing script.
-# Put this file in project to make it pack-able.
-
 @{
     Version = "1.0.0"
-
+    
+    # Internal: Folders within this project tree (No 'Shared' folder created)
+    SubProjects = @(
+        "src/Core",
+        "src/Ui"
+    )
+    
+    # External: Projects or Assets to be inlined (Creates 'Shared' folder)
     Dependencies = @(
-        # List here projects that contain such .psd1 file.
-        # No dependencies? Just leave this list empty.
+        "../External/CommonLib",           # Standard Project
+        "../Assets/logo.png",              # Static File
+        @{ Name="Net"; Path="../Network" } # Aliased Project
     )
 }
