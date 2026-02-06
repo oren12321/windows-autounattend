@@ -10,17 +10,17 @@ Describe "Complex Project Packer Tests" {
         # ProjC -> [ProjD]
         foreach ($p in 'A','B','C','D') { New-Item -Path "$MockRepo\Proj$p" -ItemType Directory | Out-Null }
         
-        '@{ Version = "1.0.0"; Dependencies=@("../ProjB", "../ProjC") }' | Out-File "$MockRepo\ProjA\ProjA.psd1"
-        '@{ Version = "1.0.0"; Dependencies=@("../ProjD") }'              | Out-File "$MockRepo\ProjB\ProjB.psd1"
-        '@{ Version = "1.0.0"; Dependencies=@("../ProjD") }'              | Out-File "$MockRepo\ProjC\ProjC.psd1"
-        '@{ Version = "1.0.0" }'                                            | Out-File "$MockRepo\ProjD\ProjD.psd1"
+        '@{ Version = "1.0.0"; Dependencies=@("../ProjB", "../ProjC") }' | Out-File "$MockRepo\ProjA\Manifest.psd1"
+        '@{ Version = "1.0.0"; Dependencies=@("../ProjD") }'              | Out-File "$MockRepo\ProjB\Manifest.psd1"
+        '@{ Version = "1.0.0"; Dependencies=@("../ProjD") }'              | Out-File "$MockRepo\ProjC\Manifest.psd1"
+        '@{ Version = "1.0.0" }'                                            | Out-File "$MockRepo\ProjD\Manifest.psd1"
 
         # --- SETUP: Circular Dependency ---
         # ProjLoop1 -> ProjLoop2 -> ProjLoop1
         New-Item -Path "$MockRepo\ProjLoop1" -ItemType Directory | Out-Null
         New-Item -Path "$MockRepo\ProjLoop2" -ItemType Directory | Out-Null
-        '@{ Version = "1.0.0"; Dependencies=@("../ProjLoop2") }' | Out-File "$MockRepo\ProjLoop1\ProjLoop1.psd1"
-        '@{ Version = "1.0.0"; Dependencies=@("../ProjLoop1") }' | Out-File "$MockRepo\ProjLoop2\ProjLoop2.psd1"
+        '@{ Version = "1.0.0"; Dependencies=@("../ProjLoop2") }' | Out-File "$MockRepo\ProjLoop1\Manifest.psd1"
+        '@{ Version = "1.0.0"; Dependencies=@("../ProjLoop1") }' | Out-File "$MockRepo\ProjLoop2\Manifest.psd1"
     }
 
     It "Should correctly bundle multiple dependencies in one list" {
@@ -42,12 +42,6 @@ Describe "Complex Project Packer Tests" {
             & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjLoop1" -Destination $BuildDir 
         } | Should -Throw -ExpectedMessage "*CIRCULAR DEPENDENCY DETECTED*"
     }
-    
-    It "Should name the manifest after the project" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjA" -Destination $BuildDir
-
-        Test-Path "$BuildDir\ProjA\ProjA.psd1" | Should -Be $true
-    }
 
     AfterAll {
         Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
@@ -62,11 +56,11 @@ Describe "Packer Version Logging Tests" {
 
         # Setup Dependency with specific version
         $DepA = New-Item -Path "$MockRepo\DepA" -ItemType Directory -Force
-        '@{ Version = "2.5.4" }' | Out-File "$DepA\DepA.psd1"
+        '@{ Version = "2.5.4" }' | Out-File "$DepA\Manifest.psd1"
 
         # Setup Main Project
         $Main = New-Item -Path "$MockRepo\MainApp" -ItemType Directory -Force
-        '@{ Version = "1.0.0"; Dependencies = @("../DepA") }' | Out-File "$Main\MainApp.psd1"
+        '@{ Version = "1.0.0"; Dependencies = @("../DepA") }' | Out-File "$Main\Manifest.psd1"
     }
 
     It "Should output the correct module versions during the fetch process" {
@@ -90,7 +84,7 @@ Describe "Packer Policy Tests" {
 
     It "Should throw an error if Version is missing" {
         $NoVer = New-Item -Path "$MockRepo\NoVer" -ItemType Directory -Force
-        '@{ Dependencies = @() }' | Out-File "$NoVer\NoVer.psd1" # Missing Version
+        '@{ Dependencies = @() }' | Out-File "$NoVer\Manifest.psd1" # Missing Version
 
         { & "$PSScriptRoot\Pack.ps1" -ProjectPath $NoVer } | Should -Throw -ExpectedMessage "*VERSION REQUIRED*"
     }
@@ -101,7 +95,7 @@ Describe "Packer Policy Tests" {
             $folder = New-Item -Path "$MockRepo\Proj$p" -ItemType Directory -Force
             $ver = "1.0.$p"
             $req = if($p -eq 'A'){"@('../ProjB')"} elseif($p -eq 'B'){"@('../ProjC')"} else{"@()"}
-            "@{ Version='$ver'; Dependencies=$req }" | Out-File "$folder\Proj$p.psd1"
+            "@{ Version='$ver'; Dependencies=$req }" | Out-File "$folder\Manifest.psd1"
         }
 
         $output = & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjA" -ListAvailable
@@ -116,17 +110,17 @@ Describe "Packer Policy Tests" {
         
         # FIX: Add Dependencies so the script actually recurses into DepPrj
         $ManifestContent = '@{ Version = "1.2.3"; Dependencies = @("../DepPrj"); CustomKey = "Preserved" }'
-        $ManifestContent | Out-File "$Root\RootPrj.psd1"
-        '@{ Version = "1.0.0" }' | Out-File "$Dep\DepPrj.psd1"
+        $ManifestContent | Out-File "$Root\Manifest.psd1"
+        '@{ Version = "1.0.0" }' | Out-File "$Dep\Manifest.psd1"
         
         & "$PSScriptRoot\Pack.ps1" -ProjectPath $Root -Destination $BuildDir
         
         # Verify Root
-        $RootOutput = Import-PowerShellDataFile "$BuildDir\RootPrj\RootPrj.psd1"
+        $RootOutput = Import-PowerShellDataFile "$BuildDir\RootPrj\Manifest.psd1"
         $RootOutput.CustomKey | Should -Be "Preserved"
         
         # Verify Dependency (This will now be true because the script followed the link)
-        Test-Path "$BuildDir\RootPrj\Shared\DepPrj\DepPrj.psd1" | Should -Be $true
+        Test-Path "$BuildDir\RootPrj\Shared\DepPrj\Manifest.psd1" | Should -Be $true
     }
 
     It "Should throw error if path exceeds the character limit" {
@@ -134,7 +128,7 @@ Describe "Packer Policy Tests" {
         
         # FIX: Add Dependencies so the script actually recurses into DepPrj
         $ManifestContent = '@{ Version = "1.0.0"; Dependencies = @("../DepPrj"); CustomKey = "Preserved" }'
-        $ManifestContent | Out-File "$Root\SomeProj.psd1"
+        $ManifestContent | Out-File "$Root\Manifest.psd1"
         
         $LongPath = "C:\" + ("a" * 255)
         { 
@@ -160,9 +154,9 @@ Describe "Packer Inventory (-ListAvailable) Tests" {
         $LibB = New-Item -Path "$MockRepo\LibB" -ItemType Directory -Force
 
         # Manifests
-        '@{ Version="1.0.0"; Dependencies=@("../LibA") }' | Out-File "$App\App.psd1"
-        '@{ Version="2.1.0"; Dependencies=@("../LibB") }' | Out-File "$LibA\LibA.psd1"
-        '@{ Version="3.0.5"; Dependencies=@() }'           | Out-File "$LibB\LibB.psd1"
+        '@{ Version="1.0.0"; Dependencies=@("../LibA") }' | Out-File "$App\Manifest.psd1"
+        '@{ Version="2.1.0"; Dependencies=@("../LibB") }' | Out-File "$LibA\Manifest.psd1"
+        '@{ Version="3.0.5"; Dependencies=@() }'           | Out-File "$LibB\Manifest.psd1"
         
         # Dummy script files
         'Write-Host "App"'  | Out-File "$App\App.ps1"
@@ -194,7 +188,7 @@ Describe "Packer Inventory (-ListAvailable) Tests" {
     Context "Error Handling" {
         It "Should still enforce version requirements even in ListAvailable mode" {
             $Broken = New-Item -Path "$MockRepo\Broken" -ItemType Directory -Force
-            '@{ Dependencies=@() }' | Out-File "$Broken\Broken.psd1" # Missing Version
+            '@{ Dependencies=@() }' | Out-File "$Broken\Manifest.psd1" # Missing Version
 
             { 
                 & "$PSScriptRoot\Pack.ps1" -ProjectPath $Broken -ListAvailable 
@@ -205,7 +199,7 @@ Describe "Packer Inventory (-ListAvailable) Tests" {
     It "Should NOT generate a manifest during -ListAvailable" {
         $Output = & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir -ListAvailable
 
-        $ManifestPath = "$BuildDir\App\App.psd1"
+        $ManifestPath = "$BuildDir\App\Manifest.psd1"
         Test-Path $ManifestPath | Should -Be $false
     }
 

@@ -23,7 +23,7 @@ function Invoke-RecursivePack {
 
     try {
         # 2. Manifest Validation
-        $srcPsd1 = Get-ChildItem -Path $normalizedSrc -Filter "*.psd1" | Select-Object -First 1
+        $srcPsd1 = Get-ChildItem -Path $normalizedSrc -Filter "Manifest.psd1" | Select-Object -First 1
         if (-not $srcPsd1) { throw "MISSING MANIFEST: Project '$folderName' must have a .psd1 file." }
         
         $manifestData = Import-PowerShellDataFile -Path $srcPsd1.FullName
