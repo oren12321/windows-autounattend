@@ -24,7 +24,7 @@ Describe "Complex Project Packer Tests" {
     }
 
     It "Should correctly bundle multiple dependencies in one list" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjA" -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath "$MockRepo\ProjA" -Destination $BuildDir
         
         $PathB = "$BuildDir\ProjA\Shared\ProjB"
         $PathC = "$BuildDir\ProjA\Shared\ProjC"
@@ -39,12 +39,12 @@ Describe "Complex Project Packer Tests" {
 
     It "Should detect and block circular dependencies" {
         { 
-            & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjLoop1" -Destination $BuildDir 
+            & "$PSScriptRoot\Stowage.ps1" -ProjectPath "$MockRepo\ProjLoop1" -Destination $BuildDir 
         } | Should -Throw -ExpectedMessage "*CIRCULAR DEPENDENCY DETECTED*"
     }
     
     It "Should generate a Paths.ps1 file mapping dependencies" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjA" -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath "$MockRepo\ProjA" -Destination $BuildDir
         $PathFile = "$BuildDir\ProjA\Paths.ps1"
         
         Test-Path $PathFile | Should -Be $true
@@ -77,7 +77,7 @@ Describe "Packer Version Logging Tests" {
     }
 
     It "Should output the correct module versions during the fetch process" {
-        $output = & "$PSScriptRoot\Pack.ps1" -ProjectPath $Main -Destination $BuildDir
+        $output = & "$PSScriptRoot\Stowage.ps1" -ProjectPath $Main -Destination $BuildDir
         
         $output | Should -Contain "[PROJECT] MainApp (v1.0.0)"
         $output | Should -Contain "[PROJECT] DepA (v2.5.4)"
@@ -99,7 +99,7 @@ Describe "Packer Policy Tests" {
         $NoVer = New-Item -Path "$MockRepo\NoVer" -ItemType Directory -Force
         '@{ Dependencies = @() }' | Out-File "$NoVer\Manifest.psd1" # Missing Version
 
-        { & "$PSScriptRoot\Pack.ps1" -ProjectPath $NoVer } | Should -Throw -ExpectedMessage "*VERSION REQUIRED*"
+        { & "$PSScriptRoot\Stowage.ps1" -ProjectPath $NoVer } | Should -Throw -ExpectedMessage "*VERSION REQUIRED*"
     }
 
     It "Should list all unique dependencies when -ListAvailable is used" {
@@ -111,7 +111,7 @@ Describe "Packer Policy Tests" {
             "@{ Version='$ver'; Dependencies=$req }" | Out-File "$folder\Manifest.psd1"
         }
 
-        $output = & "$PSScriptRoot\Pack.ps1" -ProjectPath "$MockRepo\ProjA" -ListAvailable
+        $output = & "$PSScriptRoot\Stowage.ps1" -ProjectPath "$MockRepo\ProjA" -ListAvailable
         $output | Should -Contain "ProjA                v1.0.A"
         $output | Should -Contain "ProjB                v1.0.B"
         $output | Should -Contain "ProjC                v1.0.C"
@@ -126,7 +126,7 @@ Describe "Packer Policy Tests" {
         $ManifestContent | Out-File "$Root\Manifest.psd1"
         '@{ Version = "1.0.0" }' | Out-File "$Dep\Manifest.psd1"
         
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath $Root -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath $Root -Destination $BuildDir
         
         # Verify Root
         $RootOutput = Import-PowerShellDataFile "$BuildDir\RootPrj\Manifest.psd1"
@@ -146,7 +146,7 @@ Describe "Packer Policy Tests" {
         $LongPath = "C:\" + ("a" * 255)
         { 
             # We mock the destination to a long string
-            & "$PSScriptRoot\Pack.ps1" -ProjectPath $Root -Dest $LongPath
+            & "$PSScriptRoot\Stowage.ps1" -ProjectPath $Root -Dest $LongPath
         } | Should -Throw -ExpectedMessage "*PATH TOO LONG*"
     }
     
@@ -158,7 +158,7 @@ Describe "Packer Policy Tests" {
         $Ghost = Join-Path $BuildDir "should-stay.txt"
         "test" | Out-File $Ghost -Force
 
-        { & "$PSScriptRoot\Pack.ps1" -ProjectPath $Root -Destination $BuildDir } | Should -Throw -ExpectedMessage "*DEPENDENCY NOT FOUND*"
+        { & "$PSScriptRoot\Stowage.ps1" -ProjectPath $Root -Destination $BuildDir } | Should -Throw -ExpectedMessage "*DEPENDENCY NOT FOUND*"
         
         # Verification
         Test-Path $Ghost | Should -Be $true
@@ -194,7 +194,7 @@ Describe "Packer Inventory (-ListAvailable) Tests" {
     Context "Dependency Discovery" {
         It "Should list all unique modules and their versions in the console output" {
             # Execute with ListAvailable switch
-            $Output = & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir -ListAvailable
+            $Output = & "$PSScriptRoot\Stowage.ps1" -ProjectPath $App -Destination $BuildDir -ListAvailable
 
             # Verify the discovery header and each module version
             $Output -join "`n" | Should -Match "--- Dependency Inventory ---"
@@ -219,13 +219,13 @@ Describe "Packer Inventory (-ListAvailable) Tests" {
             '@{ Dependencies=@() }' | Out-File "$Broken\Manifest.psd1" # Missing Version
 
             { 
-                & "$PSScriptRoot\Pack.ps1" -ProjectPath $Broken -ListAvailable 
+                & "$PSScriptRoot\Stowage.ps1" -ProjectPath $Broken -ListAvailable 
             } | Should -Throw -ExpectedMessage "*VERSION REQUIRED*"
         }
     }
     
     It "Should NOT generate a manifest during -ListAvailable" {
-        $Output = & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir -ListAvailable
+        $Output = & "$PSScriptRoot\Stowage.ps1" -ProjectPath $App -Destination $BuildDir -ListAvailable
 
         $ManifestPath = "$BuildDir\App\Manifest.psd1"
         Test-Path $ManifestPath | Should -Be $false
@@ -267,7 +267,7 @@ Describe "Packer Cleanup and Filtering Tests" {
         New-Item -Path $GhostFile -ItemType File -Value "I should be deleted" -Force | Out-Null
         
         # 2. Run the packer
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath $Project -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath $Project -Destination $BuildDir
         
         # 3. Verify the ghost file is gone
         Test-Path $GhostFile | Should -Be $false
@@ -275,7 +275,7 @@ Describe "Packer Cleanup and Filtering Tests" {
     }
 
     It "Should exclude .git, Build, and Shared folders from the final package" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath $Project -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath $Project -Destination $BuildDir
         $DestRoot = "$BuildDir\FilterProj"
 
         # Verify main files exist
@@ -333,7 +333,7 @@ Describe "Composite Project Orchestration Tests" {
     }
 
     It "Should correctly build the composite tree with localized Paths.ps1 files" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath $AppRoot -Destination $BuildDir
         
         $BuildRoot = "$BuildDir\MainApp"
 
@@ -355,7 +355,7 @@ Describe "Composite Project Orchestration Tests" {
     }
 
     It "Should verify that Paths.ps1 content points to the correct local Shared folder" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath $AppRoot -Destination $BuildDir
         
         # Dot-source the Core Paths file
         $CorePathsFile = "$BuildDir\MainApp\src\Core\Paths.ps1"
@@ -367,7 +367,7 @@ Describe "Composite Project Orchestration Tests" {
     }
 
     It "Should list all composite versions in -ListAvailable" {
-        $output = & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -ListAvailable
+        $output = & "$PSScriptRoot\Stowage.ps1" -ProjectPath $AppRoot -ListAvailable
         
         $output | Should -Contain "MainApp              v1.0.0"
         $output | Should -Contain "Core                 v1.1.0"
@@ -430,11 +430,11 @@ Describe "Packer Stress Test - Supported Features Only" {
     }
 
     It "Should successfully validate the entire recursive tree" {
-        { & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir -ListAvailable } | Should -Not -Throw
+        { & "$PSScriptRoot\Stowage.ps1" -ProjectPath $AppRoot -Destination $BuildDir -ListAvailable } | Should -Not -Throw
     }
 
     It "Should isolate LibA in separate 'Shared' folders for both Core and Plugins" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath $AppRoot -Destination $BuildDir
         $Base = "$BuildDir\MegaApp"
 
         # Verify Core's LibA
@@ -447,7 +447,7 @@ Describe "Packer Stress Test - Supported Features Only" {
     }
 
     It "Should handle deep dependency chains (Storage -> LibB -> LibA)" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath $AppRoot -Destination $BuildDir
         
         $StorageShared = "$BuildDir\MegaApp\src\Core\src\Storage\Shared"
         
@@ -459,7 +459,7 @@ Describe "Packer Stress Test - Supported Features Only" {
     }
 
     It "Should ensure Paths.ps1 files only contain the immediate dependencies" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath $AppRoot -Destination $BuildDir
         
         # Load Core's Paths
         . "$BuildDir\MegaApp\src\Core\Paths.ps1"
@@ -468,7 +468,7 @@ Describe "Packer Stress Test - Supported Features Only" {
     }
 
     It "Should inventory all 6 projects with correct versions" {
-        $output = & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -ListAvailable
+        $output = & "$PSScriptRoot\Stowage.ps1" -ProjectPath $AppRoot -ListAvailable
         
         $output | Should -Contain "MegaApp              v1.0"
         $output | Should -Contain "Core                 v1.1"
@@ -524,7 +524,7 @@ Describe "Project Tree Integrity Tests" {
     }
 
     It "Should mirror the entire source tree structure exactly in the build folder" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath $AppRoot -Destination $BuildDir
         $BuildRoot = "$BuildDir\MainApp"
 
         # 1. Verify Root level files/folders (Non-manifest items)
@@ -539,7 +539,7 @@ Describe "Project Tree Integrity Tests" {
     }
 
     It "Should ensure file content was preserved during the copy" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath $AppRoot -Destination $BuildDir
         
         $SchemaPath = "$BuildDir\MainApp\src\Core\src\Storage\data\schema.sql"
         Get-Content $SchemaPath | Should -Be "sql-schema"
@@ -578,7 +578,7 @@ Describe "Project Exclusion Policy Tests" {
     }
 
     It "Should strictly exclude .git, Build, and Shared folders from the source" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath $Project -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath $Project -Destination $BuildDir
         $BuildRoot = "$BuildDir\DirtyProj"
 
         # Verify excluded directories do NOT exist
@@ -591,7 +591,7 @@ Describe "Project Exclusion Policy Tests" {
     }
 
     It "Should still correctly copy deep valid subfolders" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath $Project -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath $Project -Destination $BuildDir
         Test-Path "$BuildDir\DirtyProj\src\Utility\helper.ps1" | Should -Be $true
     }
 
@@ -621,7 +621,7 @@ Describe "Packer Link Handling (Junctions) Tests" {
     }
 
     It "Should flatten junctions into real directories and files in the build" {
-        & "$PSScriptRoot\Pack.ps1" -ProjectPath $Project -Destination $BuildDir
+        & "$PSScriptRoot\Stowage.ps1" -ProjectPath $Project -Destination $BuildDir
         $BuildPath = "$BuildDir\LinkApp\LinkedFolder"
 
         # 1. Verify the folder exists in the build
@@ -679,7 +679,7 @@ Describe "Packer Mixed Dependency Tests" {
     }
 
     It "Should correctly package projects, folders, and files into Shared" {
-    & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir
+    & "$PSScriptRoot\Stowage.ps1" -ProjectPath $App -Destination $BuildDir
     $Shared = "$BuildDir\MainApp\Shared"
 
     # Verify Folder Asset structure (The logo should be directly inside Icons folder)
@@ -721,7 +721,7 @@ Describe "Packer Collision Guard Tests" {
 
     It "Should throw a DEPENDENCY COLLISION error if names overlap" {
         { 
-            & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir 
+            & "$PSScriptRoot\Stowage.ps1" -ProjectPath $App -Destination $BuildDir 
         } | Should -Throw -ExpectedMessage "*NAMING COLLISION*"
     }
 
@@ -769,7 +769,7 @@ Describe "Packer Cross-Collision Tests" {
 
     It "Should throw an error if a SubProject and Dependency share the same name" {
         { 
-            & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir 
+            & "$PSScriptRoot\Stowage.ps1" -ProjectPath $App -Destination $BuildDir 
         } | Should -Throw -ExpectedMessage "*NAMING COLLISION*"
     }
     
@@ -777,7 +777,7 @@ Describe "Packer Cross-Collision Tests" {
         $ManifestContent = '@{ Version="1.0"; Dependencies=@(@{Name="NetA"; Path="../GroupA/Common"}, @{Name="NetB"; Path="../GroupB/Common"}) }'
         $ManifestContent | Out-File "$App\Manifest.psd1"
 
-        { & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir } | Should -Not -Throw
+        { & "$PSScriptRoot\Stowage.ps1" -ProjectPath $App -Destination $BuildDir } | Should -Not -Throw
 
         . "$BuildDir\App\Paths.ps1"
         $Paths.NetA | Should -Match "Shared\\NetA$"
@@ -804,7 +804,7 @@ Describe "Packer Reserved Name Tests" {
 
     It "Should throw an error if a dependency is named 'Shared' or 'Paths'" {
         { 
-            & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir 
+            & "$PSScriptRoot\Stowage.ps1" -ProjectPath $App -Destination $BuildDir 
         } | Should -Throw -ExpectedMessage "*NAMING COLLISION*"
     }
 
@@ -874,11 +874,11 @@ Describe "Packer E2E - Complex Composite Architecture" {
 
     Context "Validation & Inventory" {
         It "Should pass a complete dry-run validation" {
-            { & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -ListAvailable } | Should -Not -Throw
+            { & "$PSScriptRoot\Stowage.ps1" -ProjectPath $AppRoot -ListAvailable } | Should -Not -Throw
         }
 
         It "Should correctly inventory every unique component and version" {
-            $output = & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -ListAvailable
+            $output = & "$PSScriptRoot\Stowage.ps1" -ProjectPath $AppRoot -ListAvailable
             $output | Should -Contain "MegaApp              v1.0"
             $output | Should -Contain "Core                 v1.1"
             $output | Should -Contain "Storage              v1.1.1"
@@ -890,7 +890,7 @@ Describe "Packer E2E - Complex Composite Architecture" {
 
     Context "Build Integrity & Injection" {
         It "Should build the entire tree with isolated dependencies and aliases" {
-            & "$PSScriptRoot\Pack.ps1" -ProjectPath $AppRoot -Destination $BuildDir
+            & "$PSScriptRoot\Stowage.ps1" -ProjectPath $AppRoot -Destination $BuildDir
             $Root = "$BuildDir\MegaApp"
 
             # 1. Verify Deep Injection (Storage -> Aliased Config)
@@ -928,7 +928,7 @@ Describe "Packer E2E - Complex Composite Architecture" {
 
             '@{ Version="1.0"; SubProjects=@("src/Conflict"); Dependencies=@("../External/Conflict") }' | Out-File "$BrokenApp\Manifest.psd1"
 
-            { & "$PSScriptRoot\Pack.ps1" -ProjectPath $BrokenApp -Destination $BuildDir } | Should -Throw -ExpectedMessage "*NAMING COLLISION*"
+            { & "$PSScriptRoot\Stowage.ps1" -ProjectPath $BrokenApp -Destination $BuildDir } | Should -Throw -ExpectedMessage "*NAMING COLLISION*"
         }
     }
 
