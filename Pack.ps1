@@ -77,43 +77,55 @@ function Invoke-RecursivePack {
         # 5. Handle EXTERNAL Dependencies
         if ($manifestData.Dependencies) {
             $mapEntries = @()
-            foreach ($relPath in $manifestData.Dependencies) {
+            # localNames (initialized in Step 4) tracks both SubProjects and Dependencies
+            
+            foreach ($depEntry in $manifestData.Dependencies) {
+                # 1. Resolve Name and Path
+                $isAlias = $depEntry -is [hashtable]
+                $relPath = if ($isAlias) { $depEntry.Path } else { $depEntry }
                 $depSrcPath = [System.IO.Path]::GetFullPath((Join-Path $Src $relPath))
-                if (-not (Test-Path $depSrcPath)) { throw "DEPENDENCY NOT FOUND: '$folderName' requires '$relPath'" }
                 
-                $depName = Split-Path $depSrcPath -Leaf
+                if (-not (Test-Path $depSrcPath)) { throw "DEPENDENCY NOT FOUND: '$folderName' requires '$relPath'" }
 
-                # --- IMPROVED COLLISION DETECTION ---
-                # 1. Check against reserved build artifact names
-                if ($depName -eq "Shared" -or $depName -eq "Paths") {
+                # 2. Identity Logic (Alias overrides Leaf Name)
+                $baseName = Split-Path $depSrcPath -Leaf
+                $depName = if ($isAlias -and $depEntry.Name) { $depEntry.Name } else { $baseName }
+
+                # --- COLLISION DETECTION (Case-Insensitive) ---
+                if ($depName -ieq "Shared" -or $depName -ieq "Paths") {
                     throw "NAMING COLLISION: The name '$depName' is reserved for build artifacts in project '$folderName'."
                 }
-
-                # 2. Check against internal names (SubProjects or other Dependencies)
                 if ($localNames.ContainsKey($depName)) {
                     $conflictType = $localNames[$depName]
                     throw "NAMING COLLISION: '$depName' is defined as both a $conflictType and a Dependency in project '$folderName'."
                 }
                 $localNames[$depName] = "Dependency"
 
+                # 3. Pathing and Mapping
                 $depDest = if (-not $AuditOnly) { Join-Path $Dest "Shared" | Join-Path -ChildPath $depName } else { $null }
                 
                 $isLeaf = Test-Path $depSrcPath -PathType Leaf
                 if (-not $AuditOnly) { 
-                    $pathValue = if ($isLeaf) { "`$PSScriptRoot\Shared\$depName\$depName" } else { "`$PSScriptRoot\Shared\$depName" }
+                    $pathValue = if ($isLeaf) { "`$PSScriptRoot\Shared\$depName\$baseName" } else { "`$PSScriptRoot\Shared\$depName" }
                     $mapEntries += "'$depName' = `"$pathValue`"" 
                 }
                 
+                # 4. Processing Flow
                 $isProject = (-not $isLeaf) -and (Test-Path (Join-Path $depSrcPath "Manifest.psd1"))
                 
                 if ($isProject) {
                     Invoke-RecursivePack -Src $depSrcPath -Dest $depDest -AuditOnly:$AuditOnly
                 } elseif (-not $AuditOnly) {
+                    # Create the aliased folder in Shared
+                    if (-not (Test-Path $depDest)) { New-Item -ItemType Directory -Path $depDest -Force | Out-Null }
+                    
                     if ($isLeaf) {
-                        New-Item -ItemType Directory -Path $depDest -Force | Out-Null
+                        # Copy file into the aliased folder
                         Copy-Item -Path $depSrcPath -Destination $depDest -Force
                     } else {
-                        Copy-Item -Path $depSrcPath -Destination (Split-Path $depDest -Parent) -Recurse -Force
+                        # Copy folder contents into the aliased folder
+                        # We use \* to copy contents into the already-created aliased directory
+                        Copy-Item -Path (Join-Path $depSrcPath "*") -Destination $depDest -Recurse -Force
                     }
                 }
             }
@@ -123,7 +135,6 @@ function Invoke-RecursivePack {
                 $mapContent | Out-File (Join-Path $Dest "Paths.ps1") -Force -Encoding UTF8
             }
         }
-
     }
     finally { $null = $script:ProcessingStack.Pop() }
 }

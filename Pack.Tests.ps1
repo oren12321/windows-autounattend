@@ -742,6 +742,14 @@ Describe "Packer Cross-Collision Tests" {
         $MockRepo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
         $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
 
+        # Create GroupA/Common
+        $GroupA = New-Item -Path "$MockRepo\GroupA\Common" -ItemType Directory -Force
+        '@{ Version="1.0" }' | Out-File "$GroupA\Manifest.psd1"
+
+        # Create GroupB/Common
+        $GroupB = New-Item -Path "$MockRepo\GroupB\Common" -ItemType Directory -Force
+        '@{ Version="1.0" }' | Out-File "$GroupB\Manifest.psd1"
+
         # External Lib named 'Core'
         $ExtCore = New-Item -Path "$MockRepo\External\Core" -ItemType Directory -Force
         '@{ Version="2.0" }' | Out-File "$ExtCore\Manifest.psd1"
@@ -764,6 +772,17 @@ Describe "Packer Cross-Collision Tests" {
             & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir 
         } | Should -Throw -ExpectedMessage "*NAMING COLLISION*"
     }
+    
+    It "Should allow aliasing to resolve naming collisions" {
+        $ManifestContent = '@{ Version="1.0"; Dependencies=@(@{Name="NetA"; Path="../GroupA/Common"}, @{Name="NetB"; Path="../GroupB/Common"}) }'
+        $ManifestContent | Out-File "$App\Manifest.psd1"
+
+        { & "$PSScriptRoot\Pack.ps1" -ProjectPath $App -Destination $BuildDir } | Should -Not -Throw
+
+        . "$BuildDir\App\Paths.ps1"
+        $Paths.NetA | Should -Match "Shared\\NetA$"
+    }
+
 
     AfterAll { Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue }
 }
