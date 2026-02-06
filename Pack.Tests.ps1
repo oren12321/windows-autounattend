@@ -549,3 +549,96 @@ Describe "Project Tree Integrity Tests" {
         Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
+
+Describe "Project Exclusion Policy Tests" {
+    BeforeAll {
+        $TestRoot = New-Item -Path "$env:TEMP\ExclusionPolicyTests" -ItemType Directory -Force
+        $MockRepo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
+        $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
+
+        # --- SETUP: A project containing forbidden folders ---
+        $Project = New-Item -Path "$MockRepo\DirtyProj" -ItemType Directory -Force
+        '@{ Version = "1.0.0" }' | Out-File "$Project\Manifest.psd1"
+        
+        # 1. Create .git folder and content
+        $GitDir = New-Item -Path "$Project\.git" -ItemType Directory -Force
+        'git-internal-data' | Out-File "$GitDir\config"
+
+        # 2. Create Build folder and content
+        $OldBuildDir = New-Item -Path "$Project\Build" -ItemType Directory -Force
+        'stale-artifact' | Out-File "$OldBuildDir\old_build.log"
+
+        # 3. Create Shared folder (should be ignored from source)
+        $OldSharedDir = New-Item -Path "$Project\Shared" -ItemType Directory -Force
+        'old-dependency' | Out-File "$OldSharedDir\lib.dll"
+
+        # 4. Create a valid nested folder to ensure normal recursion works
+        $ValidSub = New-Item -Path "$Project\src\Utility" -ItemType Directory -Force
+        'valid-code' | Out-File "$ValidSub\helper.ps1"
+    }
+
+    It "Should strictly exclude .git, Build, and Shared folders from the source" {
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath $Project -Destination $BuildDir
+        $BuildRoot = "$BuildDir\DirtyProj"
+
+        # Verify excluded directories do NOT exist
+        Test-Path "$BuildRoot\.git"    | Should -Be $false
+        Test-Path "$BuildRoot\Build"   | Should -Be $false
+        
+        # Verify the source's Shared folder was ignored 
+        # (A Shared folder only appears in Build if created by the packer's Dependency logic)
+        Test-Path "$BuildRoot\Shared"  | Should -Be $false
+    }
+
+    It "Should still correctly copy deep valid subfolders" {
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath $Project -Destination $BuildDir
+        Test-Path "$BuildDir\DirtyProj\src\Utility\helper.ps1" | Should -Be $true
+    }
+
+    AfterAll {
+        Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Describe "Packer Link Handling (Junctions) Tests" {
+    BeforeAll {
+        $TestRoot = New-Item -Path "$env:TEMP\PackerLinkTests" -ItemType Directory -Force
+        $MockRepo = New-Item -Path "$TestRoot\Repo" -ItemType Directory -Force
+        $BuildDir = New-Item -Path "$TestRoot\Build" -ItemType Directory -Force
+
+        # --- SETUP: A Source folder and a Junction pointing to it ---
+        # We create a folder outside the project tree to act as the "Target"
+        $ExternalTarget = New-Item -Path "$TestRoot\ExternalTarget" -ItemType Directory -Force
+        'linked-content' | Out-File "$ExternalTarget\data.txt"
+
+        # Create the Project
+        $Project = New-Item -Path "$MockRepo\LinkApp" -ItemType Directory -Force
+        '@{ Version = "1.0.0" }' | Out-File "$Project\Manifest.psd1"
+
+        # Create a Junction inside the project pointing to the external folder
+        # Junctions are preferred over Symlinks in PS 5.1 because they don't require Admin
+        New-Item -Path "$Project\LinkedFolder" -ItemType Junction -Value $ExternalTarget | Out-Null
+    }
+
+    It "Should flatten junctions into real directories and files in the build" {
+        & "$PSScriptRoot\Pack.ps1" -ProjectPath $Project -Destination $BuildDir
+        $BuildPath = "$BuildDir\LinkApp\LinkedFolder"
+
+        # 1. Verify the folder exists in the build
+        Test-Path $BuildPath | Should -Be $true
+
+        # 2. Verify it is a REAL directory, not a link anymore
+        # In PS 5.1, (Get-Item).LinkType is null for a standard directory
+        $item = Get-Item $BuildPath
+        $item.LinkType | Should -BeNullOrEmpty
+
+        # 3. Verify the content was copied correctly
+        Get-Content "$BuildPath\data.txt" | Should -Be "linked-content"
+    }
+
+    AfterAll {
+        # Note: Be careful when deleting junctions; always use -Recurse -Force 
+        # to ensure the link is removed without touching the original target
+        Remove-Item $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
