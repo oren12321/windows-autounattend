@@ -57,7 +57,8 @@ function Discover-Projects {
 
     Write-Timestamped (Format-Line -Level "DEBUG" -Message "Scanning subdirectories under '$BuildRoot'")
     Get-ChildItem -Path $BuildRoot -Directory -Recurse | Where-Object { 
-        $_.FullName -notlike "*\Shared\*"
+        $_.FullName -notlike "*\Shared\*" -and
+        $_.FullName -notlike "*\.git\*"
     } | ForEach-Object {
         $folder = $_
         Write-Timestamped (Format-Line -Level "TRACE" -Message "Inspecting folder '$($folder.Name)'")

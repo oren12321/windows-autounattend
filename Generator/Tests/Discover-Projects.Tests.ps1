@@ -36,13 +36,20 @@ Describe "Discover-Projects" {
         $result.Name | Should -Contain "ProjC"
     }
 
-    It "Ignores Shared folder" {
+    It "Ignores Shared and .git folders" {
         $shared = Join-Path $TestRoot "Shared"
         New-Item -ItemType Directory -Path $shared | Out-Null
 
         $projC = Join-Path $shared "ProjC"
         New-Item -ItemType Directory -Path $projC | Out-Null
         New-Item -ItemType File -Path (Join-Path $projC "ProjC.psd1") | Out-Null
+        
+        $git = Join-Path $projC ".git"
+        New-Item -ItemType Directory -Path $git | Out-Null
+        
+        $projD = Join-Path $git "ProjD"
+        New-Item -ItemType Directory -Path $projD | Out-Null
+        New-Item -ItemType File -Path (Join-Path $projD "ProjD.psd1") | Out-Null
         
         { Discover-Projects -BuildRoot $TestRoot } | Should -Throw
     }
