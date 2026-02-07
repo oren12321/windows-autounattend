@@ -13,7 +13,7 @@ Describe "Generate-Scripts" {
         Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
     }
 
-    It "Generates scripts only for passes with commands" {
+    It "Generates scripts only for all passes with or without commands" {
         $groups = @{
             Specialize  = @(@{ Command="cmd1" })
             FirstLogon  = @()
@@ -24,7 +24,7 @@ Describe "Generate-Scripts" {
 
         Test-Path $result.SpecializeScript  | Should -Be $true
         Test-Path $result.ActiveSetupScript | Should -Be $true
-        $result.FirstLogonScript            | Should -Be $null
+        Test-Path $result.FirstLogonScript  | Should -Be $true
     }
 
     It "Writes commands in correct order" {

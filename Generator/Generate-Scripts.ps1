@@ -60,11 +60,6 @@ function Generate-Scripts {
 
         $commands = $Groups[$pass]
 
-        if ($commands.Count -eq 0) {
-            Write-Timestamped (Format-Line -Level "INFO" -Message "No commands found for pass '$pass'. Skipping script generation")
-            continue
-        }
-
         $path = Join-Path $OutputFolder "$pass.ps1"
         Write-Timestamped (Format-Line -Level "DEBUG" -Message "Creating script file '$path'")
 

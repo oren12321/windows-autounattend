@@ -84,10 +84,6 @@ function Discover-Projects {
         }
     }
 
-    if ($projects.Count -eq 0) {
-        throw "No valid projects found in '$BuildRoot'."
-    }
-
     Write-Timestamped (Format-Line -Level "INFO" -Message "Project discovery complete. Total projects found: $($projects.Count)")
-    return $projects
+    return ,$projects
 }

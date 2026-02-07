@@ -51,14 +51,18 @@ Describe "Discover-Projects" {
         New-Item -ItemType Directory -Path $projD | Out-Null
         New-Item -ItemType File -Path (Join-Path $projD "Unattend.psd1") | Out-Null
         
-        { Discover-Projects -BuildRoot $TestRoot } | Should -Throw
+        $result = Discover-Projects -BuildRoot $TestRoot
+
+        $result.Count | Should -Be 0
     }
 
     It "Ignores folders without manifest" {
         $projA = Join-Path $TestRoot "ProjA"
         New-Item -ItemType Directory -Path $projA | Out-Null
 
-        { Discover-Projects -BuildRoot $TestRoot } | Should -Throw
+        $result = Discover-Projects -BuildRoot $TestRoot
+
+        $result.Count | Should -Be 0
     }
 
     It "Ignores folders with mismatched manifest name" {
@@ -67,14 +71,12 @@ Describe "Discover-Projects" {
 
         New-Item -ItemType File -Path (Join-Path $projA "Other.psd1") | Out-Null
 
-        { Discover-Projects -BuildRoot $TestRoot } | Should -Throw
+        $result = Discover-Projects -BuildRoot $TestRoot
+
+        $result.Count | Should -Be 0
     }
 
     It "Throws if Build root does not exist" {
         { Discover-Projects -BuildRoot "C:\Does\Not\Exist" } | Should -Throw
-    }
-
-    It "Throws if no projects found" {
-        { Discover-Projects -BuildRoot $TestRoot } | Should -Throw
     }
 }

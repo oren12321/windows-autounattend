@@ -37,6 +37,7 @@
 function Normalize-Commands {
     param(
         [Parameter(Mandatory)]
+        [AllowEmptyCollection()]
         [array] $Projects
     )
 

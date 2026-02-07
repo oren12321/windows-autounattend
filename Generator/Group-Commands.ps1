@@ -67,9 +67,11 @@ function Group-Commands {
 
     Write-Timestamped (Format-Line -Level "DEBUG" -Message "Sorting command groups by Order value")
 
-    $result.Specialize  = @($result.Specialize  | Sort-Object -Property { $_.Order })
-    $result.FirstLogon  = @($result.FirstLogon  | Sort-Object -Property { $_.Order })
-    $result.ActiveSetup = @($result.ActiveSetup | Sort-Object -Property { $_.Order })
+    if ($index -gt 0) {
+        $result.Specialize  = @($result.Specialize  | Sort-Object -Property { $_.Order })
+        $result.FirstLogon  = @($result.FirstLogon  | Sort-Object -Property { $_.Order })
+        $result.ActiveSetup = @($result.ActiveSetup | Sort-Object -Property { $_.Order })
+    }
 
     Write-Timestamped (Format-Line -Level "INFO" -Message "Grouping complete. Specialize: $($result.Specialize.Count), FirstLogon: $($result.FirstLogon.Count), ActiveSetup: $($result.ActiveSetup.Count)")
 

@@ -106,6 +106,7 @@ function Invoke-Generator {
     # 4. Normalize commands
     #
     Write-Timestamped (Format-Line -Level "INFO" -Message "Stage 4: Normalizing commands")
+    
     $normalized = Normalize-Commands -Projects $projects
     Write-Timestamped (Format-Line -Level "INFO" -Message "Normalized $($normalized.Count) command(s)")
 
