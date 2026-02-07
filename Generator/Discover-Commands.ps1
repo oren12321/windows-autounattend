@@ -77,7 +77,7 @@ function Discover-Commands {
 
         $discovered += @{
             Name         = $folder.Name
-            ManifestPath = $commands[0].FullName
+            CommandsPath = $commands[0].FullName
         }
     }
 
