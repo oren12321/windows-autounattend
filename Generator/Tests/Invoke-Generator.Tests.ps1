@@ -26,7 +26,7 @@ Describe "Invoke-Generator" {
         }
     )
 }
-"@ | Set-Content (Join-Path $ProjA "ProjA.psd1")
+"@ | Set-Content (Join-Path $ProjA "Unattend.psd1")
 
         # Template
         $Template = Join-Path $TestRoot "Template.xml"

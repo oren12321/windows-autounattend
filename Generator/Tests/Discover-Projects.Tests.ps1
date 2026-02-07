@@ -24,9 +24,9 @@ Describe "Discover-Projects" {
         New-Item -ItemType Directory -Path $projB | Out-Null
         New-Item -ItemType Directory -Path $projC | Out-Null
 
-        New-Item -ItemType File -Path (Join-Path $projA "ProjA.psd1") | Out-Null
-        New-Item -ItemType File -Path (Join-Path $projB "ProjB.psd1") | Out-Null
-        New-Item -ItemType File -Path (Join-Path $projC "ProjC.psd1") | Out-Null
+        New-Item -ItemType File -Path (Join-Path $projA "Unattend.psd1") | Out-Null
+        New-Item -ItemType File -Path (Join-Path $projB "Unattend.psd1") | Out-Null
+        New-Item -ItemType File -Path (Join-Path $projC "Unattend.psd1") | Out-Null
 
         $result = Discover-Projects -BuildRoot $TestRoot
 
@@ -42,14 +42,14 @@ Describe "Discover-Projects" {
 
         $projC = Join-Path $shared "ProjC"
         New-Item -ItemType Directory -Path $projC | Out-Null
-        New-Item -ItemType File -Path (Join-Path $projC "ProjC.psd1") | Out-Null
+        New-Item -ItemType File -Path (Join-Path $projC "Unattend.psd1") | Out-Null
         
         $git = Join-Path $projC ".git"
         New-Item -ItemType Directory -Path $git | Out-Null
         
         $projD = Join-Path $git "ProjD"
         New-Item -ItemType Directory -Path $projD | Out-Null
-        New-Item -ItemType File -Path (Join-Path $projD "ProjD.psd1") | Out-Null
+        New-Item -ItemType File -Path (Join-Path $projD "Unattend.psd1") | Out-Null
         
         { Discover-Projects -BuildRoot $TestRoot } | Should -Throw
     }
@@ -65,17 +65,7 @@ Describe "Discover-Projects" {
         $projA = Join-Path $TestRoot "ProjA"
         New-Item -ItemType Directory -Path $projA | Out-Null
 
-        New-Item -ItemType File -Path (Join-Path $projA "WrongName.psd1") | Out-Null
-
-        { Discover-Projects -BuildRoot $TestRoot } | Should -Throw
-    }
-
-    It "Ignores folders with multiple manifests" {
-        $projA = Join-Path $TestRoot "ProjA"
-        New-Item -ItemType Directory -Path $projA | Out-Null
-
-        New-Item -ItemType File -Path (Join-Path $projA "ProjA.psd1") | Out-Null
-        New-Item -ItemType File -Path (Join-Path $projA "Extra.psd1") | Out-Null
+        New-Item -ItemType File -Path (Join-Path $projA "Other.psd1") | Out-Null
 
         { Discover-Projects -BuildRoot $TestRoot } | Should -Throw
     }

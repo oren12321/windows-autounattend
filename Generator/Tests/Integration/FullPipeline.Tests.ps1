@@ -37,7 +37,7 @@ Describe "Full Generator Pipeline Integration Test" {
         }
     )
 }
-"@ | Set-Content (Join-Path $ProjA "ProjA.psd1")
+"@ | Set-Content (Join-Path $ProjA "Unattend.psd1")
 
         # Project B
         $ProjB = Join-Path $BuildRoot "ProjB"
@@ -53,7 +53,7 @@ Describe "Full Generator Pipeline Integration Test" {
         }
     )
 }
-"@ | Set-Content (Join-Path $ProjB "ProjB.psd1")
+"@ | Set-Content (Join-Path $ProjB "Unattend.psd1")
 
         # Template XML
         $TemplatePath = Join-Path $TestRoot "Template.xml"
@@ -103,8 +103,8 @@ Describe "Full Generator Pipeline Integration Test" {
 
         # --- ZIP contains Build folder ---
         $zipEntries = [System.IO.Compression.ZipFile]::OpenRead($result.ZipPath).Entries
-        ($zipEntries.Name -contains "ProjA.psd1") | Should -Be $true
-        ($zipEntries.Name -contains "ProjB.psd1") | Should -Be $true
+        $zipEntries.Count | Should -Eq 5 # 2 x Unattend.psd1 + 3 scripts
+        ($zipEntries.Name -contains "Unattend.psd1") | Should -Be $true
 
         # --- Specialize script sorted correctly ---
         $spec = Get-Content $result.Scripts.SpecializeScript

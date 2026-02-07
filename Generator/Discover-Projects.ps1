@@ -64,7 +64,7 @@ function Discover-Projects {
         Write-Timestamped (Format-Line -Level "TRACE" -Message "Inspecting folder '$($folder.Name)'")
 
         # Find manifest files
-        $manifests = Get-ChildItem -Path $folder.FullName -Filter "*.psd1"
+        $manifests = Get-ChildItem -Path $folder.FullName -Filter "Unattend.psd1"
         Write-Timestamped (Format-Line -Level "TRACE" -Message "Found $($manifests.Count) manifest file(s) in '$($folder.Name)'")
 
         # Must contain exactly one manifest
@@ -74,12 +74,6 @@ function Discover-Projects {
         }
 
         $manifest = $manifests[0]
-
-        # Manifest name must match folder name
-        if ($manifest.BaseName -ne $folder.Name) {
-            Write-Timestamped (Format-Line -Level "TRACE" -Message "Manifest '$($manifest.Name)' does not match folder name '$($folder.Name)'. Skipping")
-            return
-        }
 
         Write-Timestamped (Format-Line -Level "DEBUG" -Message "Valid project discovered: '$($folder.Name)'")
 
