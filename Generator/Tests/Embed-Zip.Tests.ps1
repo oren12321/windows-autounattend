@@ -31,14 +31,13 @@ Describe "Embed-Zip" {
     It "Returns XML containing the destination path" {
         $xml = Embed-Zip -ZipPath $ZipPath -DestinationPath $Dest
 
-        $xml | Should -Match "<Path>$([regex]::Escape($Dest))</Path>"
+        $xml | Should -Match "path=\""$([regex]::Escape($Dest))\"""
     }
 
     It "Embeds base64 content inside CDATA" {
         $xml = Embed-Zip -ZipPath $ZipPath -DestinationPath $Dest
 
-        $xml | Should -Match "<Content><!\[CDATA\["
-        $xml | Should -Match "\]\]></Content>"
+        $xml | Should -Match "<!\[CDATA\[.*\]\]>"
     }
 
     It "Base64 content matches the ZIP file" {

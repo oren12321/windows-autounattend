@@ -61,7 +61,7 @@ Describe "Full Generator Pipeline Integration Test" {
 <root>
 {{SPECIALIZE}}
 {{FIRSTLOGON}}
-{{ACTIVESETUP}}
+{{WORKSPACE}}
 {{EMBEDDEDZIP}}
 </root>
 "@ | Set-Content $TemplatePath
@@ -124,7 +124,7 @@ Describe "Full Generator Pipeline Integration Test" {
 
         $xml | Should -Match "RunSynchronous"
         $xml | Should -Match "FirstLogonCommands"
-        $xml | Should -Match "Active Setup"
-        $xml | Should -Match "<File>"
+        $xml | Should -Match "C:\\Workspace"
+        $xml | Should -Match "<File path="
     }
 }
