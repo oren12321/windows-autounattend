@@ -15,7 +15,7 @@ Describe "Assemble-Autounattend" {
 <root>
 {{SPECIALIZE}}
 {{FIRSTLOGON}}
-{{ACTIVESETUP}}
+{{WORKSPACE}}
 {{EMBEDDEDZIP}}
 </root>
 "@ | Set-Content $Template
@@ -37,9 +37,9 @@ Describe "Assemble-Autounattend" {
 
     It "Replaces all placeholders" {
         $sections = @{
+            WorkspacePath  = "MyWorkspace"
             SpecializeXml  = "<S>1</S>"
             FirstLogonXml  = "<F>2</F>"
-            ActiveSetupXml = "<A>3</A>"
         }
 
         $zipXml = "<Z>4</Z>"
@@ -49,17 +49,17 @@ Describe "Assemble-Autounattend" {
                                      -XmlSections $sections `
                                      -EmbeddedZipXml $zipXml
 
+        $xml | Should -Match "MyWorkspace"
         $xml | Should -Match "<S>1</S>"
         $xml | Should -Match "<F>2</F>"
-        $xml | Should -Match "<A>3</A>"
         $xml | Should -Match "<Z>4</Z>"
     }
 
     It "Writes the final XML to disk" {
         $sections = @{
+            WorkspacePath  = "MyWorkspace"
             SpecializeXml  = "<S/>"
             FirstLogonXml  = "<F/>"
-            ActiveSetupXml = "<A/>"
         }
 
         $zipXml = "<Z/>"
