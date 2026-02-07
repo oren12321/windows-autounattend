@@ -56,15 +56,11 @@ function Discover-Projects {
     $projects = @()
 
     Write-Timestamped (Format-Line -Level "DEBUG" -Message "Scanning subdirectories under '$BuildRoot'")
-    Get-ChildItem -Path $BuildRoot -Directory | ForEach-Object {
+    Get-ChildItem -Path $BuildRoot -Directory -Recurse | Where-Object { 
+        $_.FullName -notlike "*\Shared\*"
+    } | ForEach-Object {
         $folder = $_
         Write-Timestamped (Format-Line -Level "TRACE" -Message "Inspecting folder '$($folder.Name)'")
-
-        # Skip Shared folder
-        if ($folder.Name -eq "Shared") {
-            Write-Timestamped (Format-Line -Level "TRACE" -Message "Skipping folder 'Shared'")
-            return
-        }
 
         # Find manifest files
         $manifests = Get-ChildItem -Path $folder.FullName -Filter "*.psd1"

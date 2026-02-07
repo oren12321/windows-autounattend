@@ -18,18 +18,22 @@ Describe "Discover-Projects" {
     It "Finds valid projects" {
         $projA = Join-Path $TestRoot "ProjA"
         $projB = Join-Path $TestRoot "ProjB"
+        $projC = Join-Path "$projB\Others" "ProjC"
 
         New-Item -ItemType Directory -Path $projA | Out-Null
         New-Item -ItemType Directory -Path $projB | Out-Null
+        New-Item -ItemType Directory -Path $projC | Out-Null
 
         New-Item -ItemType File -Path (Join-Path $projA "ProjA.psd1") | Out-Null
         New-Item -ItemType File -Path (Join-Path $projB "ProjB.psd1") | Out-Null
+        New-Item -ItemType File -Path (Join-Path $projC "ProjC.psd1") | Out-Null
 
         $result = Discover-Projects -BuildRoot $TestRoot
 
-        $result.Count | Should -Be 2
+        $result.Count | Should -Be 3
         $result.Name | Should -Contain "ProjA"
         $result.Name | Should -Contain "ProjB"
+        $result.Name | Should -Contain "ProjC"
     }
 
     It "Ignores Shared folder" {
@@ -39,7 +43,7 @@ Describe "Discover-Projects" {
         $projC = Join-Path $shared "ProjC"
         New-Item -ItemType Directory -Path $projC | Out-Null
         New-Item -ItemType File -Path (Join-Path $projC "ProjC.psd1") | Out-Null
-
+        
         { Discover-Projects -BuildRoot $TestRoot } | Should -Throw
     }
 
