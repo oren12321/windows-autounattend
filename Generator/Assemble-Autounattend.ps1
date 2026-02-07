@@ -1,5 +1,3 @@
-. "$PSScriptRoot\..\Vendor\Logging.ps1"
-
 <#
 .SYNOPSIS
     Assembles the final autounattend.xml file.
@@ -55,33 +53,33 @@ function Assemble-Autounattend {
         [string] $EmbeddedZipXml
     )
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Assembling autounattend.xml using template '$TemplatePath'")
+    Write-Information "[INFO] Assembling autounattend.xml using template '$TemplatePath'"
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Checking if template file exists")
+    Write-Information "[DEBUG] Checking if template file exists"
     if (-not (Test-Path $TemplatePath)) {
         throw "Template file '$TemplatePath' does not exist."
     }
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Loading template content")
+    Write-Information "[DEBUG] Loading template content"
     $xml = Get-Content -Path $TemplatePath -Raw
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Injecting Specialize XML section")
+    Write-Information "[DEBUG] Injecting Specialize XML section"
     $xml = $xml.Replace("{{SPECIALIZE}}", $XmlSections.SpecializeXml)
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Injecting FirstLogon XML section")
+    Write-Information "[DEBUG] Injecting FirstLogon XML section"
     $xml = $xml.Replace("{{FIRSTLOGON}}", $XmlSections.FirstLogonXml)
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Embedding ZIP payload XML")
+    Write-Information "[DEBUG] Embedding ZIP payload XML"
     $xml = $xml.Replace("{{EMBEDDEDZIP}}", $EmbeddedZipXml)
     
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Injecting workspace folder for bootstrap script")
+    Write-Information "[DEBUG] Injecting workspace folder for bootstrap script"
     $xml = $xml.Replace("{{WORKSPACE}}", $XmlSections.WorkspacePath)
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Writing final autounattend.xml to '$OutputPath'")
+    Write-Information "[DEBUG] Writing final autounattend.xml to '$OutputPath'"
     $Utf8NoBom = New-Object System.Text.UTF8Encoding $false
     [System.IO.File]::WriteAllLines($OutputPath, $xml, $Utf8NoBom)
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Autounattend assembly complete")
+    Write-Information "[INFO] Autounattend assembly complete"
 
     return $xml
 }

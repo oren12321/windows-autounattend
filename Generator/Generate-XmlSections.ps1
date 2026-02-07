@@ -1,5 +1,3 @@
-. "$PSScriptRoot\..\Vendor\Logging.ps1"
-
 <#
 .SYNOPSIS
     Generates XML fragments for autounattend.xml.
@@ -45,12 +43,12 @@ function Generate-XmlSections {
         [string] $FirstLogonScriptPath
     )
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Generating XML sections for unattend template")
+    Write-Information "[INFO] Generating XML sections for unattend template"
 
     #
     # 1. Specialize → RunSynchronous
     #
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Building Specialize XML section using specialize script '$SpecializeScriptPath'")
+    Write-Information "[DEBUG] Building Specialize XML section using specialize script '$SpecializeScriptPath'"
     $specializeXml = @"
 <RunSynchronousCommand wcm:action="add">
 <Order>3</Order>
@@ -61,7 +59,7 @@ function Generate-XmlSections {
     #
     # 2. FirstLogonCommands
     #
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Building FirstLogon XML section using script '$FirstLogonScriptPath'")
+    Write-Information "[DEBUG] Building FirstLogon XML section using script '$FirstLogonScriptPath'"
     $firstLogonXml = @"
 <FirstLogonCommands>
   <SynchronousCommand wcm:action="add">
@@ -72,7 +70,7 @@ function Generate-XmlSections {
 </FirstLogonCommands>
 "@
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "XML section generation complete")
+    Write-Information "[INFO] XML section generation complete"
 
     return @{
         WorkspacePath  = $WorkspacePath

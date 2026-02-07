@@ -1,5 +1,3 @@
-. "$PSScriptRoot\..\Vendor\Logging.ps1"
-
 <#
 .SYNOPSIS
     Embeds a ZIP file into an XML <File> element.
@@ -37,26 +35,26 @@ function Embed-Zip {
         [string] $DestinationPath
     )
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Embedding ZIP file '$ZipPath' into unattend XML")
+    Write-Information "[INFO] Embedding ZIP file '$ZipPath' into unattend XML"
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Checking if ZIP file exists")
+    Write-Information "[DEBUG] Checking if ZIP file exists"
     if (-not (Test-Path $ZipPath)) {
         throw "ZIP file '$ZipPath' does not exist."
     }
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Reading ZIP file bytes")
+    Write-Information "[DEBUG] Reading ZIP file bytes"
     $bytes = [System.IO.File]::ReadAllBytes($ZipPath)
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Converting ZIP file to Base64")
+    Write-Information "[DEBUG] Converting ZIP file to Base64"
     $base64 = [System.Convert]::ToBase64String($bytes)
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Building XML wrapper for embedded ZIP targeting '$DestinationPath'")
+    Write-Information "[DEBUG] Building XML wrapper for embedded ZIP targeting '$DestinationPath'"
     $xml = @"
 <File path="$DestinationPath">
 <![CDATA[$base64]]>
 </File>
 "@
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "ZIP embedding complete")
+    Write-Information "[INFO] ZIP embedding complete"
     return $xml
 }

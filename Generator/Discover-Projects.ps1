@@ -1,5 +1,3 @@
-. "$PSScriptRoot\..\Vendor\Logging.ps1"
-
 <#
 .SYNOPSIS
     Scans a packed Build folder and discovers all valid project directories.
@@ -46,36 +44,36 @@ function Discover-Projects {
         [string] $BuildRoot
     )
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Discovering projects in build root '$BuildRoot'")
+    Write-Information "[INFO] Discovering projects in build root '$BuildRoot'"
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Checking if build root exists")
+    Write-Information "[DEBUG] Checking if build root exists"
     if (-not (Test-Path $BuildRoot)) {
         throw "Build root '$BuildRoot' does not exist."
     }
 
     $projects = @()
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Scanning subdirectories under '$BuildRoot'")
+    Write-Information "[DEBUG] Scanning subdirectories under '$BuildRoot'"
     Get-ChildItem -Path $BuildRoot -Directory -Recurse | Where-Object { 
         $_.FullName -notlike "*\Shared\*" -and
         $_.FullName -notlike "*\.git\*"
     } | ForEach-Object {
         $folder = $_
-        Write-Timestamped (Format-Line -Level "TRACE" -Message "Inspecting folder '$($folder.Name)'")
+        Write-Information "[TRACE] Inspecting folder '$($folder.Name)'"
 
         # Find manifest files
         $manifests = Get-ChildItem -Path $folder.FullName -Filter "Unattend.psd1"
-        Write-Timestamped (Format-Line -Level "TRACE" -Message "Found $($manifests.Count) manifest file(s) in '$($folder.Name)'")
+        Write-Information "[TRACE] Found $($manifests.Count) manifest file(s) in '$($folder.Name)'"
 
         # Must contain exactly one manifest
         if ($manifests.Count -ne 1) {
-            Write-Timestamped (Format-Line -Level "TRACE" -Message "Folder '$($folder.Name)' does not contain exactly one manifest. Skipping")
+            Write-Information "[TRACE] Folder '$($folder.Name)' does not contain exactly one manifest. Skipping"
             return
         }
 
         $manifest = $manifests[0]
 
-        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Valid project discovered: '$($folder.Name)'")
+        Write-Information "[DEBUG] Valid project discovered: '$($folder.Name)'"
 
         $projects += @{
             Name         = $folder.Name
@@ -84,6 +82,6 @@ function Discover-Projects {
         }
     }
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Project discovery complete. Total projects found: $($projects.Count)")
+    Write-Information "[INFO] Project discovery complete. Total projects found: $($projects.Count)"
     return ,$projects
 }

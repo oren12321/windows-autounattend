@@ -1,5 +1,3 @@
-. "$PSScriptRoot\..\Vendor\Logging.ps1"
-
 <#
 .SYNOPSIS
     Flattens all project commands into a normalized list.
@@ -41,14 +39,14 @@ function Normalize-Commands {
         [array] $Projects
     )
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Normalizing commands from all projects")
+    Write-Information "[INFO] Normalizing commands from all projects"
 
     $result = @()
     $projectIndex = 0
 
     foreach ($proj in $Projects) {
         $projectIndex++
-        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Processing project #$projectIndex ('$($proj.Name)')")
+        Write-Information "[DEBUG] Processing project #$projectIndex ('$($proj.Name)')"
 
         if (-not $proj.Manifest.ContainsKey("Commands")) {
             throw "Project '$($proj.Name)' manifest contains no Commands."
@@ -57,7 +55,7 @@ function Normalize-Commands {
         $cmdIndex = 0
         foreach ($cmd in $proj.Manifest.Commands) {
             $cmdIndex++
-            Write-Timestamped (Format-Line -Level "TRACE" -Message "Normalizing command #$cmdIndex from project '$($proj.Name)'")
+            Write-Information "[TRACE] Normalizing command #$cmdIndex from project '$($proj.Name)'"
 
             $result += @{
                 Project = $proj.Name
@@ -67,10 +65,10 @@ function Normalize-Commands {
             }
         }
 
-        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Completed processing project '$($proj.Name)'")
+        Write-Information "[DEBUG] Completed processing project '$($proj.Name)'"
     }
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Command normalization complete. Total commands: $($result.Count)")
+    Write-Information "[INFO] Command normalization complete. Total commands: $($result.Count)"
 
     return ,$result
 }

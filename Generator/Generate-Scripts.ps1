@@ -1,5 +1,3 @@
-. "$PSScriptRoot\..\Vendor\Logging.ps1"
-
 <#
 .SYNOPSIS
     Generates PowerShell scripts for each deployment pass.
@@ -41,12 +39,12 @@ function Generate-Scripts {
         [string] $OutputFolder
     )
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Generating pass-specific scripts in '$OutputFolder'")
+    Write-Information "[INFO] Generating pass-specific scripts in '$OutputFolder'"
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Ensuring output folder exists")
+    Write-Information "[DEBUG] Ensuring output folder exists"
     if (-not (Test-Path $OutputFolder)) {
         New-Item -ItemType Directory -Path $OutputFolder | Out-Null
-        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Created output folder '$OutputFolder'")
+        Write-Information "[DEBUG] Created output folder '$OutputFolder'"
     }
 
     $result = @{
@@ -56,12 +54,12 @@ function Generate-Scripts {
     }
 
     foreach ($pass in @("Specialize", "FirstLogon", "ActiveSetup")) {
-        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Processing pass '$pass'")
+        Write-Information "[DEBUG] Processing pass '$pass'"
 
         $commands = $Groups[$pass]
 
         $path = Join-Path $OutputFolder "$pass.ps1"
-        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Creating script file '$path'")
+        Write-Information "[DEBUG] Creating script file '$path'"
 
         $content = @(
             "# Auto-generated script for $pass"
@@ -71,17 +69,17 @@ function Generate-Scripts {
         $cmdIndex = 0
         foreach ($cmd in $commands) {
             $cmdIndex++
-            Write-Timestamped (Format-Line -Level "TRACE" -Message "Adding command #$cmdIndex from project '$($cmd.Project)' to $pass script")
+            Write-Information "[TRACE] Adding command #$cmdIndex from project '$($cmd.Project)' to $pass script"
             $content += $cmd.Command
         }
 
         $content -join "`r`n" | Set-Content -Path $path -Encoding UTF8
 
-        Write-Timestamped (Format-Line -Level "INFO" -Message "Script for pass '$pass' written to '$path'")
+        Write-Information "[INFO] Script for pass '$pass' written to '$path'"
 
         $result["${pass}Script"] = $path
     }
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Script generation complete")
+    Write-Information "[INFO] Script generation complete"
     return $result
 }

@@ -5,15 +5,14 @@ param(
     [string]$WorkspacePath = "C:\Windows\Setup\Scripts"
 )
 
-. "$PSScriptRoot\..\Vendor\Logging.ps1"
 . "$PSScriptRoot\Invoke-Generator.ps1"
 
-Write-Timestamped (Format-Line -Level "INFO" -Message "Starting generator entry point")
-Write-Timestamped (Format-Line -Level "DEBUG" -Message "Parameters:")
-Write-Timestamped (Format-Line -Level "DEBUG" -Message "  BuildRoot     = $BuildRoot")
-Write-Timestamped (Format-Line -Level "DEBUG" -Message "  TemplatePath  = $TemplatePath")
-Write-Timestamped (Format-Line -Level "DEBUG" -Message "  OutputFolder  = $OutputFolder")
-Write-Timestamped (Format-Line -Level "DEBUG" -Message "  WorkspacePath = $WorkspacePath")
+Write-Information "[INFO] Starting generator entry point"
+Write-Information "[DEBUG] Parameters:"
+Write-Information "[DEBUG]   BuildRoot     = $BuildRoot"
+Write-Information "[DEBUG]   TemplatePath  = $TemplatePath"
+Write-Information "[DEBUG]   OutputFolder  = $OutputFolder"
+Write-Information "[DEBUG]   WorkspacePath = $WorkspacePath"
 
 try {
     $result = Invoke-Generator `
@@ -22,10 +21,10 @@ try {
         -OutputFolder $OutputFolder `
         -WorkspacePath $WorkspacePath
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Generator completed successfully")
+    Write-Information "[INFO] Generator completed successfully"
     return $result
 }
 catch {
-    Write-Timestamped (Format-Line -Level "ERROR" -Message "Generator failed: $($_.Exception.Message)")
+    Write-Information "[ERROR] Generator failed: $($_.Exception.Message)"
     throw
 }

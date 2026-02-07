@@ -1,5 +1,3 @@
-. "$PSScriptRoot\..\Vendor\Logging.ps1"
-
 <#
 .SYNOPSIS
     Compresses the Build folder into a ZIP archive.
@@ -35,29 +33,29 @@ function Compress-Build {
         [string] $OutputZipPath
     )
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Compressing build root '$BuildRoot' into '$OutputZipPath'")
+    Write-Information "[INFO] Compressing build root '$BuildRoot' into '$OutputZipPath'"
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Checking if build root exists")
+    Write-Information "[DEBUG] Checking if build root exists"
     if (-not (Test-Path $BuildRoot)) {
         throw "Build root '$BuildRoot' does not exist."
     }
 
     $zipDir = Split-Path $OutputZipPath -Parent
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Ensuring output directory '$zipDir' exists")
+    Write-Information "[DEBUG] Ensuring output directory '$zipDir' exists"
     if (-not (Test-Path $zipDir)) {
         New-Item -ItemType Directory -Path $zipDir | Out-Null
-        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Created directory '$zipDir'")
+        Write-Information "[DEBUG] Created directory '$zipDir'"
     }
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Checking for existing ZIP file at '$OutputZipPath'")
+    Write-Information "[DEBUG] Checking for existing ZIP file at '$OutputZipPath'"
     if (Test-Path $OutputZipPath) {
-        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Existing ZIP found. Removing old file")
+        Write-Information "[DEBUG] Existing ZIP found. Removing old file"
         Remove-Item -Path $OutputZipPath -Force
     }
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Creating ZIP archive")
+    Write-Information "[INFO] Creating ZIP archive"
     Compress-Archive -Path (Join-Path $BuildRoot '*') -DestinationPath $OutputZipPath
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Build compression complete. Output ZIP: '$OutputZipPath'")
+    Write-Information "[INFO] Build compression complete. Output ZIP: '$OutputZipPath'"
     return $OutputZipPath
 }

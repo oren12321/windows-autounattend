@@ -1,5 +1,3 @@
-. "$PSScriptRoot\..\Vendor\Logging.ps1"
-
 <#
 .SYNOPSIS
     Validates the structure and schema of a project manifest.
@@ -43,10 +41,10 @@ function Validate-Manifest {
         [string] $ProjectName
     )
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Validating manifest for project '$ProjectName'")
+    Write-Information "[INFO] Validating manifest for project '$ProjectName'"
 
     # Check for Commands key
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Checking for 'Commands' key")
+    Write-Information "[DEBUG] Checking for 'Commands' key"
     if (-not $Manifest.ContainsKey("Commands")) {
         throw "Project '$ProjectName' manifest is missing the 'Commands' key."
     }
@@ -54,24 +52,24 @@ function Validate-Manifest {
     $commands = $Manifest.Commands
 
     # Validate Commands is an array
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "'Commands' key found. Validating type")
+    Write-Information "[DEBUG] 'Commands' key found. Validating type"
     if (-not ($commands -is [System.Collections.IEnumerable])) {
         throw "Project '$ProjectName' manifest 'Commands' must be an array."
     }
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Validating command entries")
+    Write-Information "[INFO] Validating command entries"
 
     $index = 0
     foreach ($cmd in $commands) {
         $index++
-        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Validating command entry #$index")
+        Write-Information "[DEBUG] Validating command entry #$index"
 
         if (-not ($cmd -is [hashtable])) {
             throw "Project '$ProjectName' contains a command entry that is not a hashtable."
         }
 
         foreach ($key in @("Pass", "Order", "Command")) {
-            Write-Timestamped (Format-Line -Level "TRACE" -Message "Checking required key '$key' in command #$index")
+            Write-Information "[TRACE] Checking required key '$key' in command #$index"
             if (-not $cmd.ContainsKey($key)) {
                 throw "Project '$ProjectName' command entry #$index is missing required key '$key'."
             }
@@ -79,26 +77,26 @@ function Validate-Manifest {
 
         # Validate Pass
         $validPasses = @("Specialize", "FirstLogon", "ActiveSetup")
-        Write-Timestamped (Format-Line -Level "TRACE" -Message "Validating Pass value '$($cmd.Pass)' in command #$index")
+        Write-Information "[TRACE] Validating Pass value '$($cmd.Pass)' in command #$index"
         if ($cmd.Pass -notin $validPasses) {
             throw "Project '$ProjectName' has invalid Pass value '$($cmd.Pass)' in command #$index."
         }
 
         # Validate Order
-        Write-Timestamped (Format-Line -Level "TRACE" -Message "Validating Order type in command #$index")
+        Write-Information "[TRACE] Validating Order type in command #$index"
         if (-not ($cmd.Order -is [int])) {
             throw "Project '$ProjectName' command #$index Order must be an integer."
         }
 
         # Validate Command text
-        Write-Timestamped (Format-Line -Level "TRACE" -Message "Validating Command text in command #$index")
+        Write-Information "[TRACE] Validating Command text in command #$index"
         if ([string]::IsNullOrWhiteSpace($cmd.Command)) {
             throw "Project '$ProjectName' command #$index text cannot be empty."
         }
 
-        Write-Timestamped (Format-Line -Level "INFO" -Message "Command #$index validated successfully")
+        Write-Information "[INFO] Command #$index validated successfully"
     }
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Manifest for '$ProjectName' successfully validated")
+    Write-Information "[INFO] Manifest for '$ProjectName' successfully validated"
     return $Manifest
 }

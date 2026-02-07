@@ -1,5 +1,3 @@
-. "$PSScriptRoot\..\Vendor\Logging.ps1"
-
 <#
 .SYNOPSIS
     Groups normalized commands by deployment pass and sorts them.
@@ -36,7 +34,7 @@ function Group-Commands {
         [array] $NormalizedCommands
     )
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Grouping normalized commands by pass")
+    Write-Information "[INFO] Grouping normalized commands by pass"
 
     $result = @{
         Specialize  = @()
@@ -47,25 +45,25 @@ function Group-Commands {
     $index = 0
     foreach ($cmd in $NormalizedCommands) {
         $index++
-        Write-Timestamped (Format-Line -Level "DEBUG" -Message "Processing command #$index (Project: $($cmd.Project), Pass: $($cmd.Pass))")
+        Write-Information "[DEBUG] Processing command #$index (Project: $($cmd.Project), Pass: $($cmd.Pass))"
 
         switch ($cmd.Pass) {
             "Specialize" {
-                Write-Timestamped (Format-Line -Level "TRACE" -Message "Adding command #$index to Specialize group")
+                Write-Information "[TRACE] Adding command #$index to Specialize group"
                 $result.Specialize += $cmd
             }
             "FirstLogon" {
-                Write-Timestamped (Format-Line -Level "TRACE" -Message "Adding command #$index to FirstLogon group")
+                Write-Information "[TRACE] Adding command #$index to FirstLogon group"
                 $result.FirstLogon += $cmd
             }
             "ActiveSetup" {
-                Write-Timestamped (Format-Line -Level "TRACE" -Message "Adding command #$index to ActiveSetup group")
+                Write-Information "[TRACE] Adding command #$index to ActiveSetup group"
                 $result.ActiveSetup += $cmd
             }
         }
     }
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Sorting command groups by Order value")
+    Write-Information "[DEBUG] Sorting command groups by Order value"
 
     if ($index -gt 0) {
         $result.Specialize  = @($result.Specialize  | Sort-Object -Property { $_.Order })
@@ -73,7 +71,7 @@ function Group-Commands {
         $result.ActiveSetup = @($result.ActiveSetup | Sort-Object -Property { $_.Order })
     }
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Grouping complete. Specialize: $($result.Specialize.Count), FirstLogon: $($result.FirstLogon.Count), ActiveSetup: $($result.ActiveSetup.Count)")
+    Write-Information "[INFO] Grouping complete. Specialize: $($result.Specialize.Count), FirstLogon: $($result.FirstLogon.Count), ActiveSetup: $($result.ActiveSetup.Count)"
 
     return $result
 }

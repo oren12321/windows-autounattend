@@ -1,5 +1,3 @@
-. "$PSScriptRoot\..\Vendor\Logging.ps1"
-
 <#
 .SYNOPSIS
     Loads a project manifest (.psd1) into a hashtable.
@@ -37,14 +35,14 @@ function Load-Manifest {
         [string] $ManifestPath
     )
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Loading manifest from '$ManifestPath'")
+    Write-Information "[INFO] Loading manifest from '$ManifestPath'"
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Checking if manifest file exists")
+    Write-Information "[DEBUG] Checking if manifest file exists"
     if (-not (Test-Path $ManifestPath)) {
         throw "Manifest file '$ManifestPath' does not exist."
     }
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Parsing manifest file")
+    Write-Information "[DEBUG] Parsing manifest file"
     try {
         $data = Import-PowerShellDataFile -Path $ManifestPath
     }
@@ -52,11 +50,11 @@ function Load-Manifest {
         throw "Failed to parse manifest '$ManifestPath': $($_.Exception.Message)"
     }
 
-    Write-Timestamped (Format-Line -Level "DEBUG" -Message "Validating manifest structure")
+    Write-Information "[DEBUG] Validating manifest structure"
     if (-not ($data -is [hashtable])) {
         throw "Manifest '$ManifestPath' did not produce a hashtable."
     }
 
-    Write-Timestamped (Format-Line -Level "INFO" -Message "Manifest loaded successfully")
+    Write-Information "[INFO] Manifest loaded successfully"
     return $data
 }
