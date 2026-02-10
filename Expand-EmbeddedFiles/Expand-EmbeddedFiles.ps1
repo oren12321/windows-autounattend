@@ -1,17 +1,23 @@
 function Expand-EmbeddedFiles {
     param(
-        [xml] $Document
+        [xml] $Document,
+        [string] $RedirectFolder
     )
 
     foreach ($file in $Document.unattend.Extensions.File) {
         $path = [System.Environment]::ExpandEnvironmentVariables($file.GetAttribute('path'))
-        $ext  = [System.IO.Path]::GetExtension($path).ToLower()
-
+        
+        if ($RedirectFolder) {
+            $path = $path -replace "^[a-zA-Z]:", $RedirectFolder
+        }
+        
         # Ensure parent directory exists
         $parent = Split-Path $path -Parent
         if ($parent) {
             mkdir -Path $parent -ErrorAction SilentlyContinue | Out-Null
         }
+        
+        $ext  = [System.IO.Path]::GetExtension($path).ToLower()
 
         if ($ext -in '.zip', '.exe', '.dll', '.msi') {
             # Binary-safe extraction
