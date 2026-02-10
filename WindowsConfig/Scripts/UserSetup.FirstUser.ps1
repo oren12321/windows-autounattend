@@ -1,0 +1,53 @@
+﻿. "C:\MySetup\Scripts\Apply-Registry.ps1"
+. "C:\MySetup\Scripts\RegistryPlacement.ps1"
+
+$logsDir = "$env:LOCALAPPDATA\MySetup"
+if (-not (Test-Path $logsDir)) {
+    New-Item -Path $logsDir -ItemType Directory -Force | Out-Null
+}
+
+$scripts = @(
+	{
+        . "C:\MySetup\Scripts\ExplorerRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $ExplorerEntries -Scope FirstUser)
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $(Get-WallpaperConfigurationEntries) -Scope FirstUser)
+	};
+    {
+        . "C:\MySetup\Scripts\PerformanceRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $Entries $PerformanceEntries -Scope FirstUser)
+	};
+    {
+        . "C:\MySetup\Scripts\ShellUIRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $ShellUIEntries -Scope FirstUser)
+	};
+    {
+        . "C:\MySetup\Scripts\SecurityAndPrivacyRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $SecurityAndPrivacyEntries -Scope FirstUser)
+	};
+    {
+        . "C:\MySetup\Scripts\SoundAndNotificationsRegistry.User.ps1"
+        Apply-RegistryBatch $(Get-EntriesForScope -Entries $SoundAndNotificationsEntries -Scope FirstUser)
+	};
+);
+
+& {
+  [float] $complete = 0;
+  [float] $increment = 100 / $scripts.Count;
+  foreach( $script in $scripts ) {
+    Write-Progress -Activity 'Running scripts to configure this user account. Do not close this window.' -PercentComplete $complete;
+    "*** Will now execute command $([char]0xAB){0}$([char]0xBB)." -f $(
+      $str = $script.ToString().Trim() -replace '\s+', ' ';
+      $max = 100;
+      if( $str.Length -le $max ) {
+        $str;
+      } else {
+        $str.Substring( 0, $max - 1 ) + "$([char]0x2026)";
+      }
+    );
+    $start = [datetime]::Now;
+    & $script;
+    '*** Finished executing command after {0:0} ms.' -f [datetime]::Now.Subtract( $start ).TotalMilliseconds;
+    "`r`n" * 3;
+    $complete += $increment;
+  }
+} *>&1 | Out-String -Width 1KB -Stream >> "$logsDir\UserSetup.FirstUser.log";
