@@ -135,7 +135,7 @@ $pauseUpdateXml = @"
   </Actions>
 </Task>
 "@
-Register-ScheduledTask -TaskName 'PauseWindowsUpdate' -Xml $( Get-Content -LiteralPath "$pauseUpdateXml" -Raw );
+Register-ScheduledTask -TaskName 'PauseWindowsUpdate' -Xml "$pauseUpdateXml";
 
 $moveHoursPrimary = @"
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
@@ -188,7 +188,7 @@ $moveHoursPrimary = @"
   </Actions>
 </Task>
 "@
-Register-ScheduledTask -TaskName 'MoveActiveHoursPrimary' -Xml $( Get-Content -LiteralPath "$moveHoursPrimary" -Raw );
+Register-ScheduledTask -TaskName 'MoveActiveHoursPrimary' -Xml "$moveHoursPrimary";
 
 $moveHoursBackup = @"
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
@@ -241,4 +241,4 @@ $moveHoursBackup = @"
   </Actions>
 </Task>
 "@
-Register-ScheduledTask -TaskName 'MoveActiveHoursBackup' -Xml $( Get-Content -LiteralPath "$moveHoursBackup" -Raw );
+Register-ScheduledTask -TaskName 'MoveActiveHoursBackup' -Xml "$moveHoursBackup";
