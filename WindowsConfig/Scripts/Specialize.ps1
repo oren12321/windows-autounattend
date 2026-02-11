@@ -32,6 +32,11 @@
     {
         & "$PSScriptRoot\ConfigureSoundAndNotifications.System.ps1" >> "$PSScriptRoot\..\Logs\ConfigureSoundAndNotifications.System.log" 2>&1
     };
+    {
+        . "$PSScriptRoot\..\Paths.ps1"
+        $installerPath = Join-Path $Paths.Tappet "Install.ps1"
+        & $installerPath -InstallDirectory "C:\Tappet" *>> "$PSScriptRoot\..\Logs\Tappet.Install.log"
+    };
 );
 
 & {
