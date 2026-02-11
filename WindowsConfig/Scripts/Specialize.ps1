@@ -1,36 +1,36 @@
 ﻿$scripts = @(
     {
-        & "C:\MySetup\Scripts\CopyLayoutXml.ps1"
+        & "$PSScriptRoot\CopyLayoutXml.ps1"
     };
     {
-        & "C:\MySetup\Scripts\Debloat.ps1"
+        & "$PSScriptRoot\Debloat.ps1"
     };
     {
-        & "C:\MySetup\Scripts\ConfigureSetupAndOOBE.System.ps1" >> "C:\MySetup\Logs\ConfigureSetupAndOOBE.System.log" 2>&1
+        & "$PSScriptRoot\ConfigureSetupAndOOBE.System.ps1" >> "$PSScriptRoot\..\Logs\ConfigureSetupAndOOBE.System.log" 2>&1
     };
     {
-        & "C:\MySetup\Scripts\ConfigurePowerSettings.System.ps1" >> "C:\MySetup\Logs\ConfigurePowerSettings.System.log" 2>&1
+        & "$PSScriptRoot\ConfigurePowerSettings.System.ps1" >> "$PSScriptRoot\..\Logs\ConfigurePowerSettings.System.log" 2>&1
     };
     {
-        & "C:\MySetup\Scripts\ConfigureWindowsUpdate.System.ps1" >> "C:\MySetup\Logs\ConfigureWindowsUpdate.System.log" 2>&1
+        & "$PSScriptRoot\ConfigureWindowsUpdate.System.ps1" >> "$PSScriptRoot\..\Logs\ConfigureWindowsUpdate.System.log" 2>&1
     };
     {
-        & "C:\MySetup\Scripts\ConfigureWindowsAI.System.ps1" >> "C:\MySetup\Logs\ConfigureWindowsAI.System.log" 2>&1
+        & "$PSScriptRoot\ConfigureWindowsAI.System.ps1" >> "$PSScriptRoot\..\Logs\ConfigureWindowsAI.System.log" 2>&1
     };
     {
-        & "C:\MySetup\Scripts\ConfigureSecurityAndPrivacy.System.ps1" >> "C:\MySetup\Logs\ConfigureSecurityAndPrivacy.System.log" 2>&1
+        & "$PSScriptRoot\ConfigureSecurityAndPrivacy.System.ps1" >> "$PSScriptRoot\..\Logs\ConfigureSecurityAndPrivacy.System.log" 2>&1
     };
     {
-        & "C:\MySetup\Scripts\ConfigurePerformance.System.ps1" >> "C:\MySetup\Logs\ConfigurePerformance.System.log" 2>&1
+        & "$PSScriptRoot\ConfigurePerformance.System.ps1" >> "$PSScriptRoot\..\Logs\ConfigurePerformance.System.log" 2>&1
     };
     {
-        & "C:\MySetup\Scripts\ConfigureExplorer.System.ps1" >> "C:\MySetup\Logs\ConfigureExplorer.System.log" 2>&1
+        & "$PSScriptRoot\ConfigureExplorer.System.ps1" >> "$PSScriptRoot\..\Logs\ConfigureExplorer.System.log" 2>&1
     };
     {
-        & "C:\MySetup\Scripts\ConfigureShellUI.System.ps1" >> "C:\MySetup\Logs\ConfigureShellUI.System.log" 2>&1
+        & "$PSScriptRoot\ConfigureShellUI.System.ps1" >> "$PSScriptRoot\..\Logs\ConfigureShellUI.System.log" 2>&1
     };
     {
-        & "C:\MySetup\Scripts\ConfigureSoundAndNotifications.System.ps1" >> "C:\MySetup\Logs\ConfigureSoundAndNotifications.System.log" 2>&1
+        & "$PSScriptRoot\ConfigureSoundAndNotifications.System.ps1" >> "$PSScriptRoot\..\Logs\ConfigureSoundAndNotifications.System.log" 2>&1
     };
 );
 
@@ -54,4 +54,4 @@
     "`r`n" * 3;
     $complete += $increment;
   }
-} *>&1 | Out-String -Width 1KB -Stream >> "C:\MySetup\Logs\Specialize.log";
+} *>&1 | Out-String -Width 1KB -Stream >> "$PSScriptRoot\..\Logs\Specialize.log";

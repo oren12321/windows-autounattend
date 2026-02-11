@@ -1,5 +1,5 @@
-﻿. "C:\MySetup\Scripts\Apply-Registry.ps1"
-. "C:\MySetup\Scripts\RegistryPlacement.ps1"
+﻿. "$PSScriptRoot\Apply-Registry.ps1"
+. "$PSScriptRoot\RegistryPlacement.ps1"
 
 $logsDir = "$env:LOCALAPPDATA\MySetup"
 if (-not (Test-Path $logsDir)) {
@@ -8,24 +8,24 @@ if (-not (Test-Path $logsDir)) {
 
 $scripts = @(
 	{
-        . "C:\MySetup\Scripts\ExplorerRegistry.User.ps1"
+        . "$PSScriptRoot\ExplorerRegistry.User.ps1"
         Apply-RegistryBatch $(Get-EntriesForScope -Entries $ExplorerEntries -Scope PerUser)
         Apply-RegistryBatch $(Get-EntriesForScope -Entries $(Get-WallpaperConfigurationEntries) -Scope PerUser)
 	};
     {
-        . "C:\MySetup\Scripts\PerformanceRegistry.User.ps1"
+        . "$PSScriptRoot\PerformanceRegistry.User.ps1"
         Apply-RegistryBatch $(Get-EntriesForScope -Entries $Entries $PerformanceEntries -Scope PerUser)
 	};
     {
-        . "C:\MySetup\Scripts\ShellUIRegistry.User.ps1"
+        . "$PSScriptRoot\ShellUIRegistry.User.ps1"
         Apply-RegistryBatch $(Get-EntriesForScope -Entries $ShellUIEntries -Scope PerUser)
 	};
     {
-        . "C:\MySetup\Scripts\SecurityAndPrivacyRegistry.User.ps1"
+        . "$PSScriptRoot\SecurityAndPrivacyRegistry.User.ps1"
         Apply-RegistryBatch $(Get-EntriesForScope -Entries $SecurityAndPrivacyEntries -Scope PerUser)
 	};
     {
-        . "C:\MySetup\Scripts\SoundAndNotificationsRegistry.User.ps1"
+        . "$PSScriptRoot\SoundAndNotificationsRegistry.User.ps1"
         Apply-RegistryBatch $(Get-EntriesForScope -Entries $SoundAndNotificationsEntries -Scope PerUser)
 	};
 );

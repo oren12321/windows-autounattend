@@ -1,29 +1,29 @@
-﻿. "C:\MySetup\Scripts\Apply-Registry.ps1"
-. "C:\MySetup\Scripts\RegistryPlacement.ps1"
+﻿. "$PSScriptRoot\Apply-Registry.ps1"
+. "$PSScriptRoot\RegistryPlacement.ps1"
 
 $scripts = @(
     {
         reg.exe load "HKU\DefaultUser" "C:\Users\Default\NTUSER.DAT"
     };
     {
-        . "C:\MySetup\Scripts\ExplorerRegistry.User.ps1"
+        . "$PSScriptRoot\ExplorerRegistry.User.ps1"
         Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $ExplorerEntries -Scope DefaultUser))
         Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $(Get-WallpaperConfigurationEntries) -Scope DefaultUser))
 	};
     {
-        . "C:\MySetup\Scripts\PerformanceRegistry.User.ps1"
+        . "$PSScriptRoot\PerformanceRegistry.User.ps1"
         Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $Entries $PerformanceEntries -Scope DefaultUser))
 	};
     {
-        . "C:\MySetup\Scripts\ShellUIRegistry.User.ps1"
+        . "$PSScriptRoot\ShellUIRegistry.User.ps1"
         Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $ShellUIEntries -Scope DefaultUser))
 	};
     {
-        . "C:\MySetup\Scripts\SecurityAndPrivacyRegistry.User.ps1"
+        . "$PSScriptRoot\SecurityAndPrivacyRegistry.User.ps1"
         Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $SecurityAndPrivacyEntries -Scope DefaultUser))
 	};
     {
-        . "C:\MySetup\Scripts\SoundAndNotificationsRegistry.User.ps1"
+        . "$PSScriptRoot\SoundAndNotificationsRegistry.User.ps1"
         Apply-RegistryBatch $(Convert-EntriesToDefaultUserHive $(Get-EntriesForScope -Entries $SoundAndNotificationsEntries -Scope DefaultUser))
 	};
     {
@@ -59,4 +59,4 @@ $scripts = @(
     "`r`n" * 3;
     $complete += $increment;
   }
-} *>&1 | Out-String -Width 1KB -Stream >> "C:\MySetup\Logs\DefaultUser.log";
+} *>&1 | Out-String -Width 1KB -Stream >> "$PSScriptRoot\..\Logs\DefaultUser.log";

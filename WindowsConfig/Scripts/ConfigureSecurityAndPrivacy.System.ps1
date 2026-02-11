@@ -1,4 +1,4 @@
-﻿. "C:\MySetup\Scripts\Apply-Registry.ps1"
+﻿. "$PSScriptRoot\Apply-Registry.ps1"
 
 $entries = @(
     @{

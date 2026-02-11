@@ -18,4 +18,4 @@
     Set-ItemProperty @params -Name 'PauseQualityUpdatesEndTime' -Value $end;
     Set-ItemProperty @params -Name 'PauseUpdatesStartTime' -Value $start;
     Set-ItemProperty @params -Name 'PauseUpdatesExpiryTime' -Value $end;
-} *>&1 | Out-String -Width 1KB -Stream >> "C:\MySetup\Logs\PauseWindowsUpdate.log";
+} *>&1 | Out-String -Width 1KB -Stream >> "$PSScriptRoot\..\Logs\PauseWindowsUpdate.log";

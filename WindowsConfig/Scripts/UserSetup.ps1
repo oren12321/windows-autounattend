@@ -2,7 +2,7 @@
     [string]$Mode  # "FirstUser" or "PerUser"
 )
 
-$logFile = "C:\MySetup\Logs\UserSetup.log"
+$logFile = "$PSScriptRoot\..\Logs\UserSetup.log"
 
 # Logging helper
 function Write-Log {
@@ -133,7 +133,7 @@ function Wait-Until {
     # Give it a moment to finish writing theme defaults
     Write-Output "$env:LOCALAPPDATA\Packages detected — waiting 5 seconds for stabilization..."
     Start-Sleep -Seconds 5
-} *>&1 | Out-String -Width 1KB -Stream >> "C:\MySetup\Logs\UserSetup.log";
+} *>&1 | Out-String -Width 1KB -Stream >> "$PSScriptRoot\..\Logs\UserSetup.log";
 ###############################################################
 #>
 
@@ -147,7 +147,7 @@ switch ($Mode) {
         try {
             # Things ONLY the first user should get
             # Example: OEM branding, one-time app installs, etc.
-            & "C:\MySetup\Scripts\UserSetup.FirstUser.ps1"
+            & "$PSScriptRoot\UserSetup.FirstUser.ps1"
         }
         catch {
             Write-Log "ERROR in FirstUser script: $_"
@@ -160,7 +160,7 @@ switch ($Mode) {
         try {
             # Things EVERY user should get
             # Example: Explorer defaults, Taskbar tweaks, Start menu tweaks
-            & "C:\MySetup\Scripts\UserSetup.PerUser.ps1"
+            & "$PSScriptRoot\UserSetup.PerUser.ps1"
         }
         catch {
             Write-Log "ERROR in PerUser script: $_"

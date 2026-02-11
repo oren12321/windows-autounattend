@@ -22,7 +22,7 @@ $removeCommand = {
   }
 };
 $type = 'Feature';
-$logfile = 'C:\MySetup\Logs\RemoveFeatures.log';
+$logfile = '$PSScriptRoot\..\Logs\RemoveFeatures.log';
 & {
 	$installed = & $getCommand;
 	foreach( $selector in $selectors ) {

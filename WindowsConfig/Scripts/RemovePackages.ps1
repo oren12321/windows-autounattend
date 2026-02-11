@@ -67,7 +67,7 @@ $removeCommand = {
   }
 };
 $type = 'Package';
-$logfile = 'C:\MySetup\Logs\RemovePackages.log';
+$logfile = '$PSScriptRoot\..\Logs\RemovePackages.log';
 & {
 	$installed = & $getCommand;
 	foreach( $selector in $selectors ) {
