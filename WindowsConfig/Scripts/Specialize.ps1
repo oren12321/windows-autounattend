@@ -32,10 +32,6 @@
     {
         & "C:\MySetup\Scripts\ConfigureSoundAndNotifications.System.ps1" >> "C:\MySetup\Logs\ConfigureSoundAndNotifications.System.log" 2>&1
     };
-    {
-        # Per user Active Setup
-        & "C:\MySetup\Scripts\ConfigureActiveSetup.ps1" >> "C:\MySetup\Logs\ConfigureActiveSetup.log" 2>&1
-    };
 );
 
 & {
