@@ -77,6 +77,13 @@
         Description = "Choose how the Windows search appears on your taskbar: hidden, icon only, icon with label, or full search box"
     },
     @{
+        Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search"
+        Name        = "SearchboxTaskbarModeCache"
+        Type        = "DWord"
+        Value       = 0
+        Description = "Choose how the Windows search appears on your taskbar: hidden, icon only, icon with label, or full search box"
+    },
+    @{
         Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
         Name        = "TaskbarAl"
         Type        = "DWord"
