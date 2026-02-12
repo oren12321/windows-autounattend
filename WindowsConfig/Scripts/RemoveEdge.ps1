@@ -190,7 +190,7 @@ function Install-EdgeProtocolRedirect {
     }
 
     Write-Information "Installing Edge protocol redirect using OpenWebSearch"
-    $scriptsDir = "C:\MySetup\Scripts\OpenWebSearch"
+    $scriptsDir = "$PSScriptRoot\OpenWebSearch"
     New-Item -ItemType Directory -Path $scriptsDir -Force -ErrorAction SilentlyContinue | Out-Null
 
     $stubTargetPath = "$scriptsDir\ie_to_edge_stub.exe"
@@ -578,7 +578,7 @@ if ($chromiumInstalled) {
     }
 
     if ($stubPath) {
-        $scriptsDir = "C:\MySetup\Scripts\OpenWebSearch"
+        $scriptsDir = "$PSScriptRoot\OpenWebSearch"
         New-Item -ItemType Directory -Path $scriptsDir -Force -ErrorAction SilentlyContinue | Out-Null
         Copy-Item $stubPath "$scriptsDir\ie_to_edge_stub.exe" -Force -ErrorAction SilentlyContinue
         Write-Information "Copied ie_to_edge_stub.exe to $scriptsDir before Edge removal"
