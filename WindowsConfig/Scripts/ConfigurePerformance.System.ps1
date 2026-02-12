@@ -366,6 +366,7 @@ $entries = @(
         Description = "Enables support for file paths with up to 32,767 characters instead of the traditional 260-character limit"
     }
 )
+Apply-RegistryBatch $entries
 
 $scheduledTasks = @(
     @{ TN="\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser"; Action="/Disable"; Desc="Evaluates system and application compatibility for Windows upgrades." },
