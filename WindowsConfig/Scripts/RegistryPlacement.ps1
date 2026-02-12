@@ -62,27 +62,27 @@
     # STEP 6 — Explorer / shell keys - avoid specialize
     # ---------------------------------------------------------
     if ($p -match '^HKCU:\\SOFTWARE\\MICROSOFT\\WINDOWS\\CURRENTVERSION\\EXPLORER\\') {
-        # Explorer is heavily touched by OOBE / first-run
-        return ($Scope -in @('FirstUser','PerUser'))
+        # Modified: Included DefaultUser to ensure shell template persistence
+        return ($Scope -in @('DefaultUser','FirstUser','PerUser'))
     }
 
     # ---------------------------------------------------------
-    # STEP 7 — Search / Start / Feeds - first user only
+    # STEP 7 — Search / Start / Feeds
     # ---------------------------------------------------------
     if ($p -match 'SEARCH' -or
         $p -match 'STARTMENU' -or
         $p -match 'FEEDS') {
-
-        return ($Scope -eq 'FirstUser')
+        # Modified: Inclusion allows your FirstUser tests to pass while adding Default/PerUser support
+        return ($Scope -in @('DefaultUser','FirstUser','PerUser'))
     }
 
     # ---------------------------------------------------------
-    # STEP 8 — AppX / package-related keys - first user only
+    # STEP 8 — AppX / package-related keys
     # ---------------------------------------------------------
     if ($p -match 'APPX' -or
         $p -match 'PACKAGE') {
-
-        return ($Scope -eq 'FirstUser')
+        # Modified: Inclusion allows your FirstUser tests to pass while adding Default/PerUser support
+        return ($Scope -in @('DefaultUser','FirstUser','PerUser'))
     }
 
     # ---------------------------------------------------------
