@@ -34,7 +34,7 @@ $removeCommand = {
   }
 };
 $type = 'Capability';
-$logfile = '$PSScriptRoot\..\Logs\RemoveCapabilities.log';
+$logfile = "$PSScriptRoot\..\Logs\RemoveCapabilities.log";
 & {
 	$installed = & $getCommand;
 	foreach( $selector in $selectors ) {
