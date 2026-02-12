@@ -65,7 +65,7 @@ function Wait-Until {
             (Get-Process StartMenuExperienceHost -ErrorAction SilentlyContinue) -or `
             (Get-Process ShellExperienceHost -ErrorAction SilentlyContinue)
         } `
-        -TimeoutSeconds 60 `
+        -TimeoutSeconds 300 `
         -IntervalSeconds 2
 
     # ---------------------------------------------------------
@@ -80,7 +80,7 @@ function Wait-Until {
                 Where-Object { $_.Path -like "*ContentDeliveryManager*" }
             )
         } `
-        -TimeoutSeconds 60 `
+        -TimeoutSeconds 300 `
         -IntervalSeconds 2
 
     # ---------------------------------------------------------
@@ -97,7 +97,7 @@ function Wait-Until {
             # 2. OR it exists but is no longer suspended (actually working)
             (-not $p) -or ($p.Threads.WaitReason -ne 'Suspended')
         } `
-        -TimeoutSeconds 60 `
+        -TimeoutSeconds 300 `
         -IntervalSeconds 2
 
     # ---------------------------------------------------------
@@ -105,12 +105,13 @@ function Wait-Until {
     # ---------------------------------------------------------
 
     Wait-Until `
-        -Description "explorer.exe to start" `
+        -Description "Waiting for Desktop UI to render" `
         -Condition {
-            Get-Process explorer -ErrorAction SilentlyContinue
+            $ex = Get-Process explorer -ErrorAction SilentlyContinue
+            $ex.MainWindowHandle -ne 0
         } `
-        -TimeoutSeconds 60 `
-        -IntervalSeconds 2
+        -TimeoutSeconds 300 `
+        -IntervalSeconds 5
 
     # ---------------------------------------------------------
     # CONDITION 5 — Packages folder is present
@@ -121,7 +122,7 @@ function Wait-Until {
         -Condition {
             Test-Path "$env:LOCALAPPDATA\Packages"
         } `
-        -TimeoutSeconds 60 `
+        -TimeoutSeconds 300 `
         -IntervalSeconds 2
 
     # ---------------------------------------------------------
@@ -135,7 +136,7 @@ function Wait-Until {
         -Condition {
             Test-Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\SessionInfo\$currentSessionId"
         } `
-        -TimeoutSeconds 60 `
+        -TimeoutSeconds 300 `
         -IntervalSeconds 2
 
     # ---------------------------------------------------------
@@ -165,7 +166,7 @@ function Wait-Until {
             
             return (-not $isSuspended)
         } `
-        -TimeoutSeconds 60 `
+        -TimeoutSeconds 300 `
         -IntervalSeconds 2
     
     # ---------------------------------------------------------
@@ -173,15 +174,13 @@ function Wait-Until {
     # ---------------------------------------------------------
     # Windows sets 'FirstLogonAnim' to 0 once the "Hi" screen ends and the desktop appears.
     Wait-Until `
-        -Description "Desktop to be visible (FirstLogonAnim = 0)" `
+        -Description "Waiting for 'Hi' screen to disappear" `
         -Condition {
             $animStatus = Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -Name "FirstLogonAnim" -ErrorAction SilentlyContinue
-            # If the value doesn't exist, we assume it's an existing profile/stable session.
-            # If it is 0, the animation has ended and the desktop is visible.
             ($null -eq $animStatus) -or ($animStatus.FirstLogonAnim -eq 0)
         } `
-        -TimeoutSeconds 120 `
-        -IntervalSeconds 2
+        -TimeoutSeconds 300 `
+        -IntervalSeconds 5
 
     # ---------------------------------------------------------
     # CONDITION 9 — Shell "IsInitialized" Check
@@ -199,7 +198,7 @@ function Wait-Until {
             
             return ($init.ShellInitialized -eq 1)
         } `
-        -TimeoutSeconds 60 `
+        -TimeoutSeconds 300 `
         -IntervalSeconds 2
 
     # ---------------------------------------------------------

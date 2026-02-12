@@ -1,7 +1,7 @@
 ﻿. "$PSScriptRoot\Apply-Registry.ps1"
 . "$PSScriptRoot\RegistryPlacement.ps1"
 
-$logsDir = "$env:LOCALAPPDATA\MySetup"
+$logsDir = "$env:LOCALAPPDATA\Logs"
 if (-not (Test-Path $logsDir)) {
     New-Item -Path $logsDir -ItemType Directory -Force | Out-Null
 }
