@@ -1,7 +1,6 @@
 ﻿<#
   .SYNOPSIS
       Removes Microsoft Edge (Legacy and Chromium versions) from Windows 10/11 systems.
-      Script Version: 1.0
 
   .DESCRIPTION
       This script detects and removes Microsoft Edge installations including:
@@ -25,19 +24,18 @@
       - Chromium Edge removal based on work by FR33THY: https://github.com/FR33THYFR33THY/Ultimate-Windows-Optimization-Guide/blob/main/6%20Windows/14%20Edge.ps1
       - Edge protocol redirect based on OpenWebSearch by AveYo: https://github.com/AveYo/fox/blob/main/OpenWebSearch.cmd
       
-      - Minor refactoring for embedding in Schneegans's generated autounattend.xml
-      - Refined by additional guards to prevent reinstallation
+      Minor refactoring for embedding in Schneegans's generated autounattend.xml
 #>
 
 # Check if script is running as Administrator
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator")) {
     Try {
         Start-Process PowerShell.exe -ArgumentList ("-NoProfile -ExecutionPolicy Bypass -File `"{0}`"" -f $PSCommandPath) -Verb RunAs
-        return
+        Exit
     }
     Catch {
-        Write-Information "Failed to run as Administrator. Please rerun with elevated privileges."
-        return
+        Write-Output "Failed to run as Administrator. Please rerun with elevated privileges."
+        Exit
     }
 }
 
@@ -87,20 +85,20 @@ function Test-ChromiumEdgeInstalled {
 
 # Function to stop Edge-related processes
 function Stop-EdgeProcesses {
-    Write-Information "Stopping Edge-related processes and services"
+    Write-Output "Stopping Edge-related processes and services"
     $stop = "MicrosoftEdgeUpdate", "OneDrive", "WidgetService", "Widgets", "msedge", "Resume", "CrossDeviceResume", "msedgewebview2"
     $stop | ForEach-Object {
         $processCount = (Get-Process -Name $_ -ErrorAction SilentlyContinue).Count
         if ($processCount -gt 0) {
             Stop-Process -Name $_ -Force -ErrorAction SilentlyContinue
-            Write-Information "Stopped $processCount instance(s) of $_"
+            Write-Output "Stopped $processCount instance(s) of $_"
         }
     }
 }
 
 # Function to remove Legacy Edge
 function Remove-LegacyEdge {
-    Write-Information "Starting Legacy Edge/UWP Edge removal process"
+    Write-Output "Starting Legacy Edge/UWP Edge removal process"
     # Query registry for Edge Legacy package
     $packages = Get-LegacyEdgePackages
     $edgeLegacyPackageVersion = $packages | Select-Object -First 1
@@ -110,40 +108,40 @@ function Remove-LegacyEdge {
     # Remove owners registry entries
     $ownersPath = "$packagePath\Owners"
     if (Test-Path $ownersPath) { Remove-Item -Path $ownersPath -Recurse -Force -ErrorAction SilentlyContinue }
-    Write-Information "Removing Legacy Edge package via DISM (with 30-second timeout)"
-    $dismProcess = Start-Process -FilePath "dism.exe" -ArgumentList "/online", "/Remove-Package", "/PackageName:$edgeLegacyPackageVersion" -NoNewWindow -PassThru
+    Write-Output "Removing Legacy Edge package via DISM (with 30-second timeout)"
+    $dismProcess = Start-Process -FilePath "dism.exe" -ArgumentList "/online", "/Remove-Package", "/PackageName:$edgeLegacyPackageVersion", "/NoRestart" -NoNewWindow -PassThru
 
     if ($dismProcess -and $dismProcess.WaitForExit(30000)) {
-        Write-Information "DISM completed successfully"
+        Write-Output "DISM completed successfully"
     } elseif ($dismProcess) {
-        Write-Information "DISM timed out after 30 seconds, killing process and retrying once"
+        Write-Output "DISM timed out after 30 seconds, killing process and retrying once"
         $dismProcess.Kill()
         Start-Sleep 2
 
         # Retry once
-        Write-Information "Retrying DISM command"
-        $retryProcess = Start-Process -FilePath "dism.exe" -ArgumentList "/online", "/Remove-Package", "/PackageName:$edgeLegacyPackageVersion" -NoNewWindow -PassThru
+        Write-Output "Retrying DISM command"
+        $retryProcess = Start-Process -FilePath "dism.exe" -ArgumentList "/online", "/Remove-Package", "/PackageName:$edgeLegacyPackageVersion", "/NoRestart" -NoNewWindow -PassThru
 
         if ($retryProcess -and $retryProcess.WaitForExit(30000)) {
-            Write-Information "DISM retry completed successfully"
+            Write-Output "DISM retry completed successfully"
         } elseif ($retryProcess) {
-            Write-Information "DISM retry also timed out, continuing with script"
+            Write-Output "DISM retry also timed out, continuing with script"
             $retryProcess.Kill()
         } else {
-            Write-Information "DISM retry failed to start, continuing with script"
+            Write-Output "DISM retry failed to start, continuing with script"
         }
     } else {
-        Write-Information "DISM failed to start, continuing with script"
+        Write-Output "DISM failed to start, continuing with script"
     }
     # Remove Legacy UWP Edge package
-    Write-Information "Removing Legacy UWP Edge package"
-    Get-AppxPackage -AllUsers Microsoft.MicrosoftEdge | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue | Out-Null
-    Write-Information "Legacy Edge/UWP Edge removal process completed"
+    Write-Output "Removing Legacy UWP Edge package"
+    Get-AppxPackage Microsoft.MicrosoftEdge | Remove-AppxPackage -ErrorAction SilentlyContinue | Out-Null
+    Write-Output "Legacy Edge/UWP Edge removal process completed"
 }
 
 # Function to remove Edge shortcuts
 function Remove-EdgeShortcuts {
-    Write-Information "Starting Edge shortcuts cleanup"
+    Write-Output "Starting Edge shortcuts cleanup"
 
     # Get ALL user profiles (no exclusions)
     $userProfiles = Get-ChildItem -Path "C:\Users" -Directory | Where-Object {
@@ -176,28 +174,28 @@ function Remove-EdgeShortcuts {
         }
     }
 
-    Write-Information "Removed $removedCount Edge shortcut(s)"
+    Write-Output "Removed $removedCount Edge shortcut(s)"
 }
 
 function Install-EdgeProtocolRedirect {
-    Write-Information "Checking if Edge protocol redirect is needed"
+    Write-Output "Checking if Edge protocol redirect is needed"
 
     $ifeoCheck = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\ie_to_edge_stub.exe\0"
     if (Test-Path $ifeoCheck) {
         $debugger = (Get-ItemProperty -Path $ifeoCheck -Name "Debugger" -ErrorAction SilentlyContinue).Debugger
         if ($debugger -like "*OpenWebSearch*") {
-            Write-Information "Edge protocol redirect already installed"
+            Write-Output "Edge protocol redirect already installed"
             return
         }
     }
 
-    Write-Information "Installing Edge protocol redirect using OpenWebSearch"
-    $scriptsDir = "C:\ProgramData\Winhance\OpenWebSearch"
+    Write-Output "Installing Edge protocol redirect using OpenWebSearch"
+    $scriptsDir = "C:\MySetup\Scripts\OpenWebSearch"
     New-Item -ItemType Directory -Path $scriptsDir -Force -ErrorAction SilentlyContinue | Out-Null
 
     $stubTargetPath = "$scriptsDir\ie_to_edge_stub.exe"
     if (!(Test-Path $stubTargetPath)) {
-        Write-Information "Warning: ie_to_edge_stub.exe not found at $stubTargetPath (should have been copied before Edge removal)"
+        Write-Output "Warning: ie_to_edge_stub.exe not found at $stubTargetPath (should have been copied before Edge removal)"
         return
     }
 
@@ -257,20 +255,20 @@ set ".=!.:{=%%!" & endlocal& set "URL=%.:}=!%" & exit /b
 
     $openWebSearchPath = "$scriptsDir\OpenWebSearch.cmd"
     $openWebSearchContent | Out-File -FilePath $openWebSearchPath -Encoding ASCII -Force
-    Write-Information "Created OpenWebSearch.cmd at $openWebSearchPath"
+    Write-Output "Created OpenWebSearch.cmd at $openWebSearchPath"
 
     $msedgePath = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
     $edgePath = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\edge.exe"
     if ((Test-Path $msedgePath) -and !(Test-Path $edgePath)) {
         cmd /c mklink /h "$edgePath" "$msedgePath" 2>&1 | Out-Null
-        Write-Information "Created edge.exe hardlink at $edgePath"
+        Write-Output "Created edge.exe hardlink at $edgePath"
     }
 
     $buildNumber = [Environment]::OSVersion.Version.Build
     $conhostFlags = if ($buildNumber -gt 25179) { "--width 1 --height 1" } else { "--headless" }
     $conhostDebugger = "$env:SystemRoot\system32\conhost.exe $conhostFlags $scriptsDir\OpenWebSearch.cmd"
 
-    Write-Information "Configuring registry entries for Edge protocol redirect"
+    Write-Output "Configuring registry entries for Edge protocol redirect"
     reg.exe add "HKCR\microsoft-edge" /f /ve /d "URL:microsoft-edge" 2>&1 | Out-Null
     reg.exe add "HKCR\microsoft-edge" /f /v "URL Protocol" /d `"`" 2>&1 | Out-Null
     reg.exe add "HKCR\microsoft-edge" /f /v "NoOpenWith" /d `"`" 2>&1 | Out-Null
@@ -283,36 +281,37 @@ set ".=!.:{=%%!" & endlocal& set "URL=%.:}=!%" & exit /b
     reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe" /f /v UseFilter /d 1 /t reg_dword 2>&1 | Out-Null
     reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe\0" /f /v FilterFullPath /d "$msedgePath" 2>&1 | Out-Null
     reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\msedge.exe\0" /f /v Debugger /d "$conhostDebugger" 2>&1 | Out-Null
-    Write-Information "Registry configuration completed"
+    Write-Output "Registry configuration completed"
 
     $repairScriptPath = "$scriptsDir\OpenWebSearchRepair.cmd"
     $repairScriptContent = "@echo off`r`nmklink /h ""$edgePath"" ""$msedgePath"""
     $repairScriptContent | Out-File -FilePath $repairScriptPath -Encoding ASCII -Force
-    Write-Information "Created repair script at $repairScriptPath"
+    Write-Output "Created repair script at $repairScriptPath"
 
-    Write-Information "Creating OpenWebSearchRepair scheduled task"
+    Write-Output "Creating OpenWebSearchRepair scheduled task"
     try {
         $taskAction = New-ScheduledTaskAction -Execute $repairScriptPath
         $taskTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date
         $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-        Register-ScheduledTask -TaskName 'OpenWebSearchRepair' -Action $taskAction -Trigger $taskTrigger -Settings $taskSettings -RunLevel Highest -Force | Out-Null
-        Write-Information "OpenWebSearchRepair scheduled task created"
+        $taskPrincipal = New-ScheduledTaskPrincipal -UserId "S-1-5-18" -LogonType ServiceAccount -RunLevel Highest
+        Register-ScheduledTask -TaskName 'OpenWebSearchRepair' -Action $taskAction -Trigger $taskTrigger -Settings $taskSettings -Principal $taskPrincipal -Force | Out-Null
+        Write-Output "OpenWebSearchRepair scheduled task created"
     } catch {
-        Write-Information "Failed to create OpenWebSearchRepair scheduled task: $($_.Exception.Message)"
+        Write-Output "Failed to create OpenWebSearchRepair scheduled task: $($_.Exception.Message)"
     }
 }
 
 # Function to remove Chromium Edge and EdgeUpdate
 function Remove-ChromiumEdge {
     # Remove Chromium Edge
-    Write-Information "Starting Edge Chromium uninstallation process"
+    Write-Output "Starting Edge Chromium uninstallation process"
     # Folder and file to allow uninstall of Edge Chromium Browser
-    Write-Information "Creating temporary directory for Edge uninstallation"
+    Write-Output "Creating temporary directory for Edge uninstallation"
     $edgePath = "$env:SystemRoot\SystemApps\Microsoft.MicrosoftEdge_8wekyb3d8bbwe"
     New-Item -Path $edgePath -ItemType Directory -ErrorAction SilentlyContinue | Out-Null
     New-Item -Path $edgePath -ItemType File -Name "MicrosoftEdge.exe" -ErrorAction SilentlyContinue | Out-Null
     # Get Edge Uninstall Strings for Enterprise MSI version or normal version (they require different handling)
-    Write-Information "Searching for Edge uninstall strings in registry"
+    Write-Output "Searching for Edge uninstall strings in registry"
     $uninstallKeys = Get-ChildItem "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
     $edgeUninstallCount = 0
     foreach ($key in $uninstallKeys) {
@@ -323,33 +322,33 @@ function Remove-ChromiumEdge {
                 $edgeUninstallCount++
                 if ($uninstallString -like "*msiexec*") {
                     # Uninstalls Enterprise MSI version
-                    Write-Information "Executing MSI uninstaller for Edge"
+                    Write-Output "Executing MSI uninstaller for Edge"
                     Start-Process cmd.exe "/c $uninstallString /quiet" -WindowStyle Hidden -Wait | Out-Null
                 } else {
                     # Uninstalls normal version
-                    Write-Information "Executing standard uninstaller for Edge"
+                    Write-Output "Executing standard uninstaller for Edge"
                     Start-Process cmd.exe "/c $uninstallString --force-uninstall --silent" -WindowStyle Hidden -Wait | Out-Null
                 }
             }
         }
     }
     if ($edgeUninstallCount -eq 0) {
-        Write-Information "No Edge uninstall entries found in registry"
+        Write-Output "No Edge uninstall entries found in registry"
     } else {
-        Write-Information "Executed $edgeUninstallCount Edge uninstaller(s)"
+        Write-Output "Executed $edgeUninstallCount Edge uninstaller(s)"
     }
     # Remove UWP Edge Chromium package
-    Write-Information "Removing UWP Edge Chromium package"
-    Get-AppxPackage -AllUsers Microsoft.MicrosoftEdge.Stable | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue | Out-Null
+    Write-Output "Removing UWP Edge Chromium package"
+    Get-AppxPackage *Microsoft.MicrosoftEdge.Stable* | Remove-AppxPackage -ErrorAction SilentlyContinue | Out-Null
     # Cleanup: Remove folder and file we created earlier
-    Write-Information "Cleaning up temporary Edge directory"
+    Write-Output "Cleaning up temporary Edge directory"
     Remove-Item -Recurse -Force $edgePath -ErrorAction SilentlyContinue | Out-Null
-    Write-Information "Edge Chromium uninstallation process completed"
+    Write-Output "Edge Chromium uninstallation process completed"
 
     # Remove EdgeUpdate
-    Write-Information "Starting EdgeUpdate removal process"
+    Write-Output "Starting EdgeUpdate removal process"
     # Find EdgeUpdate executables
-    Write-Information "Searching for EdgeUpdate executables"
+    Write-Output "Searching for EdgeUpdate executables"
     $edgeupdate = @()
     $searchPaths = @("LocalApplicationData", "ProgramFilesX86", "ProgramFiles")
     foreach ($pathType in $searchPaths) {
@@ -361,30 +360,44 @@ function Remove-ChromiumEdge {
         }
     }
     if ($edgeupdate.Count -gt 0) {
-        Write-Information "Found $($edgeupdate.Count) EdgeUpdate executable(s)"
+        Write-Output "Found $($edgeupdate.Count) EdgeUpdate executable(s)"
     } else {
-        Write-Information "No EdgeUpdate executables found"
+        Write-Output "No EdgeUpdate executables found"
     }
     # Backup ClientState registry if it exists (important, or else webview won't work)
     $backupRegFile = "$env:TEMP\EdgeUpdate_ClientState_Backup_$(Get-Date -Format 'yyyyMMdd_HHmmss').reg"
     $clientStatePath = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\ClientState"
     if (Test-Path $clientStatePath) {
-        Write-Information "Backing up EdgeUpdate ClientState registry"
+        Write-Output "Backing up EdgeUpdate ClientState registry"
         cmd /c "reg export `"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\ClientState`" `"$backupRegFile`" /y" 2>$null
         if (Test-Path $backupRegFile) {
-            Write-Information "Successfully created registry backup at $backupRegFile"
+            Write-Output "Successfully created registry backup at $backupRegFile"
         } else {
-            Write-Information "Warning: Failed to create registry backup"
+            Write-Output "Warning: Failed to create registry backup"
         }
     } else {
-        Write-Information "No EdgeUpdate ClientState registry found to backup"
+        Write-Output "No EdgeUpdate ClientState registry found to backup"
     }
+    # Clean registry entries
+    Write-Output "Removing EdgeUpdate registry entries"
+    $registryPaths = @(
+        "HKLM:\SOFTWARE", "HKLM:\SOFTWARE\Policies", "HKLM:\SOFTWARE\WOW6432Node", "HKLM:\SOFTWARE\WOW6432Node\Policies"
+    )
+    $removedRegCount = 0
+    foreach ($location in $registryPaths) {
+        $regPath = "$location\Microsoft\EdgeUpdate"
+        if (Test-Path $regPath) {
+            Remove-Item $regPath -Recurse -Force -ErrorAction SilentlyContinue
+            $removedRegCount++
+        }
+    }
+    Write-Output "Removed EdgeUpdate registry entries from $removedRegCount location(s)"
     # Uninstall EdgeUpdate executables
-    Write-Information "Processing EdgeUpdate uninstallation"
+    Write-Output "Processing EdgeUpdate uninstallation"
     foreach ($path in $edgeupdate) {
         if (Test-Path $path) {
             # Unregister service
-            Write-Information "Unregistering EdgeUpdate service from $path"
+            Write-Output "Unregistering EdgeUpdate service from $path"
             Start-Process -FilePath $path -ArgumentList "/unregsvc" -Wait -WindowStyle Hidden -ErrorAction SilentlyContinue
             # Wait for processes to finish
             $waitCount = 0
@@ -394,159 +407,48 @@ function Remove-ChromiumEdge {
             } while ($runningProcesses -and $waitCount++ -lt 20)
             # Run uninstall if file still exists
             if (Test-Path $path) {
-                Write-Information "Running EdgeUpdate uninstaller from $path"
+                Write-Output "Running EdgeUpdate uninstaller from $path"
                 Start-Process -FilePath $path -ArgumentList "/uninstall" -Wait -WindowStyle Hidden -ErrorAction SilentlyContinue
             }
         }
     }
     # Restore ClientState backup
     if ((Test-Path $backupRegFile)) {
-        Write-Information "Restoring EdgeUpdate ClientState registry from backup"
+        Write-Output "Restoring EdgeUpdate ClientState registry from backup"
         cmd /c "reg import `"$backupRegFile`"" 2>$null
         Remove-Item $backupRegFile -ErrorAction SilentlyContinue
-        Write-Information "Registry restore completed and backup file cleaned up"
+        Write-Output "Registry restore completed and backup file cleaned up"
     } else {
-        Write-Information "No registry backup file found to restore"
+        Write-Output "No registry backup file found to restore"
     }
-    Write-Information "EdgeUpdate removal process completed"
+    Write-Output "EdgeUpdate removal process completed"
 }
 
-function Remove-EdgeRegistryKeys {
-    Write-Information "Starting comprehensive Edge registry cleanup"
-
-    $directPaths = @(
-        "HKLM:\SOFTWARE\Microsoft\Edge",
-        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Edge",
-        "HKCU:\Software\Microsoft\Edge",
-        "HKCU:\Software\Microsoft\EdgeUpdate",
-        "HKLM:\SOFTWARE\Clients\StartMenuInternet\Microsoft Edge",
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe",
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\MicrosoftEdge",
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge",
-        "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\Application\Edge",
-        "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\Application\edgeupdate",
-        "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\Application\edgeupdatem"
-    )
-
-    $removedCount = 0
-    foreach ($path in $directPaths) {
-        if (Test-Path $path) {
-            Remove-Item $path -Recurse -Force -ErrorAction SilentlyContinue
-            $removedCount++
-        }
-    }
-    Write-Information "Removed $removedCount direct registry key(s)"
-
-    $valuesToRemove = @(
-        @{Path = "HKLM:\SOFTWARE\RegisteredApplications"; Name = "Microsoft Edge"},
-        @{Path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FeatureUsage\AppLaunch"; Name = "MSEdge"},
-        @{Path = "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Compatibility Assistant\Store"; Name = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"}
-    )
-
-    $removedValuesCount = 0
-    foreach ($item in $valuesToRemove) {
-        if ((Test-Path $item.Path) -and (Get-ItemProperty -Path $item.Path -Name $item.Name -ErrorAction SilentlyContinue)) {
-            Remove-ItemProperty -Path $item.Path -Name $item.Name -Force -ErrorAction SilentlyContinue
-            $removedValuesCount++
-        }
-    }
-    Write-Information "Removed $removedValuesCount registry value(s)"
-
-    $patterns = @(
-        @{Root = "HKLM:\SOFTWARE\Classes"; Pattern = "microsoft-edge"},
-        @{Root = "HKLM:\SOFTWARE\Classes"; Pattern = "MicrosoftEdgeUpdate*"},
-        @{Root = "HKLM:\SOFTWARE\Classes"; Pattern = "MSEdge*"},
-        @{Root = "HKLM:\SOFTWARE\Classes\WOW6432Node"; Pattern = "MicrosoftEdgeUpdate*"},
-        @{Root = "HKLM:\SOFTWARE\WOW6432Node\Classes"; Pattern = "MicrosoftEdgeUpdate*"}
-    )
-
-    $removedPatternCount = 0
-    foreach ($patternItem in $patterns) {
-        if (Test-Path $patternItem.Root) {
-            $matchedKeys = Get-ChildItem -Path $patternItem.Root -ErrorAction SilentlyContinue |
-                Where-Object { $_.PSChildName -like $patternItem.Pattern }
-
-            foreach ($key in $matchedKeys) {
-                Remove-Item $key.PSPath -Recurse -Force -ErrorAction SilentlyContinue
-                $removedPatternCount++
-            }
-        }
-    }
-    Write-Information "Removed $removedPatternCount pattern-matched key(s)"
-
-    $muiCachePath = "HKCU:\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache"
-    if (Test-Path $muiCachePath) {
-        $properties = Get-ItemProperty -Path $muiCachePath -ErrorAction SilentlyContinue
-        $removedMuiCount = 0
-        if ($properties) {
-            foreach ($prop in $properties.PSObject.Properties) {
-                if ($prop.Name -like "*Edge*" -or $prop.Name -like "*EdgeUpdate*") {
-                    Remove-ItemProperty -Path $muiCachePath -Name $prop.Name -Force -ErrorAction SilentlyContinue
-                    $removedMuiCount++
-                }
-            }
-        }
-        Write-Information "Removed $removedMuiCount MuiCache entry(ies)"
-    }
-}
-
-function Remove-AdditionalEdgeFolders {
-    Write-Information "Starting additional Edge folder cleanup"
-
-    $systemPaths = @(
-        "C:\ProgramData\Microsoft\EdgeUpdate",
-        "C:\Windows\Temp\MsEdgeCrashpad"
-    )
-
-    $removedCount = 0
-    foreach ($path in $systemPaths) {
-        if (Test-Path $path) {
-            Write-Information "Removing: $path"
-            Remove-Item $path -Recurse -Force -ErrorAction SilentlyContinue
-            $removedCount++
-        }
-    }
-
-    $userProfiles = Get-ChildItem -Path "C:\Users" -Directory -ErrorAction SilentlyContinue |
-        Where-Object { Test-Path "$($_.FullName)\NTUSER.DAT" }
-
-    foreach ($profile in $userProfiles) {
-        $edgeLocalPath = "$($profile.FullName)\AppData\Local\Microsoft\Edge"
-        if (Test-Path $edgeLocalPath) {
-            Write-Information "Removing: $edgeLocalPath"
-            Remove-Item $edgeLocalPath -Recurse -Force -ErrorAction SilentlyContinue
-            $removedCount++
-        }
-    }
-
-    Write-Information "Removed $removedCount additional Edge folder(s)"
-}
-
-Write-Information "Starting Edge removal process. See $logFile for details."
+Write-Output "Starting Edge removal process."
 
 # Check for Edge installations first
-Write-Information "Checking for Edge installations..."
+Write-Output "Checking for Edge installations..."
 
 $legacyInstalled = Test-LegacyEdgeInstalled
 $chromiumInstalled = Test-ChromiumEdgeInstalled
 
 if (-not $legacyInstalled -and -not $chromiumInstalled) {
-    Write-Information "No Edge installations detected. Exiting."
-    Write-Information "No Edge installations found. Script exiting."
-    return
+    Write-Output "No Edge installations detected. Exiting."
+    Write-Output "No Edge installations found. Script exiting."
+    exit 0
 }
 
 $removedSomething = $false
 $stubPath = $null
 
 if ($chromiumInstalled) {
-    Write-Information "Chromium Edge detected. Finding ie_to_edge_stub.exe before removal."
+    Write-Output "Chromium Edge detected. Finding ie_to_edge_stub.exe before removal."
 
     $stubLocations = @("$env:ProgramData\ie_to_edge_stub.exe", "$env:Public\ie_to_edge_stub.exe")
     foreach ($loc in $stubLocations) {
         if (Test-Path $loc) {
             $stubPath = $loc
-            Write-Information "Found stub at: $loc"
+            Write-Output "Found stub at: $loc"
             break
         }
     }
@@ -555,29 +457,29 @@ if ($chromiumInstalled) {
         $stubSearch = Get-ChildItem "${env:ProgramFiles(x86)}\Microsoft\Edge" -Filter "ie_to_edge_stub.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($stubSearch) {
             $stubPath = $stubSearch.FullName
-            Write-Information "Found stub at: $stubPath"
+            Write-Output "Found stub at: $stubPath"
         } else {
-            Write-Information "ie_to_edge_stub.exe not found in any location"
+            Write-Output "ie_to_edge_stub.exe not found in any location"
         }
     }
 
     if ($stubPath) {
-        $scriptsDir = "C:\ProgramData\Winhance\OpenWebSearch"
+        $scriptsDir = "C:\MySetup\Scripts\OpenWebSearch"
         New-Item -ItemType Directory -Path $scriptsDir -Force -ErrorAction SilentlyContinue | Out-Null
         Copy-Item $stubPath "$scriptsDir\ie_to_edge_stub.exe" -Force -ErrorAction SilentlyContinue
-        Write-Information "Copied ie_to_edge_stub.exe to $scriptsDir before Edge removal"
+        Write-Output "Copied ie_to_edge_stub.exe to $scriptsDir before Edge removal"
     }
 }
 
 if ($legacyInstalled) {
-    Write-Information "Legacy Edge detected. Proceeding with removal."
+    Write-Output "Legacy Edge detected. Proceeding with removal."
     Stop-EdgeProcesses
     Remove-LegacyEdge
     $removedSomething = $true
 }
 
 if ($chromiumInstalled) {
-    Write-Information "Chromium Edge detected. Proceeding with removal."
+    Write-Output "Chromium Edge detected. Proceeding with removal."
     Stop-EdgeProcesses
     Remove-ChromiumEdge
     $removedSomething = $true
@@ -586,64 +488,62 @@ if ($chromiumInstalled) {
 # Only do cleanup if we removed something
 if ($removedSomething) {
     # Cleanup: Remove folders containing Edge (Edge, EdgeCore, EdgeUpdate) or Temp but exclude EdgeWebView
-    Write-Information "Starting cleanup of Microsoft Edge folders"
+    Write-Output "Starting cleanup of Microsoft Edge folders"
     $edgeFolders = Get-ChildItem -Path "$env:SystemDrive\Program Files (x86)\Microsoft" -Directory -ErrorAction SilentlyContinue |
     Where-Object { ($_.Name -like "*Edge*" -or $_.Name -like "*Temp*") -and $_.Name -notlike "*EdgeWebView*" }
     if ($edgeFolders) {
-        Write-Information "Found $($edgeFolders.Count) Edge-related folder(s) to remove"
+        Write-Output "Found $($edgeFolders.Count) Edge-related folder(s) to remove"
         $edgeFolders | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-        Write-Information "Cleanup of Microsoft Edge folders completed"
+        Write-Output "Cleanup of Microsoft Edge folders completed"
     } else {
-        Write-Information "No Edge-related folders found to clean up"
+        Write-Output "No Edge-related folders found to clean up"
     }
 
     Remove-EdgeShortcuts
-    Remove-EdgeRegistryKeys
-    Remove-AdditionalEdgeFolders
     Install-EdgeProtocolRedirect
 }
 
 # Always check for and delete Edge scheduled tasks
-Write-Information "Checking for Edge scheduled tasks"
+Write-Output "Checking for Edge scheduled tasks"
 try {
     $edgeTasks = Get-ScheduledTask -TaskName "*Edge*" -ErrorAction SilentlyContinue
     if ($edgeTasks) {
         foreach ($task in $edgeTasks) {
             # Skip the EdgeRemoval task
             if ($task.TaskName -eq "EdgeRemoval") {
-                Write-Information "Skipping EdgeRemoval task: $($task.TaskName)"
+                Write-Output "Skipping EdgeRemoval task: $($task.TaskName)"
                 continue
             }
             
-            Write-Information "Found Edge scheduled task: $($task.TaskName) - State: $($task.State)"
+            Write-Output "Found Edge scheduled task: $($task.TaskName) - State: $($task.State)"
             try {
                 Unregister-ScheduledTask -TaskName $task.TaskName -TaskPath $task.TaskPath -Confirm:$false -ErrorAction SilentlyContinue
-                Write-Information "Deleted scheduled task: $($task.TaskName)"
+                Write-Output "Deleted scheduled task: $($task.TaskName)"
             }
             catch {
-                Write-Information "Failed to delete scheduled task: $($task.TaskName) - $($_.Exception.Message)"
+                Write-Output "Failed to delete scheduled task: $($task.TaskName) - $($_.Exception.Message)"
             }
         }
     } else {
-        Write-Information "No Edge scheduled tasks found"
+        Write-Output "No Edge scheduled tasks found"
     }
 }
 catch {
-    Write-Information "Failed to check scheduled tasks: $($_.Exception.Message)"
+    Write-Output "Failed to check scheduled tasks: $($_.Exception.Message)"
 }
 
-Write-Information "Create the EdgeUpdate key and block automatic Chromium Edge installation"
+Write-Output "Create the EdgeUpdate key and block automatic Chromium Edge installation"
 $RegPath = "HKLM:\SOFTWARE\Microsoft\EdgeUpdate"
 if (!(Test-Path $RegPath)) { New-Item -Path $RegPath -Force }
 New-ItemProperty -Path $RegPath -Name "DoNotUpdateToEdgeWithChromium" -Value 1 -PropertyType DWORD -Force
 
-Write-Information "Prevent Edge installation via standard Update policies"
+Write-Output "Prevent Edge installation via standard Update policies"
 $PolicyPath = "HKLM:\SOFTWARE\Policies\Microsoft\EdgeUpdate"
 if (!(Test-Path $PolicyPath)) { New-Item -Path $PolicyPath -Force }
 New-ItemProperty -Path $PolicyPath -Name "InstallDefault" -Value 0 -PropertyType DWORD -Force
 New-ItemProperty -Path $PolicyPath -Name "Install{56EB18F8-8008-4CBD-B6D0-588447950844}" -Value 0 -PropertyType DWORD -Force
 
-Write-Information "Put Package Family Names (PFN) for both Chromium and Legacy Edge in provisioned list"
+Write-Output "Put Package Family Names (PFN) for both Chromium and Legacy Edge in provisioned list"
 $EdgePFNs = @(
     "Microsoft.MicrosoftEdge.Stable_8wekyb3d8bbwe", # Modern Chromium Edge
     "Microsoft.MicrosoftEdge_8wekyb3d8bbwe"         # Legacy Edge
@@ -653,8 +553,8 @@ foreach ($PFN in $EdgePFNs) {
     $Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\$PFN"
     if (!(Test-Path $Path)) {
         New-Item -Path $Path -Force | Out-Null
-        Write-Information "Deprovisioned marker added for: $PFN"
+        Write-Output "Deprovisioned marker added for: $PFN"
     }
 }
 
-Write-Information "Done."
+Write-Output "Done."
