@@ -16,6 +16,13 @@ $entries = @(
         Description = "Determines whether UAC prompts appear on the secure desktop for added protection."
     },
     @{
+        Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
+        Name = "EnableLUA"
+        Type = "DWord"
+        Value = 0
+        Description = "Disable UAC"
+    },
+    @{
         Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin"
         Name = "BlockAADWorkplaceJoin"
         Type = "DWord"

@@ -39,6 +39,9 @@
 	'Microsoft.YourPhone';
 	'Microsoft.ZuneVideo';
     'Microsoft.Windows.Ai.Copilot.Provider';
+    
+    'Microsoft.WindowsStore';
+    'Microsoft.StorePurchaseApp';
 );
 $getCommand = {
   Get-AppxProvisionedPackage -Online;
@@ -88,4 +91,34 @@ $logfile = "$PSScriptRoot\..\Logs\RemovePackages.log";
 		}
 		$result | ConvertTo-Json -Depth 3 -Compress;
 	}
+    
+    # ---------------------------------------------------------
+    # INSERTED HERE — inside inline script, so it logs properly
+    # ---------------------------------------------------------
+
+    $policyResult = [ordered] @{
+        Action = "Apply Store Removal Policies";
+    };
+
+    try {
+        # Ensure policy key exists
+        New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore" -Force | Out-Null
+
+        # Prevent Store from reinstalling
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore" `
+                         -Name "RemoveWindowsStore" -Type DWord -Value 1
+
+        # Disable Store auto-downloads
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore" `
+                         -Name "AutoDownload" -Type DWord -Value 2
+
+        $policyResult.Message = "Policies applied successfully."
+    }
+    catch {
+        $policyResult.Message = "Failed to apply policies."
+        $policyResult.Error = $_
+    }
+
+    $policyResult | ConvertTo-Json -Depth 3 -Compress
+
 } *>&1 | Out-String -Width 1KB -Stream >> $logfile;
