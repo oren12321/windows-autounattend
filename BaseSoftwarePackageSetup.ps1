@@ -1,626 +1,306 @@
-#################################################
-########## Base Software Package Setup ##########
-#################################################
+<#
+===========================================================================================
+    Windows Workstation Automated Software Installation Script
+===========================================================================================
 
-function Install-Firefox {
+    This script automates the setup of a complete Windows workstation by installing
+    a curated collection of applications using both **winget** and **Chocolatey**.
+    It is designed to streamline fresh installations, provisioning, or system rebuilds.
 
-    Write-Host "=== Starting Firefox installation ==="
+    -----------------------------------------
+    WHAT THE SCRIPT DOES
+    -----------------------------------------
+    • Enables required execution policies and installs Chocolatey.
+    • Installs software in organized categories using winget and choco.
+    • Performs silent unattended installations where possible.
+    • Downloads and installs Micro‑Cap 12 using a generated InstallShield response file.
+    • Cleans up temporary files created during installation.
 
-    # Return object template
-    $result = [PSCustomObject]@{
-        Success = $false
-        Error   = ""
-    }
+    -----------------------------------------
+    SOFTWARE INSTALLED BY CATEGORY
+    -----------------------------------------
 
-    # --------------------------- CONFIG ---------------------------
+    INTERNET
+        - Mozilla Firefox
+        - Brave Browser
+        - qBittorrent
 
-    $TempDir          = "$env:TEMP\FirefoxInstall"
-    $InstallerPath    = "$TempDir\Firefox.msi"
-    $LatestVersionUrl = "https://product-details.mozilla.org/1.0/firefox_versions.json"
+    FILE MANAGEMENT
+        - OneCommander
+        - Everything
+        - 7‑Zip
+        - LocalSend
+        - WinMerge
 
-    # Ensure temp directory exists
-    try {
-        New-Item -ItemType Directory -Force -Path $TempDir | Out-Null
-    } catch {
-        $result.Error = "Failed to create temp directory: $_"
-        return $result
-    }
+    DOCUMENTS & TEXT
+        - ONLYOFFICE Desktop Editors
+        - PDFgear
+        - Notepad++
+        - MarkText
 
-    # --------------------------- HELPERS ---------------------------
+    MEDIA (PHOTO, VIDEO, AUDIO)
+        - GIMP 3
+        - VLC Media Player
+        - LosslessCut
+        - Shotcut
+        - Audacity
+        - OBS Studio
+        - HandBrake (choco)
+        - Equalizer APO (choco)
 
-    function Get-LatestFirefoxVersion {
-        try {
-            $json = Invoke-RestMethod -Uri $LatestVersionUrl -UseBasicParsing
-            return $json.LATEST_FIREFOX_VERSION
-        }
-        catch {
-            Write-Host "Failed to fetch latest version info: $_"
-            return $null
-        }
-    }
+    PEN & DRAWING
+        - Krita
+        - Microsoft Journal (Microsoft Store)
+        - Concepts (Microsoft Store)
 
-    function Get-InstalledFirefoxVersion {
-        $paths = @(
-            "HKLM:\SOFTWARE\Mozilla\Mozilla Firefox",
-            "HKLM:\SOFTWARE\WOW6432Node\Mozilla\Mozilla Firefox"
-        )
+    TWEAKS
+        - Microsoft PowerToys
 
-        foreach ($path in $paths) {
-            if (Test-Path $path) {
-                $current = Get-ItemProperty -Path $path -ErrorAction SilentlyContinue
-                if ($current -and $current.CurrentVersion) {
-                    return $current.CurrentVersion
-                }
-            }
-        }
-        return $null
-    }
+    MONITORING & TESTING
+        - HWiNFO
+        - OCCT
+        - CrystalDiskInfo
+        - WizTree
+        - MSI Afterburner
+        - Wireshark
+        - Sysinternals Process Monitor
+        - Sysinternals Process Explorer
 
-    function Uninstall-Firefox {
-        Write-Host "Attempting to uninstall existing Firefox..."
+    CLEANUP & MAINTENANCE
+        - Bulk Crap Uninstaller (BCUninstaller)
+        - BleachBit
 
-        $uninstallKeys = @(
-            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
-        )
+    DISK & RECOVERY
+        - Ventoy
+        - Rufus
+        - Hasleo Backup Suite Free
+        - AnyBurn
+        - TestDisk & PhotoRec (choco)
 
-        foreach ($key in $uninstallKeys) {
-            Get-ChildItem $key -ErrorAction SilentlyContinue | ForEach-Object {
-                $props = Get-ItemProperty $_.PsPath -ErrorAction SilentlyContinue
-                if ($props.DisplayName -like "*Mozilla Firefox*") {
-                    if ($props.UninstallString) {
-                        Write-Host "Uninstalling Firefox..."
-                        Start-Process "msiexec.exe" -ArgumentList "/x $($_.PSChildName) /qn" -Wait
-                        Write-Host "Uninstall completed"
-                    }
-                }
-            }
-        }
-    }
+    SOFTWARE DEVELOPMENT
+        - VSCodium
+        - Git
+        - Fork
+        - DBeaver Community
+        - Insomnia
+        - DevToys
+        - VirtualBox + Extension Pack (choco)
+        - Micro‑Cap 12 (silent InstallShield setup)
 
-    function Remove-StartupEntries {
-        Write-Host "Removing Firefox from startup entries..."
+    COMMUNICATION
+        - Signal
+        - Zoom
+        - Microsoft Teams
+        - Discord
+        - Slack
+        - WhatsApp
 
-        $startupPaths = @(
-            "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run",
-            "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run",
-            "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup",
-            "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Startup"
-        )
+===========================================================================================
+#>
 
-        foreach ($path in $startupPaths) {
-            if (Test-Path $path) {
-                Get-ChildItem $path -ErrorAction SilentlyContinue | ForEach-Object {
-                    if ($_.Name -like "*Firefox*") {
-                        Remove-Item $_.PsPath -Force -ErrorAction SilentlyContinue
-                        Write-Host "Removed startup entry: $($_.Name)"
-                    }
-                }
-            }
-        }
-    }
+Write-Host "Installing Chocolatey" -ForegroundColor Cyan
+Set-ExecutionPolicy Bypass -Scope Process -Force
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 
-    function Download-Installer($url, $dest) {
+##########################################################################################################################
 
-        Write-Host "Downloading Firefox MSI from:"
-        Write-Host $url
+Write-Host "Installing INTERNET Software..." -ForegroundColor Cyan
+$wingetApps = @(
+    "Mozilla.Firefox", "Brave.Brave", "qBittorrent.qBittorrent"
+)
+foreach ($app in $wingetApps) {
+    winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
+}
+Write-Host "Done." -ForegroundColor Cyan
 
-        # Try BITS first
-        try {
-            Start-BitsTransfer -Source $url -Destination $dest -ErrorAction Stop
-            Write-Host "Download completed via BITS"
-            return $true
-        }
-        catch {
-            Write-Host "BITS download failed: $_"
-        }
+##########################################################################################################################
 
-        # Fallback to curl.exe
-        try {
-            Write-Host "Trying curl fallback..."
-            curl.exe -L $url -o $dest
-            Write-Host "Download completed via curl"
-            return $true
-        }
-        catch {
-            Write-Host "curl download failed: $_"
-        }
+Write-Host "Installing FILE MANAGEMENT Software..." -ForegroundColor Cyan
+$wingetApps = @(
+    "MilosParipovic.OneCommander", "voidtools.Everything", "7zip.7zip", "LocalSend.LocalSend", "WinMerge.WinMerge"
+)
+foreach ($app in $wingetApps) {
+    winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
+}
+Write-Host "Done." -ForegroundColor Cyan
 
-        return $false
-    }
+##########################################################################################################################
 
-    function Is-ValidMSI($path) {
-        if (!(Test-Path $path)) { return $false }
+Write-Host "Installing DOCUMENTS & TEXT Software..." -ForegroundColor Cyan
+$wingetApps = @(
+    "ONLYOFFICE.DesktopEditors", "PDFgear.PDFgear", "Notepad++.Notepad++", "MarkText.MarkText"
+)
+foreach ($app in $wingetApps) {
+    winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
+}
+Write-Host "Done." -ForegroundColor Cyan
 
-        try {
-            $bytes = Get-Content -Path $path -Encoding Byte -TotalCount 8
-            # MSI signature: D0 CF 11 E0 A1 B1 1A E1
-            $msiSig = @(0xD0,0xCF,0x11,0xE0,0xA1,0xB1,0x1A,0xE1)
+##########################################################################################################################
 
-            return ($bytes -join ",") -eq ($msiSig -join ",")
-        }
-        catch {
-            return $false
-        }
-    }
-    
-    function Normalize-Version($v) {
-        if (-not $v) { return $null }
-
-        # Remove leading "v"
-        $v = $v.TrimStart("v")
-
-        # Split into components
-        $parts = $v.Split(".")
-        
-        # Take only the first 3 parts (major.minor.build)
-        if ($parts.Count -ge 3) {
-            return "$($parts[0]).$($parts[1]).$($parts[2])"
-        }
-
-        return $v
-    }
-
-
-    # --------------------------- MAIN LOGIC ---------------------------
-
-    $latestVersion = Get-LatestFirefoxVersion
-    if (-not $latestVersion) {
-        $result.Error = "Could not determine latest Firefox version."
-        return $result
-    }
-
-    Write-Host "Latest Firefox version: $latestVersion"
-
-    # Build direct MSI URL
-    $InstallerUrl = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/$latestVersion/win64/en-US/Firefox%20Setup%20$latestVersion.msi"
-
-    # Remove old installer if exists
-    Remove-Item $InstallerPath -Force -ErrorAction SilentlyContinue
-
-    # Download with validation + retry
-    $attempts = 0
-    $maxAttempts = 3
-
-    while ($attempts -lt $maxAttempts) {
-        $attempts++
-
-        Write-Host "Download attempt $attempts of $maxAttempts..."
-
-        if (Download-Installer -url $InstallerUrl -dest $InstallerPath) {
-            if (Is-ValidMSI $InstallerPath) {
-                Write-Host "Valid MSI downloaded."
-                break
-            }
-            else {
-                Write-Host "Downloaded file is NOT a valid MSI. Retrying..."
-                Remove-Item $InstallerPath -Force -ErrorAction SilentlyContinue
-            }
-        }
-        else {
-            Write-Host "Download failed. Retrying..."
-        }
-    }
-
-    if (!(Is-ValidMSI $InstallerPath)) {
-        $result.Error = "Failed to download a valid Firefox MSI after $maxAttempts attempts."
-        return $result
-    }
-
-    # Uninstall old version if present
-    $installedVersion = Get-InstalledFirefoxVersion
-    if ($installedVersion) {
-        Write-Host "Existing Firefox version detected: $installedVersion"
-        Uninstall-Firefox
-    }
-
-    # Install MSI
-    Write-Host "Installing Firefox..."
-    try {
-        Start-Process "msiexec.exe" -ArgumentList "/i `"$InstallerPath`" /qn ALLUSERS=1" -Wait
-    }
-    catch {
-        $result.Error = "Installer execution failed: $_"
-        return $result
-    }
-
-    Start-Sleep -Seconds 3
-
-    # Verify installation by checking firefox.exe
-    $exePath = "C:\Program Files\Mozilla Firefox\firefox.exe"
-    if (!(Test-Path $exePath)) {
-        $result.Error = "Firefox installation failed: firefox.exe not found."
-        return $result
-    }
-
-    Write-Host "Firefox installed successfully."
-
-    Remove-StartupEntries
-
-    Write-Host "Cleaning up..."
-    Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
-
-    $result.Success = $true
-    return $result
+Write-Host "Installing MEDIA (PHOTO, VIDEO, AUDIO) Software..." -ForegroundColor Cyan
+$wingetApps = @(
+    "GIMP.GIMP.3", "VideoLAN.VLC", "ch.LosslessCut", "Meltytech.Shotcut", "Audacity.Audacity", "OBSProject.OBSStudio"
+)
+foreach ($app in $wingetApps) {
+    winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
 }
 
-function Install-Brave {
+$chocoApps = @(
+    "handbrake", "equalizerapo"
+)
+foreach ($app in $chocoApps) {
+    choco install $app -y --no-progress
+}
+Write-Host "Done." -ForegroundColor Cyan
 
-    Write-Host "=== Starting Brave installation (GitHub Silent EXE) ==="
+##########################################################################################################################
 
-    $result = [PSCustomObject]@{
-        Success = $false
-        Error   = ""
-    }
+Write-Host "Installing PEN & DRAWING Software..." -ForegroundColor Cyan
+winget install -e --id KDE.Krita --source winget --scope machine --accept-package-agreements --accept-source-agreements
+winget install "Microsoft Journal" --source msstore --silent --accept-package-agreements --accept-source-agreements
+winget install "Concepts" --source msstore --silent --accept-package-agreements --accept-source-agreements
+Write-Host "Done." -ForegroundColor Cyan
 
-    $TempDir       = "$env:TEMP\BraveInstall"
-    $InstallerPath = "$TempDir\BraveSilent.exe"
-    $GitHubApiUrl  = "https://api.github.com/repos/brave/brave-browser/releases/latest"
+##########################################################################################################################
 
-    try {
-        New-Item -ItemType Directory -Force -Path $TempDir | Out-Null
-    } catch {
-        $result.Error = "Failed to create temp directory: $_"
-        return $result
-    }
+Write-Host "Installing TWEAKS Software..." -ForegroundColor Cyan
+winget install -e --id Microsoft.PowerToys --source winget --scope machine --accept-package-agreements --accept-source-agreements
+Write-Host "Done." -ForegroundColor Cyan
 
-    # ---------------------- Helper Functions ----------------------
+##########################################################################################################################
 
-    function Normalize-BraveInstalledVersion($v) {
-        if (-not $v) { return $null }
-
-        $parts = $v.Split(".")
-
-        # Brave EXE metadata uses: ChromiumMajor.BraveMajor.BraveMinor.BravePatch
-        if ($parts.Count -eq 4) {
-            return "$($parts[1]).$($parts[2]).$($parts[3])"
-        }
-
-        # Already normalized
-        if ($parts.Count -eq 3) {
-            return $v
-        }
-
-        return $v
-    }
-
-    function Normalize-BraveGitHubVersion($v) {
-        if (-not $v) { return $null }
-        return $v.TrimStart("v")
-    }
-
-    function Get-InstalledBraveVersion {
-        $paths = @(
-            "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
-            "C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe",
-            "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\Application\brave.exe"
-        )
-
-        foreach ($path in $paths) {
-            if (Test-Path $path) {
-                try {
-                    $info = (Get-Item $path).VersionInfo
-                    return $info.ProductVersion
-                }
-                catch {}
-            }
-        }
-
-        return $null
-    }
-
-    function Uninstall-Brave {
-        Write-Host "Attempting to uninstall existing Brave..."
-
-        $uninstallKeys = @(
-            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
-        )
-
-        foreach ($key in $uninstallKeys) {
-            Get-ChildItem $key -ErrorAction SilentlyContinue | ForEach-Object {
-                $props = Get-ItemProperty $_.PsPath -ErrorAction SilentlyContinue
-                if ($props.DisplayName -like "*Brave*") {
-                    if ($props.UninstallString) {
-                        Write-Host "Uninstalling Brave..."
-                        Start-Process $props.UninstallString -ArgumentList "--silent" -Wait
-                        Write-Host "Uninstall completed"
-                    }
-                }
-            }
-        }
-    }
-
-    function Remove-StartupEntries {
-        Write-Host "Removing Brave from startup entries..."
-
-        $startupPaths = @(
-            "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run",
-            "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run",
-            "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup",
-            "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Startup"
-        )
-
-        foreach ($path in $startupPaths) {
-            if (Test-Path $path) {
-                Get-ChildItem $path -ErrorAction SilentlyContinue | ForEach-Object {
-                    if ($_.Name -like "*Brave*") {
-                        Remove-Item $_.PsPath -Force -ErrorAction SilentlyContinue
-                        Write-Host "Removed startup entry: $($_.Name)"
-                    }
-                }
-            }
-        }
-    }
-
-    function Download-Installer($url, $dest) {
-
-        Write-Host "Downloading Brave silent installer from:"
-        Write-Host $url
-
-        try {
-            Start-BitsTransfer -Source $url -Destination $dest -ErrorAction Stop
-            Write-Host "Download completed via BITS"
-            return $true
-        }
-        catch {
-            Write-Host "BITS download failed: $_"
-        }
-
-        try {
-            Write-Host "Trying curl fallback..."
-            curl.exe -L $url -o $dest
-            Write-Host "Download completed via curl"
-            return $true
-        }
-        catch {
-            Write-Host "curl download failed: $_"
-        }
-
-        return $false
-    }
-
-    function Get-BraveSilentInstallerUrl {
-        Write-Host "Querying GitHub API for latest Brave release..."
-
-        try {
-            $response = Invoke-RestMethod -Uri $GitHubApiUrl -Headers @{ "User-Agent" = "PowerShell" }
-        }
-        catch {
-            Write-Host "Failed to query GitHub API: $_"
-            return $null
-        }
-
-        foreach ($asset in $response.assets) {
-            if ($asset.name -eq "BraveBrowserStandaloneSilentSetup.exe") {
-                return $asset.browser_download_url, $response.tag_name.TrimStart("v")
-            }
-        }
-
-        return $null
-    }
-
-    # ---------------------- Version Check ----------------------
-
-    $installedVersion = Get-InstalledBraveVersion
-    $installedNorm = Normalize-BraveInstalledVersion $installedVersion
-
-    Write-Host "Installed Brave version: $installedVersion (normalized: $installedNorm)"
-
-    $installerInfo = Get-BraveSilentInstallerUrl
-    if (-not $installerInfo) {
-        $result.Error = "Could not find Brave silent installer in GitHub release."
-        return $result
-    }
-
-    $InstallerUrl = $installerInfo[0]
-    $latestVersion = $installerInfo[1]
-    $latestNorm = Normalize-BraveGitHubVersion $latestVersion
-
-    Write-Host "Latest Brave version: $latestVersion (normalized: $latestNorm)"
-
-    if ($installedNorm -and ($installedNorm -eq $latestNorm)) {
-        Write-Host "Brave is already up to date. No installation needed."
-        $result.Success = $true
-        return $result
-    }
-
-    Write-Host "Brave is outdated or missing. Proceeding with installation..."
-
-    # ---------------------- Download & Install ----------------------
-
-    Remove-Item $InstallerPath -Force -ErrorAction SilentlyContinue
-
-    if (-not (Download-Installer -url $InstallerUrl -dest $InstallerPath)) {
-        $result.Error = "Failed to download Brave silent installer."
-        return $result
-    }
-
-    # Kill running Brave processes
-    Get-Process brave -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-
-    if ($installedVersion) {
-        Uninstall-Brave
-    }
-
-    Write-Host "Installing Brave..."
-    try {
-        Start-Process $InstallerPath -Wait
-    }
-    catch {
-        $result.Error = "Installer execution failed: $_"
-        return $result
-    }
-
-    Start-Sleep -Seconds 3
-
-    # Check all possible install paths
-    $possiblePaths = @(
-        "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
-        "C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe",
-        "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\Application\brave.exe"
-    )
-
-    $exePath = $possiblePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
-
-    if (-not $exePath) {
-        $result.Error = "Brave installation failed: brave.exe not found in any known location."
-        return $result
-    }
-
-    Write-Host "Brave installed successfully at: $exePath"
-
-    Remove-StartupEntries
-
-    Write-Host "Cleaning up..."
-    Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
-
-    $result.Success = $true
-    return $result
+Write-Host "Installing MONITORING & TESTING Software..." -ForegroundColor Cyan
+$wingetApps = @(
+    "REALiX.HWiNFO", "CrystalDewWorld.CrystalDiskInfo", "AntibodySoftware.WizTree",
+    "Guru3D.Afterburner", "WiresharkFoundation.Wireshark", "Microsoft.Sysinternals.ProcessMonitor", "Microsoft.Sysinternals.ProcessExplorer"
+)
+foreach ($app in $wingetApps) {
+    winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
 }
 
-function Install-FreeProtonVPN {
+choco install occt -y --no-progress
+Write-Host "Done." -ForegroundColor Cyan
 
-    Write-Host "=== Installing/Updating ProtonVPN Free (Winget) ==="
+##########################################################################################################################
 
-    $result = [PSCustomObject]@{
-        Success = $false
-        Error   = ""
-    }
+Write-Host "Installing CLEANUP & MAINTENANCE Software..." -ForegroundColor Cyan
+$wingetApps = @(
+    "Klocman.BulkCrapUninstaller", "BleachBit.BleachBit"
+)
+foreach ($app in $wingetApps) {
+    winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
+}
+Write-Host "Done." -ForegroundColor Cyan
 
-    try {
-        Write-Host "Refreshing Winget sources..."
-        winget source reset --force 2>$null
-        winget source update 2>$null
-    }
-    catch {
-        $result.Error = "Failed to refresh Winget sources: $_"
-        return $result
-    }
+##########################################################################################################################
 
-    # Check if ProtonVPN is installed
-    try {
-        $installed = winget list --id Proton.ProtonVPN --source winget 2>$null
-    }
-    catch {
-        $result.Error = "Winget list failed: $_"
-        return $result
-    }
-
-    try {
-        if ($installed -match "ProtonVPN") {
-            Write-Host "ProtonVPN is already installed. Updating..."
-            winget upgrade Proton.ProtonVPN `
-                --silent `
-                --accept-source-agreements `
-                --accept-package-agreements `
-                --force `
-                --disable-interactivity `
-                2>$null
-        }
-        else {
-            Write-Host "ProtonVPN not installed. Installing..."
-            winget install Proton.ProtonVPN `
-                --silent `
-                --accept-source-agreements `
-                --accept-package-agreements `
-                --force `
-                --disable-interactivity `
-                2>$null
-        }
-    }
-    catch {
-        $result.Error = "Winget installation/upgrade failed: $_"
-        return $result
-    }
-
-    # Verify installation
-    try {
-        $installedCheck = winget list --id Proton.ProtonVPN --source winget 2>$null
-        if (-not ($installedCheck -like "*ProtonVPN*")) {
-            $result.Error = "ProtonVPN installation or update did not complete successfully."
-            return $result
-        }
-    }
-    catch {
-        $result.Error = "Failed to verify ProtonVPN installation: $_"
-        return $result
-    }
-
-    Write-Host "ProtonVPN installed/updated successfully."
-    $result.Success = $true
-    return $result
+Write-Host "Installing DISK & RECOVERY Software..." -ForegroundColor Cyan
+$wingetApps = @(
+    "Ventoy.Ventoy", "Rufus.Rufus", "PowerSoftware.AnyBurn"
+)
+foreach ($app in $wingetApps) {
+    winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
 }
 
-function Install-qBittorrent {
+choco install testdisk-photorec -y --no-progress
+choco install hasleobackupsuite -y --no-progress --ignore-checksum
+Write-Host "Done." -ForegroundColor Cyan
 
-    Write-Host "=== Installing/Updating qBittorrent (Winget) ==="
+##########################################################################################################################
 
-    $result = [PSCustomObject]@{
-        Success = $false
-        Error   = ""
-    }
-
-    try {
-        Write-Host "Refreshing Winget sources..."
-        winget source reset --force 2>$null
-        winget source update 2>$null
-    }
-    catch {
-        $result.Error = "Failed to refresh Winget sources: $_"
-        return $result
-    }
-
-    # Check if qBittorrent is installed
-    try {
-        $installed = winget list --id qBittorrent.qBittorrent --source winget 2>$null
-    }
-    catch {
-        $result.Error = "Winget list failed: $_"
-        return $result
-    }
-
-    try {
-        if ($installed -like "*qBittorrent*") {
-            Write-Host "qBittorrent is already installed. Updating..."
-            winget upgrade qBittorrent.qBittorrent `
-                --silent `
-                --accept-source-agreements `
-                --accept-package-agreements `
-                --force `
-                --disable-interactivity `
-                2>$null
-        }
-        else {
-            Write-Host "qBittorrent not installed. Installing..."
-            winget install qBittorrent.qBittorrent `
-                --silent `
-                --accept-source-agreements `
-                --accept-package-agreements `
-                --force `
-                --disable-interactivity `
-                2>$null
-        }
-    }
-    catch {
-        $result.Error = "Winget installation/upgrade failed: $_"
-        return $result
-    }
-
-    # Verify installation
-    try {
-        $installedCheck = winget list --id qBittorrent.qBittorrent --source winget 2>$null
-        if (-not ($installedCheck -like "*qBittorrent*")) {
-            $result.Error = "qBittorrent installation or update did not complete successfully."
-            return $result
-        }
-    }
-    catch {
-        $result.Error = "Failed to verify qBittorrent installation: $_"
-        return $result
-    }
-
-    Write-Host "qBittorrent installed/updated successfully."
-    $result.Success = $true
-    return $result
+Write-Host "Installing SOFTWARE DEVELOPMENT Software..." -ForegroundColor Cyan
+$wingetApps = @(
+    "VSCodium.VSCodium", "Git.Git", "Fork.Fork", "DBeaver.DBeaver.Community", "Insomnia.Insomnia", "DevToys-app.DevToys"
+)
+foreach ($app in $wingetApps) {
+    winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
 }
+
+choco install virtualbox -y --no-progress --params "/ExtensionPack"
+
+Write-Host "Installing Micro-Cap 12..." -ForegroundColor Yellow
+$iss = @'
+[InstallShield Silent]
+Version=v7.00
+File=Response File
+[File Transfer]
+OverwrittenReadOnly=NoToAll
+[Application]
+Name=Micro-Cap 12
+Version=12.2.0.3
+Company=Spectrum Software
+Lang=0409
+[{6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-DlgOrder]
+Dlg0={6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdWelcome-0
+Count=9
+Dlg1={6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdAskDestPath-0
+Dlg2={6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdLicense-0
+Dlg3={6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdRegisterUser-0
+Dlg4={6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdComponentDialog2-0
+Dlg5={6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdSelectFolder-0
+Dlg6={6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-AskOptions-0
+Dlg7={6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdStartCopy-0
+Dlg8={6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdFinish-0
+[{6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdWelcome-0]
+Result=1
+[{6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdAskDestPath-0]
+szDir=C:\MC12
+Result=1
+[{6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdLicense-0]
+Result=1
+[{6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdRegisterUser-0]
+szName=user
+szCompany=company
+Result=1
+[{6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdComponentDialog2-0]
+Component-type=string
+Component-count=6
+Component-0=PRO\Program Files
+Component-1=PRO\Help Files
+Component-2=PRO\Sample Circuits
+Component-3=PRO\Shape And Component Libraries
+Component-4=PRO\Model Libraries
+Component-5=PRO\Manuals
+Result=1
+[{6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdSelectFolder-0]
+szFolder=Micro-Cap 12
+Result=1
+[{6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-AskOptions-0]
+Result=1
+Sel-0=1
+Sel-1=1
+Sel-2=0
+Sel-3=1
+[{6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdStartCopy-0]
+Result=1
+[{6DF8477A-6C32-407B-9EB4-25B1F0A1A350}-SdFinish-0]
+Result=1
+bOpt1=0
+bOpt2=0
+'@
+$iss | Out-File -FilePath "C:\setup.iss"
+Start-BitsTransfer -Source "https://gotroot.ca/spectrum/www.spectrum-soft.com/download/mc12cd.zip" -Destination "$env:TEMP\mc12cd.zip"
+Expand-Archive -Path "$env:TEMP\mc12cd.zip" -DestinationPath "$env:TEMP\mc12"
+Start-Process "$env:TEMP\mc12\setup.exe" -ArgumentList '/s /f1"C:\setup.iss"' -Wait
+Remove-Item -Path "$env:TEMP\mc12" -Force -Recurse -ErrorAction SilentlyContinue
+Remove-Item -Path "$env:TEMP\mc12cd.zip" -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "C:\setup.iss" -Force -ErrorAction SilentlyContinue
+
+Write-Host "Done." -ForegroundColor Cyan
+
+##########################################################################################################################
+
+Write-Host "Installing COMMUNICATION Software..." -ForegroundColor Cyan
+$wingetApps = @(
+    "OpenWhisperSystems.Signal", "Zoom.Zoom",
+    "Discord.Discord", "SlackTechnologies.Slack", "WhatsApp.WhatsApp"
+)
+foreach ($app in $wingetApps) {
+    winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
+}
+
+choco install microsoft-teams-new-bootstrapper -y --no-progress
+Write-Host "Done." -ForegroundColor Cyan
+
+##########################################################################################################################
