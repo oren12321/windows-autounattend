@@ -220,6 +220,10 @@ foreach ($app in $wingetApps) {
 choco install virtualbox -y --no-progress --params "/ExtensionPack"
 
 Write-Host "Installing Micro-Cap 12..." -ForegroundColor Yellow
+Remove-Item -Path "$env:TEMP\mc12" -Force -Recurse -ErrorAction SilentlyContinue
+Remove-Item -Path "$env:TEMP\mc12cd.zip" -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "C:\setup.iss" -Force -ErrorAction SilentlyContinue
+
 $iss = @'
 [InstallShield Silent]
 Version=v7.00
@@ -283,10 +287,10 @@ $iss | Out-File -FilePath "C:\setup.iss"
 Start-BitsTransfer -Source "https://gotroot.ca/spectrum/www.spectrum-soft.com/download/mc12cd.zip" -Destination "$env:TEMP\mc12cd.zip"
 Expand-Archive -Path "$env:TEMP\mc12cd.zip" -DestinationPath "$env:TEMP\mc12"
 Start-Process "$env:TEMP\mc12\setup.exe" -ArgumentList '/s /f1"C:\setup.iss"' -Wait
+
 Remove-Item -Path "$env:TEMP\mc12" -Force -Recurse -ErrorAction SilentlyContinue
 Remove-Item -Path "$env:TEMP\mc12cd.zip" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "C:\setup.iss" -Force -ErrorAction SilentlyContinue
-
 Write-Host "Done." -ForegroundColor Cyan
 
 ##########################################################################################################################
