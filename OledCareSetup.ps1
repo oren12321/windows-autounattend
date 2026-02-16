@@ -522,7 +522,7 @@ function Install-AutoHideMouseCursor {
         New-Item -Path $progPath -Force | Out-Null
     }
     New-ItemProperty -Path $progPath -Name "auto_hide_icons_sec"      -Value "$TimeoutSeconds"  -PropertyType String -Force | Out-Null
-    New-ItemProperty -Path $progPath -Name "hidden_when_you_press_an_key_on_the_keyboard"        -Value "-1" -PropertyType String -Force | Out-Null
+    New-ItemProperty -Path $progPath -Name "hidden_when_you_press_an_key_on_the_keyboard"        -Value "0" -PropertyType String -Force | Out-Null
     New-ItemProperty -Path $progPath -Name "start_tray"               -Value "1"  -PropertyType String -Force | Out-Null
     
     # 7. Add to Startup
