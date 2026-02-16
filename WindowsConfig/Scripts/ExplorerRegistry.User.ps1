@@ -78,6 +78,13 @@
 
 $ExplorerEntries = @(
     @{
+        Path        = "HKCU:\Software\Policies\Microsoft\Windows\Explorer"
+        Name        = "DisableSearchBoxSuggestions"
+        Type        = "DWord"
+        Value       = 1
+        Description = "Disable Bing search"
+    },
+    @{
         Path        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects"
         Name        = "VisualFXSetting"
         Type        = "DWord"
