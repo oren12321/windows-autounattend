@@ -1,0 +1,63 @@
+===========================
+ASUS OFFLINE DRIVER INSTALL PLAN
+===========================
+
+Download installers from official ASUS website, extract
+them to the appropriate folders and run the install.bat.
+The Nvidia driver requires a custom install.bat of its own
+in its root folder (rename it from install.nvidia.bat to
+install.bat after copying it to the extracted Nvidia installer).
+
+
+1. CHIPSET
+----------------------------------
+1) INFUpdate_DCH_Intel_D_V10.1.48.18_42321_1
+2) SerialIO_Intel_D_V30.100.2416.40_42322_1
+3) DPTF_DCH_Intel_D_V2.2.10003.3_42323_1
+4) HIDEVENTFilter_DCH_Intel_D_V2.2.2.11_42325_1
+5) SensorHub_DCH_Intel_D_V5.8.36.0_42326_1
+6) ICSS_DCH_Intel_X_V2.1.10500.0007_41056_1
+7) PMT_Intel_D_V5.2.3.4_42333_1
+8) TXT_DCH_Intel_D_V1.20.16.0_42330_1
+9) MEI_Consumer_DCH_Intel_D_V2452.7.1.0_43060_1
+10) NPU_DCH_Intel_D_V32.0.100.4239_45000
+
+----------------------------------
+2. AUDIO
+----------------------------------
+1) iSST_DCH_Intel_D_V20.42.12134.0_47594
+2) Audio_DriverOnly_Dolby_DCH_Realtek_D_V6.0.9818.1_43360_1
+3) SmartAMP_TI_DCH_TexasInstruments_D_V3.1.26.4_41982_1
+4) DolbyAtmosdriverforConsumer_ASUS_Z_V10.1031.743.43_17160.exe
+
+----------------------------------
+3. GRAPHICS
+----------------------------------
+1) Graphic_IGCC_DCH_Intel_D_V32.0.101.6556_43364_1
+2) 591.74-notebook-win10-win11-64bit-international-nsd-dch-whql
+3) Nvidia control panel .appx from the extracted installer
+
+----------------------------------
+4. NETWORK
+----------------------------------
+1) Bluetooth_DCH_Intel_Z_V23.160.0.9_44629
+2) WirelessLan_PIE_DCH_Intel_Z_V23.160.0.4_44628
+3) WirelessLan_ICPS_Intel_D_V4.1024.1009.5_42336_1
+4) Wi-Fi_sensing_DCH_Intel_D_V23.130.1.1_43356_1
+
+----------------------------------
+5. CARD READER
+----------------------------------
+1) CardReader_DCH_Genesys_D_V4.5.11.300_42328_1
+
+----------------------------------
+6. POINTING DEVICE
+----------------------------------
+1) PrecisionTouchPad_DCH_ASUS_X_V16.0.0.36_43216_1
+
+----------------------------------
+7. ASUS SOFTWARE
+----------------------------------
+1) ASUSSystemControlInterfacev3_ASUS_Z_V3.1.59.0_17476.exe
+
+-- FINAL REBOOT --
