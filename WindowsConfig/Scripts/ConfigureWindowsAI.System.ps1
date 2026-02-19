@@ -51,6 +51,13 @@ $entries = @(
         Description = "Disables AI-powered search box suggestions in Windows Search."
     },
     @{
+        Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer"
+        Name = "DisableSearchBoxSuggestions"
+        Type = "DWord"
+        Value = 1
+        Description = "Disables Bing search box suggestions in Start Menu Search."
+    },
+    @{
         Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
         Name = "ConnectedSearchUseWeb"
         Type = "DWord"
