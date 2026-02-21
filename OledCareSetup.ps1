@@ -241,24 +241,36 @@ function Set-TransparencyOff {
     Write-Output "Turned off transparency"
 }
 
-function Set-AutoAccentColor {
-    # --- 1. ENABLE AUTOMATIC ACCENT COLOR ---
-    # This sets "Pick an accent color from my background" to ON
-    $dwmpPath = "HKCU\Control Panel\Desktop"
-    reg add "$dwmpPath" /v AutoColorization /t REG_DWORD /d 1 /f
+function Set-ManualAccentColor {
+    # --- 1. DISABLE AUTOMATIC ACCENT COLOR ---
+    # This sets "Pick an accent color from my background" to OFF
+    reg add "HKCU\Control Panel\Desktop" /v AutoColorization /t REG_DWORD /d 0 /f
 
     # --- 2. DISABLE COLOR ON START, TASKBAR, AND ACTION CENTER ---
     # This ensures "Show accent color on Start and taskbar" is OFF
-    $personalizePath = "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
-    reg add "$personalizePath" /v ColorPrevalence /t REG_DWORD /d 0 /f
+    reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v ColorPrevalence /t REG_DWORD /d 0 /f
 
     # --- 3. DISABLE COLOR ON TITLE BARS AND WINDOW BORDERS ---
     # This ensures "Show accent color on title bars and window borders" is OFF
     # In Windows 11, this specifically affects the 'AccentColorOnTitleBars' UI toggle
-    $dwmxPath = "HKCU\Software\Microsoft\Windows\DWM"
-    reg add "$dwmxPath" /v ColorPrevalence /t REG_DWORD /d 0 /f
+    reg add "HKCU\Software\Microsoft\Windows\DWM" /v ColorPrevalence /t REG_DWORD /d 0 /f
     
-    Write-Output "Enabled automatic accent color"
+    # --- 4. SET PRIMARY ACCENT COLOR - ABGR format
+    reg add "HKCU\Software\Microsoft\Windows\DWM" /v AccentColor /t REG_DWORD /d 0xFF7E715D /f
+    
+    # --- 5. SET ACCENT PALETTE (BINARY) - THE 8-COLOR GRADIENT
+    reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent" /v AccentPalette /t REG_BINARY /d 91ABBDFF768FA1FF5D717EFF4B5B66FF39454DFF272F35FF15191DFF0078D700 /f
+    
+    # --- 6. SYNC 'START' BUTTON COLORS ---
+    # Forces the Start menu power button and toggles to use your custom palette
+    reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent" /v StartColorMenu /t REG_DWORD /d 0xFF5D717E /f
+    reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent" /v AccentColorMenu /t REG_DWORD /d 0xFF5D717E /f
+
+    # --- 7. FIX 'ACTIVE' ICON UNDERLINE ---
+    # Ensures the little line under active apps on the Taskbar uses your color
+    reg add "HKCU\Software\Microsoft\Colors" /v AccentColor /t REG_DWORD /d 0xFF7E715D /f
+    
+    Write-Output "Enabled manual accent color"
 }
 
 function Set-AutoHideTaskbar {
@@ -600,7 +612,7 @@ Set-DesktopSlideshow
 
 Set-DarkMode
 Set-TransparencyOff
-Set-AutoAccentColor
+Set-ManualAccentColor
 Set-AutoHideTaskbar
 Set-LockScreenSpotlight
 
