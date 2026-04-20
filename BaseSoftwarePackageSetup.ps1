@@ -26,8 +26,6 @@
         - qBittorrent
 
     FILE MANAGEMENT
-        - OneCommander
-        - Everything
         - 7‑Zip
         - LocalSend
         - WinMerge
@@ -36,7 +34,6 @@
         - ONLYOFFICE Desktop Editors
         - PDFgear
         - Notepad++
-        - MarkText
 
     MEDIA (PHOTO, VIDEO, AUDIO)
         - GIMP 3
@@ -46,19 +43,14 @@
         - Audacity
         - OBS Studio
         - HandBrake (choco)
-        - Equalizer APO (choco)
 
     PEN & DRAWING
         - Krita
         - Microsoft Journal (Microsoft Store)
         - Concepts (Microsoft Store)
 
-    TWEAKS
-        - Microsoft PowerToys
-
     MONITORING & TESTING
         - HWiNFO
-        - OCCT
         - CrystalDiskInfo
         - WizTree
         - MSI Afterburner
@@ -68,7 +60,6 @@
 
     CLEANUP & MAINTENANCE
         - Bulk Crap Uninstaller (BCUninstaller)
-        - BleachBit
 
     DISK & RECOVERY
         - Ventoy
@@ -80,20 +71,10 @@
     SOFTWARE DEVELOPMENT
         - VSCodium
         - Git
-        - Fork
-        - DBeaver Community
         - Insomnia
         - DevToys
         - VirtualBox + Extension Pack (choco)
         - Micro‑Cap 12 (silent InstallShield setup)
-
-    COMMUNICATION
-        - Signal
-        - Zoom
-        - Microsoft Teams
-        - Discord
-        - Slack
-        - WhatsApp
 
 ===========================================================================================
 #>
@@ -118,7 +99,7 @@ Write-Host "Done." -ForegroundColor Cyan
 
 Write-Host "Installing FILE MANAGEMENT Software..." -ForegroundColor Cyan
 $wingetApps = @(
-    "MilosParipovic.OneCommander", "voidtools.Everything", "7zip.7zip", "LocalSend.LocalSend", "WinMerge.WinMerge"
+    "7zip.7zip", "LocalSend.LocalSend", "WinMerge.WinMerge"
 )
 foreach ($app in $wingetApps) {
     winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
@@ -129,7 +110,7 @@ Write-Host "Done." -ForegroundColor Cyan
 
 Write-Host "Installing DOCUMENTS & TEXT Software..." -ForegroundColor Cyan
 $wingetApps = @(
-    "ONLYOFFICE.DesktopEditors", "PDFgear.PDFgear", "Notepad++.Notepad++", "MarkText.MarkText"
+    "ONLYOFFICE.DesktopEditors", "PDFgear.PDFgear", "Notepad++.Notepad++"
 )
 foreach ($app in $wingetApps) {
     winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
@@ -147,7 +128,7 @@ foreach ($app in $wingetApps) {
 }
 
 $chocoApps = @(
-    "handbrake", "equalizerapo"
+    "handbrake"
 )
 foreach ($app in $chocoApps) {
     choco install $app -y --no-progress
@@ -164,12 +145,6 @@ Write-Host "Done." -ForegroundColor Cyan
 
 ##########################################################################################################################
 
-Write-Host "Installing TWEAKS Software..." -ForegroundColor Cyan
-winget install -e --id Microsoft.PowerToys --source winget --scope machine --accept-package-agreements --accept-source-agreements
-Write-Host "Done." -ForegroundColor Cyan
-
-##########################################################################################################################
-
 Write-Host "Installing MONITORING & TESTING Software..." -ForegroundColor Cyan
 $wingetApps = @(
     "REALiX.HWiNFO", "CrystalDewWorld.CrystalDiskInfo", "AntibodySoftware.WizTree",
@@ -178,15 +153,13 @@ $wingetApps = @(
 foreach ($app in $wingetApps) {
     winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
 }
-
-choco install occt -y --no-progress
 Write-Host "Done." -ForegroundColor Cyan
 
 ##########################################################################################################################
 
 Write-Host "Installing CLEANUP & MAINTENANCE Software..." -ForegroundColor Cyan
 $wingetApps = @(
-    "Klocman.BulkCrapUninstaller", "BleachBit.BleachBit"
+    "Klocman.BulkCrapUninstaller"
 )
 foreach ($app in $wingetApps) {
     winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
@@ -211,7 +184,7 @@ Write-Host "Done." -ForegroundColor Cyan
 
 Write-Host "Installing SOFTWARE DEVELOPMENT Software..." -ForegroundColor Cyan
 $wingetApps = @(
-    "VSCodium.VSCodium", "Git.Git", "Fork.Fork", "DBeaver.DBeaver.Community", "Insomnia.Insomnia", "DevToys-app.DevToys"
+    "VSCodium.VSCodium", "Git.Git",  "Insomnia.Insomnia", "DevToys-app.DevToys", "Neovim.Neovim"
 )
 foreach ($app in $wingetApps) {
     winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
@@ -291,20 +264,6 @@ Start-Process "$env:TEMP\mc12\setup.exe" -ArgumentList '/s /f1"C:\setup.iss"' -W
 Remove-Item -Path "$env:TEMP\mc12" -Force -Recurse -ErrorAction SilentlyContinue
 Remove-Item -Path "$env:TEMP\mc12cd.zip" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "C:\setup.iss" -Force -ErrorAction SilentlyContinue
-Write-Host "Done." -ForegroundColor Cyan
-
-##########################################################################################################################
-
-Write-Host "Installing COMMUNICATION Software..." -ForegroundColor Cyan
-$wingetApps = @(
-    "OpenWhisperSystems.Signal", "Zoom.Zoom",
-    "Discord.Discord", "SlackTechnologies.Slack", "WhatsApp.WhatsApp"
-)
-foreach ($app in $wingetApps) {
-    winget install -e --id $app --source winget --scope machine --accept-package-agreements --accept-source-agreements
-}
-
-choco install microsoft-teams-new-bootstrapper -y --no-progress
 Write-Host "Done." -ForegroundColor Cyan
 
 ##########################################################################################################################
